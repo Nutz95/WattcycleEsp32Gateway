@@ -18,11 +18,13 @@ The gateway:
 
 ### Security
 
-- **Never** hardcode Wi-Fi credentials, OTA passwords, or BMS secrets in source.
+- **Never** hardcode Wi-Fi credentials, OTA passwords, web passwords, or BMS secrets in source.
 - Inject secrets only via environment variables consumed by PlatformIO:
   - `WIFI_SSID`
   - `WIFI_PASS`
   - `BMS_BLE_ADDRESS` (BLE MAC only — required for BMS connect; no serial/password)
+- Web UI auth: salted SHA-256 hashes in NVS (`wg_auth`); sessions are RAM-only; telemetry APIs must be gated server-side (never trust the browser).
+- First-time setup / password reset require physical confirm (GPIO35 = OK, GPIO0 = Cancel; hold GPIO0 3s to request reset).
 - Do not commit `.env` files, private keys, or captured telemetry dumps with PII.
 
 ### Architecture (SOLID + DI)
@@ -31,7 +33,8 @@ The gateway:
 - Construct concrete adapters only in `src/main.cpp`; `GatewayApplication` depends on interfaces.
 - Keep domain folders focused:
   - `Bms/` protocol + BLE transport
-  - `Telemetry/` store + polling + JSON + gateway status
+  - `Telemetry/` store + polling + binary codec + gateway status
+  - `Auth/` NVS-hashed web credentials + RAM sessions + physical confirm
   - `Wifi/`, `Ota/`, `Web/`, `Display/`, `Config/`, `CompositionRoot/`
 - No nested classes.
 - No god-objects: **≤ 400 lines per file**, **≤ 30 methods per class**.

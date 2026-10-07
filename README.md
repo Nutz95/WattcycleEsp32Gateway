@@ -161,15 +161,24 @@ This uploads firmware **and** the LittleFS web assets.
 http://<esp-ip>:6789/
 ```
 
-Binary telemetry API (decoded in the browser):
+Binary telemetry API (decoded in the browser; **requires login session cookie**):
 
 ```text
 http://<esp-ip>:6789/api/telemetry.bin
 ```
 
+### Web authentication
+
+- First visit with empty NVS: browser asks for username/password → ESP screen asks for **physical confirm** (**TOP / GPIO35 = OK**, **BOTTOM / GPIO0 = Cancel**).
+- Username ≤32 `[A-Za-z0-9._-]`; password 8–64 printable ASCII. Auth JSON bodies capped at 512 bytes (overflow / injection hardening).
+- After credentials are stored (salted SHA-256 in NVS `wg_auth`), the SPA stays on the login screen until `/api/auth/login` succeeds. Telemetry is rejected with **401** without a valid `wg_session` cookie (`HttpOnly; SameSite=Strict`).
+- Forgot password / Account tab: hold **BOTTOM (GPIO0) for 3 seconds** → confirm clear on TOP. Then recreate credentials. Use **Account** to sign out.
+- Threat model: HTTP on LAN + local password. Sessions are RAM-only (re-login after reboot). Do **not** expose port 6789 to the public internet.
+- **HTTPS note:** on this classic ESP32 + NimBLE stack, in-process TLS (`esp32_https_server` / OpenSSL) freezes the device under load — HTTP is intentional until a lighter TLS path exists.
+
 Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets). The `data/` folder is gitignored — regenerate with the bundle script / PlatformIO pre-script.
 
-TTGO buttons: **GPIO0** = previous page, **GPIO35** = next page (Overview → Cells → Temps → Alerts → Gateway → ESP). This board has **no touchscreen** — wake/sleep uses the two buttons only. Backlight sleeps after **60 s** without input; the display UI task is suspended while asleep and resumes on the next button press (wake only, no page change).
+TTGO buttons: **GPIO0 (bottom)** = previous page / Cancel; **GPIO35 (top)** = next page / Validate. No touchscreen. Backlight sleeps after **60 s** without input; the display UI task is suspended while asleep and resumes on the next button press (wake only, no page change). Gateway/overview show **`ip:port`** for the web UI.
 
 ### 4. Later updates over the air
 

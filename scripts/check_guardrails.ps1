@@ -20,7 +20,9 @@ $concreteAdapterHeaders = @(
   "WattcycleBleClient.h",
   "EspWebGateway.h",
   "TtgoStatusDisplay.h",
-  "InMemoryTelemetryStore.h"
+  "InMemoryTelemetryStore.h",
+  "NvsCredentialStore.h",
+  "AuthService.h"
 )
 
 foreach ($file in $sourceFiles) {
