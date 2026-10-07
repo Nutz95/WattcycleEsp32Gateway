@@ -8,7 +8,7 @@
 namespace wattcycle::telemetry {
 
 /// Compact little-endian binary snapshot for the web front-end decoder.
-/// Layout version is embedded so the JS decoder can reject mismatches.
+/// Single evolving format (no backward-compat branches during active development).
 class BinaryTelemetryCodec {
  public:
   static constexpr uint32_t kMagic = 0x4D475457u;  // 'WTGM' LE

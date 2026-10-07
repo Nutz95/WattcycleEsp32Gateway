@@ -52,6 +52,7 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   const auto product = store.product();
   const auto warnings = store.warnings();
   const auto gateway = store.status();
+  const auto esp = store.espHealth();
 
   uint8_t* cursor = buffer;
   writeU32(cursor, kMagic);
@@ -83,6 +84,7 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeU16(cursor, static_cast<uint16_t>(battery.moduleVoltage * 100.0f + 0.5f));
   writeI16(cursor, static_cast<int16_t>(battery.currentAmps * 10.0f));
   writeI16(cursor, static_cast<int16_t>(battery.powerWatts));
+  writeI16(cursor, static_cast<int16_t>(battery.balanceCurrentAmps * 10.0f));
   writeU16(cursor, static_cast<uint16_t>(battery.remainingCapacityAh * 10.0f + 0.5f));
   writeU16(cursor, static_cast<uint16_t>(battery.totalCapacityAh * 10.0f + 0.5f));
   writeU16(cursor, static_cast<uint16_t>(battery.designCapacityAh * 10.0f + 0.5f));
@@ -94,6 +96,19 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeU8(cursor, battery.cellCount);
   for (uint8_t i = 0; i < battery.cellCount; ++i) {
     writeU16(cursor, static_cast<uint16_t>(battery.cellVoltages[i] * 1000.0f + 0.5f));
+  }
+
+  const uint8_t balanceByteCount =
+      static_cast<uint8_t>((battery.cellCount + 7u) / 8u);
+  for (uint8_t byteIndex = 0; byteIndex < balanceByteCount; ++byteIndex) {
+    uint8_t bits = 0;
+    for (uint8_t bit = 0; bit < 8; ++bit) {
+      const uint8_t cellIndex = static_cast<uint8_t>(byteIndex * 8 + bit);
+      if (cellIndex < battery.cellCount && warnings.cellBalancing[cellIndex]) {
+        bits |= static_cast<uint8_t>(1u << bit);
+      }
+    }
+    writeU8(cursor, bits);
   }
 
   const uint8_t cellTempCount =
@@ -117,6 +132,12 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeFixedString(cursor, gateway.wifiIp, 16);
   writeFixedString(cursor, gateway.bleAddress, 18);
   writeFixedString(cursor, gateway.lastError, 64);
+
+  writeU8(cursor, esp.cpuCore0Percent);
+  writeU8(cursor, esp.cpuCore1Percent);
+  writeI16(cursor, toDeciCelsius(esp.chipTemperatureC));
+  writeU16(cursor, static_cast<uint16_t>(esp.freeHeapBytes / 1024u));
+  writeU32(cursor, esp.uptimeSeconds);
 
   const size_t written = static_cast<size_t>(cursor - buffer);
   if (written > capacity) {

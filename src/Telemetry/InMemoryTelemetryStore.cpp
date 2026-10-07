@@ -86,6 +86,12 @@ void InMemoryTelemetryStore::setTelemetryFresh(bool fresh) {
   unlock();
 }
 
+void InMemoryTelemetryStore::updateEspHealth(const EspHealth& health) {
+  lock();
+  espHealth_ = health;
+  unlock();
+}
+
 bms::BatteryTelemetry InMemoryTelemetryStore::battery() const {
   lock();
   const bms::BatteryTelemetry copy = battery_;
@@ -110,6 +116,13 @@ bms::WarningFlags InMemoryTelemetryStore::warnings() const {
 GatewayStatus InMemoryTelemetryStore::status() const {
   lock();
   const GatewayStatus copy = status_;
+  unlock();
+  return copy;
+}
+
+EspHealth InMemoryTelemetryStore::espHealth() const {
+  lock();
+  const EspHealth copy = espHealth_;
   unlock();
   return copy;
 }
