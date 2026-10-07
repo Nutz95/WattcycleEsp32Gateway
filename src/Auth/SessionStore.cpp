@@ -42,7 +42,13 @@ bool SessionStore::create(char* tokenOut, size_t tokenCapacity, uint32_t nowMs) 
     }
   }
   if (slot < 0) {
-    slot = 0;  // reuse oldest slot under pressure
+    // Evict the session that expires soonest (oldest remaining TTL budget).
+    slot = 0;
+    for (size_t i = 1; i < kMaxSessions; ++i) {
+      if (sessions_[i].expiresAtMs < sessions_[static_cast<size_t>(slot)].expiresAtMs) {
+        slot = static_cast<int>(i);
+      }
+    }
   }
 
   uint8_t raw[kSessionTokenBytes] = {};
