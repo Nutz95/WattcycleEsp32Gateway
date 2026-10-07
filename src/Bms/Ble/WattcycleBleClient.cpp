@@ -57,22 +57,46 @@ bool WattcycleBleClient::connect(const char* address, uint32_t timeoutMs) {
   disconnect();
   NimBLEDevice::init("WattcycleGateway");
   NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+  NimBLEDevice::setMTU(247);
 
-  NimBLEClient* client = NimBLEDevice::createClient();
-  client->setConnectTimeout(timeoutMs / 1000);
-  if (!client->connect(NimBLEAddress(address))) {
+  // Brief scan helps some stacks resolve peer address type / RPA.
+  NimBLEScan* scan = NimBLEDevice::getScan();
+  scan->setActiveScan(true);
+  scan->setInterval(45);
+  scan->setWindow(15);
+  scan->start(2, false);
+  scan->clearResults();
+
+  // Wattcycle / XDZN packs typically advertise a random address.
+  const uint8_t addressTypes[] = {BLE_ADDR_RANDOM, BLE_ADDR_PUBLIC};
+  NimBLEClient* client = nullptr;
+  for (uint8_t addressType : addressTypes) {
+    client = NimBLEDevice::createClient();
+    const uint32_t timeoutSeconds =
+        timeoutMs < 1000 ? 1 : (timeoutMs + 999) / 1000;
+    client->setConnectTimeout(timeoutSeconds);
+    Serial.printf("BLE connect %s type=%u...\n", address, addressType);
+    if (client->connect(NimBLEAddress(address, addressType))) {
+      Serial.printf("BLE connected (type=%u)\n", addressType);
+      break;
+    }
     NimBLEDevice::deleteClient(client);
+    client = nullptr;
+  }
+  if (client == nullptr) {
     return false;
   }
 
   clientHandle_ = client;
   if (!resolveCharacteristics()) {
+    Serial.println(F("BLE GATT resolve failed"));
     disconnect();
     return false;
   }
 
   auto* notify = asCharacteristic(notifyCharacteristic_);
   if (!notify->subscribe(true, notifyCallback)) {
+    Serial.println(F("BLE notify subscribe failed"));
     disconnect();
     return false;
   }
@@ -80,6 +104,7 @@ bool WattcycleBleClient::connect(const char* address, uint32_t timeoutMs) {
   gActiveClient = this;
   connected_ = true;
   if (!authenticate()) {
+    Serial.println(F("BLE HiLink auth failed"));
     disconnect();
     return false;
   }

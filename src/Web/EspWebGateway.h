@@ -19,14 +19,19 @@ class EspWebGateway : public IWebGateway {
 
  private:
   void handleRoot();
-  void handleApiTelemetry();
+  void handleApiTelemetryBinary();
   void handleNotFound();
+  bool trySendCached(const char* path, const char* contentType);
+  void sendWithEtag(const char* path, const char* contentType);
 
   telemetry::ITelemetryStore& store_;
 #ifndef UNIT_TEST
   std::unique_ptr<WebServer> server_;
 #endif
   bool started_ = false;
+  char indexEtag_[17] = {};
+  char cssEtag_[17] = {};
+  char jsEtag_[17] = {};
 };
 
 }  // namespace wattcycle::web

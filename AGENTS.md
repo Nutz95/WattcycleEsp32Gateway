@@ -22,7 +22,7 @@ The gateway:
 - Inject secrets only via environment variables consumed by PlatformIO:
   - `WIFI_SSID`
   - `WIFI_PASS`
-  - `BMS_BLE_ADDRESS` (optional but required for BLE connect)
+  - `BMS_BLE_ADDRESS` (BLE MAC only — required for BMS connect; no serial/password)
 - Do not commit `.env` files, private keys, or captured telemetry dumps with PII.
 
 ### Architecture (SOLID + DI)

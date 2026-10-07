@@ -131,10 +131,12 @@ Design goals: **SOLID**, constructor injection, files **&lt; 400 lines**, classe
 ```powershell
 $env:WIFI_SSID = "YourWifiName"
 $env:WIFI_PASS = "YourWifiPassword"
-$env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # from phone app / BLE scan
+$env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # BLE MAC only — no serial / password needed
 ```
 
-> Tip: leave `BMS_BLE_ADDRESS` unset only while bringing Wi-Fi/UI up; BLE polling will report a clear error on the display and `/api/telemetry`.
+> **BMS connection:** only the BLE MAC (`BMS_BLE_ADDRESS`) is required. Auth uses the fixed Wattcycle `HiLink` key over GATT (no pairing, no serial number). Find the MAC in the phone app or any BLE scanner (`XDZN…` / `WT…` names).
+
+> Tip: leave `BMS_BLE_ADDRESS` unset only while bringing Wi-Fi/UI up; BLE polling will report a clear error on the display and `/api/telemetry.bin`.
 
 ### 1. Run unit tests + guardrails
 
@@ -159,11 +161,13 @@ This uploads firmware **and** the LittleFS web assets.
 http://<esp-ip>:6789/
 ```
 
-JSON API:
+Binary telemetry API (decoded in the browser):
 
 ```text
-http://<esp-ip>:6789/api/telemetry
+http://<esp-ip>:6789/api/telemetry.bin
 ```
+
+Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets).
 
 ### 4. Later updates over the air
 

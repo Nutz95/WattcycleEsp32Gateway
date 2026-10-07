@@ -9,6 +9,11 @@
 #include "Web/IWebGateway.h"
 #include "Wifi/IWifiConnector.h"
 
+#ifndef UNIT_TEST
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
 namespace wattcycle::composition {
 
 /// Owns the application loop; depends only on interfaces (wired in main).
@@ -24,8 +29,14 @@ class GatewayApplication {
   void serviceNetwork();
 
  private:
-  void refreshWifiStatus();
+  void startBleTask();
+  void refreshWifiStatus(uint32_t nowMs);
   void maybeRefreshDisplay(uint32_t nowMs);
+
+#ifndef UNIT_TEST
+  static void bleTaskTrampoline(void* context);
+  void bleTaskLoop();
+#endif
 
   config::AppConfig appConfig_;
   wifi::IWifiConnector& wifiConnector_;
@@ -36,6 +47,10 @@ class GatewayApplication {
   web::IWebGateway& webGateway_;
   display::IStatusDisplay& statusDisplay_;
   uint32_t lastDisplayMs_ = 0;
+  uint32_t lastWifiStatusMs_ = 0;
+#ifndef UNIT_TEST
+  TaskHandle_t bleTaskHandle_ = nullptr;
+#endif
 };
 
 }  // namespace wattcycle::composition

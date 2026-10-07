@@ -13,12 +13,6 @@ namespace {
 
 wattcycle::composition::GatewayApplication* gApplication = nullptr;
 
-void bleLoopYield() {
-  if (gApplication != nullptr) {
-    gApplication->serviceNetwork();
-  }
-}
-
 }  // namespace
 
 void setup() {
@@ -26,10 +20,14 @@ void setup() {
   delay(200);
   Serial.println();
   Serial.println(F("Wattcycle ESP32 Gateway"));
-  Serial.println(F("Board: ESP32-D0WDQ6 TTGO T-Display"));
+  Serial.println(F("Board: ESP32-D0WDQ6 TTGO T-Display (dual-core)"));
+  Serial.println(F("Mode: monitoring only (no BMS writes)"));
 
   const wattcycle::config::AppConfig config =
       wattcycle::config::AppConfigFactory::fromBuildFlags();
+
+  Serial.printf("BMS target: %s\n",
+                config.bmsBleAddress[0] ? config.bmsBleAddress : "(unset)");
 
   static wattcycle::wifi::EspWifiConnector wifiConnector;
   static wattcycle::ota::ArduinoOtaUpdater otaUpdater;
@@ -38,8 +36,6 @@ void setup() {
   static wattcycle::web::EspWebGateway webGateway(telemetryStore);
   static wattcycle::display::TtgoStatusDisplay statusDisplay;
 
-  wattcycle::bms::WattcycleBleClient::setLoopYield(bleLoopYield);
-
   static wattcycle::composition::GatewayApplication application(
       config, wifiConnector, otaUpdater, bleClient, telemetryStore, webGateway,
       statusDisplay);
@@ -47,8 +43,6 @@ void setup() {
 
   if (!application.begin()) {
     Serial.println(F("Gateway boot incomplete — check Serial / display errors"));
-  } else {
-    Serial.printf("Web UI: http://<device-ip>:%u/\n", config.webServerPort);
   }
 }
 

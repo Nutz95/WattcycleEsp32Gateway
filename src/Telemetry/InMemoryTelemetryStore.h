@@ -2,10 +2,18 @@
 
 #include "Telemetry/ITelemetryStore.h"
 
+#ifndef UNIT_TEST
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#endif
+
 namespace wattcycle::telemetry {
 
 class InMemoryTelemetryStore : public ITelemetryStore {
  public:
+  InMemoryTelemetryStore();
+  ~InMemoryTelemetryStore() override;
+
   void updateBattery(const bms::BatteryTelemetry& telemetry) override;
   void updateProduct(const bms::ProductInfo& product) override;
   void updateWarnings(const bms::WarningFlags& warnings) override;
@@ -19,10 +27,16 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   GatewayStatus status() const override;
 
  private:
+  void lock() const;
+  void unlock() const;
+
   bms::BatteryTelemetry battery_{};
   bms::ProductInfo product_{};
   bms::WarningFlags warnings_{};
   GatewayStatus status_{};
+#ifndef UNIT_TEST
+  SemaphoreHandle_t mutex_ = nullptr;
+#endif
 };
 
 }  // namespace wattcycle::telemetry
