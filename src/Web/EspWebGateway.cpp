@@ -45,8 +45,9 @@ bool computeFileEtag(const char* path, char* out, size_t capacity) {
 
 }  // namespace
 
-EspWebGateway::EspWebGateway(telemetry::ITelemetryStore& store, auth::IAuthService& authService)
-    : store_(store), authService_(authService) {}
+EspWebGateway::EspWebGateway(telemetry::ITelemetryStore& store,
+                             auth::IAuthSessionService& authSessions)
+    : store_(store), authSessions_(authSessions) {}
 
 bool EspWebGateway::begin(uint16_t port) {
   if (!LittleFS.begin(true)) {
@@ -132,7 +133,7 @@ void EspWebGateway::sendUnauthorized() {
 bool EspWebGateway::requireAuth() {
   char token[auth::kSessionTokenHexLen + 1] = {};
   collectSessionToken(token, sizeof(token));
-  if (!authService_.isAuthenticated(token)) {
+  if (!authSessions_.isAuthenticated(token)) {
     sendUnauthorized();
     return false;
   }
@@ -189,7 +190,7 @@ void EspWebGateway::handleRoot() {
 void EspWebGateway::handleAuthStatus() {
   char token[auth::kSessionTokenHexLen + 1] = {};
   collectSessionToken(token, sizeof(token));
-  const auto st = authService_.status(token);
+  const auto st = authSessions_.status(token);
   char json[160];
   std::snprintf(json, sizeof(json),
                 "{\"configured\":%s,\"pendingSetup\":%s,\"pendingReset\":%s,\"authenticated\":%s}",
@@ -224,7 +225,7 @@ void EspWebGateway::handleAuthSetup() {
     return;
   }
   char error[32] = {};
-  if (!authService_.beginSetup(username, password, error, sizeof(error))) {
+  if (!authSessions_.beginSetup(username, password, error, sizeof(error))) {
     char json[80];
     std::snprintf(json, sizeof(json), "{\"error\":\"%s\"}", error[0] ? error : "rejected");
     sendJson(400, json);
@@ -241,7 +242,7 @@ void EspWebGateway::handleAuthLogin() {
   }
   char token[auth::kSessionTokenHexLen + 1] = {};
   char error[32] = {};
-  if (!authService_.login(username, password, token, sizeof(token), error, sizeof(error))) {
+  if (!authSessions_.login(username, password, token, sizeof(token), error, sizeof(error))) {
     char json[80];
     std::snprintf(json, sizeof(json), "{\"error\":\"%s\"}", error[0] ? error : "rejected");
     const int code = (std::strcmp(error, "locked") == 0) ? 429 : 401;
@@ -258,7 +259,7 @@ void EspWebGateway::handleAuthLogin() {
 void EspWebGateway::handleAuthLogout() {
   char token[auth::kSessionTokenHexLen + 1] = {};
   collectSessionToken(token, sizeof(token));
-  authService_.logout(token);
+  authSessions_.logout(token);
   server_->sendHeader("Set-Cookie", "wg_session=; Path=/; Max-Age=0");
   sendJson(200, "{\"ok\":true}");
 }

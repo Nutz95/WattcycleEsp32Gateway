@@ -16,11 +16,6 @@ class AuthService : public IAuthService {
 
   bool beginSetup(const char* username, const char* password, char* error,
                   size_t errorCapacity) override;
-  bool confirmSetup() override;
-  void cancelPending() override;
-
-  bool beginResetRequest() override;
-  bool confirmReset() override;
 
   bool login(const char* username, const char* password, char* sessionTokenOut,
              size_t sessionTokenCapacity, char* error, size_t errorCapacity) override;
@@ -32,7 +27,10 @@ class AuthService : public IAuthService {
   void onCancelPressed() override;
 
  private:
-  static void copyError(char* error, size_t capacity, const char* message);
+  bool confirmSetup();
+  void cancelPending();
+  bool beginResetRequest();
+  bool confirmReset();
   bool recordLoginFailure(uint32_t nowMs, char* error, size_t errorCapacity);
   uint32_t nowMs() const;
 

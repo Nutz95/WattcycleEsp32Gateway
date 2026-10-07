@@ -1,29 +1,12 @@
 #include "CompositionRoot/GatewayApplication.h"
 
 #include "Config/TimingConstants.h"
-#include "Util/SafeCopy.h"
 
 #ifndef UNIT_TEST
 #include <Arduino.h>
 #endif
 
 namespace wattcycle::composition {
-namespace {
-
-display::DisplayAuthKind mapAuthKind(auth::AuthPromptKind kind) {
-  switch (kind) {
-    case auth::AuthPromptKind::ConfirmSetup:
-      return display::DisplayAuthKind::ConfirmSetup;
-    case auth::AuthPromptKind::ConfirmReset:
-      return display::DisplayAuthKind::ConfirmReset;
-    case auth::AuthPromptKind::None:
-    default:
-      return display::DisplayAuthKind::None;
-  }
-}
-
-}  // namespace
-
 
 GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        wifi::IWifiConnector& wifiConnector,
@@ -32,7 +15,7 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        telemetry::ITelemetryStore& telemetryStore,
                                        web::IWebGateway& webGateway,
                                        display::IStatusDisplay& statusDisplay,
-                                       auth::IAuthService& authService)
+                                       auth::IAuthPhysicalConfirm& authConfirm)
     : appConfig_(appConfig),
       wifiConnector_(wifiConnector),
       otaUpdater_(otaUpdater),
@@ -41,13 +24,12 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
       telemetryPoller_(bleClient, telemetryStore, appConfig),
       webGateway_(webGateway),
       statusDisplay_(statusDisplay),
-      authService_(authService) {}
+      authConfirm_(authConfirm) {}
 
 bool GatewayApplication::begin() {
   statusDisplay_.begin();
   buttonNavigator_.begin();
   espHealthSampler_.begin();
-  authService_.begin();
   lastInputMs_ = millis();
 
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
@@ -130,20 +112,12 @@ void GatewayApplication::notifyDisplay() {
 }
 
 bool GatewayApplication::authUiActive() const {
-  return authService_.prompt().kind != auth::AuthPromptKind::None;
-}
-
-display::DisplayAuthPrompt GatewayApplication::toDisplayAuthPrompt() const {
-  const auth::AuthPrompt prompt = authService_.prompt();
-  display::DisplayAuthPrompt out;
-  out.kind = mapAuthKind(prompt.kind);
-  util::copyCString(out.username, sizeof(out.username), prompt.username);
-  return out;
+  return authConfirm_.prompt().kind != auth::AuthPromptKind::None;
 }
 
 bool GatewayApplication::handleAuthUi(const display::ButtonEvent& event, uint32_t nowMs) {
   const bool wasActive = authUiActive();
-  authService_.onCancelHeld(event.cancelHeld, nowMs);
+  authConfirm_.onCancelHeld(event.cancelHeld, nowMs);
   if (!authUiActive()) {
     return false;
   }
@@ -156,10 +130,10 @@ bool GatewayApplication::handleAuthUi(const display::ButtonEvent& event, uint32_
   }
 
   if (event.action == display::ButtonAction::Next) {
-    authService_.onConfirmPressed();
+    authConfirm_.onConfirmPressed();
     notifyDisplay();
   } else if (event.action == display::ButtonAction::Previous) {
-    authService_.onCancelPressed();
+    authConfirm_.onCancelPressed();
     notifyDisplay();
   }
   return true;
@@ -228,7 +202,7 @@ void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
 
 void GatewayApplication::renderCurrentDisplay() {
   if (authUiActive()) {
-    statusDisplay_.renderAuthPrompt(toDisplayAuthPrompt());
+    statusDisplay_.renderAuthPrompt(authConfirm_.prompt());
     return;
   }
   statusDisplay_.render(telemetryStore_);
@@ -236,7 +210,7 @@ void GatewayApplication::renderCurrentDisplay() {
 
 uint32_t GatewayApplication::displayFingerprint() const {
   if (authUiActive()) {
-    return 0xA0000000u | static_cast<uint32_t>(authService_.prompt().kind);
+    return 0xA0000000u | static_cast<uint32_t>(authConfirm_.prompt().kind);
   }
   const auto battery = telemetryStore_.battery();
   const auto esp = telemetryStore_.espHealth();

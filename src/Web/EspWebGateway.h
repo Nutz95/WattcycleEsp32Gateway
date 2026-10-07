@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Auth/IAuthService.h"
+#include "Auth/IAuthSessionService.h"
 #include "Telemetry/ITelemetryStore.h"
 #include "Web/IWebGateway.h"
 
@@ -13,7 +13,7 @@ namespace wattcycle::web {
 
 class EspWebGateway : public IWebGateway {
  public:
-  EspWebGateway(telemetry::ITelemetryStore& store, auth::IAuthService& authService);
+  EspWebGateway(telemetry::ITelemetryStore& store, auth::IAuthSessionService& authSessions);
 
   bool begin(uint16_t port) override;
   void loop() override;
@@ -39,7 +39,7 @@ class EspWebGateway : public IWebGateway {
   bool requireAuth();
 
   telemetry::ITelemetryStore& store_;
-  auth::IAuthService& authService_;
+  auth::IAuthSessionService& authSessions_;
 #ifndef UNIT_TEST
   std::unique_ptr<WebServer> server_;
 #endif

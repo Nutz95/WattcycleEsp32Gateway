@@ -37,6 +37,7 @@ void setup() {
   static wattcycle::telemetry::InMemoryTelemetryStore telemetryStore;
   static wattcycle::auth::NvsCredentialStore credentialStore;
   static wattcycle::auth::AuthService authService(credentialStore);
+  authService.begin();
   static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService);
   static wattcycle::display::TtgoStatusDisplay statusDisplay;
 

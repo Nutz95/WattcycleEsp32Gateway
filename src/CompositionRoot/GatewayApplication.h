@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Auth/IAuthService.h"
+#include "Auth/IAuthPhysicalConfirm.h"
 #include "Bms/Ble/IBmsBleClient.h"
 #include "Config/AppConfig.h"
 #include "Display/ButtonNavigator.h"
@@ -24,7 +24,8 @@ class GatewayApplication {
   GatewayApplication(const config::AppConfig& appConfig, wifi::IWifiConnector& wifiConnector,
                      ota::IOtaUpdater& otaUpdater, bms::IBmsBleClient& bleClient,
                      telemetry::ITelemetryStore& telemetryStore, web::IWebGateway& webGateway,
-                     display::IStatusDisplay& statusDisplay, auth::IAuthService& authService);
+                     display::IStatusDisplay& statusDisplay,
+                     auth::IAuthPhysicalConfirm& authConfirm);
 
   bool begin();
   void loop();
@@ -38,7 +39,6 @@ class GatewayApplication {
   void handleButtons(uint32_t nowMs);
   bool handleAuthUi(const display::ButtonEvent& event, uint32_t nowMs);
   bool authUiActive() const;
-  display::DisplayAuthPrompt toDisplayAuthPrompt() const;
   void notifyDisplay();
   void sleepDisplay();
   void wakeDisplay(uint32_t nowMs);
@@ -61,7 +61,7 @@ class GatewayApplication {
   telemetry::TelemetryPoller telemetryPoller_;
   web::IWebGateway& webGateway_;
   display::IStatusDisplay& statusDisplay_;
-  auth::IAuthService& authService_;
+  auth::IAuthPhysicalConfirm& authConfirm_;
   display::ButtonNavigator buttonNavigator_;
   esp_sys::EspHealthSampler espHealthSampler_;
   uint32_t lastWifiStatusMs_ = 0;

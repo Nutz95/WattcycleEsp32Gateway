@@ -33,18 +33,14 @@ uint32_t AuthService::nowMs() const {
   return millis();
 }
 
-void AuthService::copyError(char* error, size_t capacity, const char* message) {
-  util::copyCString(error, capacity, message);
-}
-
 bool AuthService::recordLoginFailure(uint32_t now, char* error, size_t errorCapacity) {
   loginFailures_ += 1;
   if (loginFailures_ >= kMaxLoginFailures) {
     loginLockUntilMs_ = now + kLoginLockoutMs;
     loginFailures_ = 0;
-    copyError(error, errorCapacity, "locked");
+    util::copyCString(error, errorCapacity, "locked");
   } else {
-    copyError(error, errorCapacity, "invalid_credentials");
+    util::copyCString(error, errorCapacity, "invalid_credentials");
   }
   return false;
 }
@@ -72,11 +68,11 @@ AuthPrompt AuthService::prompt() const {
 bool AuthService::beginSetup(const char* username, const char* password, char* error,
                              size_t errorCapacity) {
   if (credentialStore_.hasCredentials()) {
-    copyError(error, errorCapacity, "already_configured");
+    util::copyCString(error, errorCapacity, "already_configured");
     return false;
   }
   if (pendingSetup_.active || pendingReset_) {
-    copyError(error, errorCapacity, "pending_confirmation");
+    util::copyCString(error, errorCapacity, "pending_confirmation");
     return false;
   }
   if (!CredentialPolicy::validateUsername(username, error, errorCapacity)) {
@@ -90,7 +86,7 @@ bool AuthService::beginSetup(const char* username, const char* password, char* e
   pendingSetup_.active = true;
   util::copyCString(pendingSetup_.username, sizeof(pendingSetup_.username), username);
   util::copyCString(pendingSetup_.password, sizeof(pendingSetup_.password), password);
-  copyError(error, errorCapacity, "");
+  util::copyCString(error, errorCapacity, "");
   return true;
 }
 
@@ -148,16 +144,16 @@ bool AuthService::login(const char* username, const char* password, char* sessio
                         size_t sessionTokenCapacity, char* error, size_t errorCapacity) {
   const uint32_t now = nowMs();
   if (now < loginLockUntilMs_) {
-    copyError(error, errorCapacity, "locked");
+    util::copyCString(error, errorCapacity, "locked");
     return false;
   }
   if (!credentialStore_.hasCredentials()) {
-    copyError(error, errorCapacity, "not_configured");
+    util::copyCString(error, errorCapacity, "not_configured");
     return false;
   }
   StoredCredentials credentials;
   if (!credentialStore_.load(credentials)) {
-    copyError(error, errorCapacity, "not_configured");
+    util::copyCString(error, errorCapacity, "not_configured");
     return false;
   }
 
@@ -178,10 +174,10 @@ bool AuthService::login(const char* username, const char* password, char* sessio
   loginFailures_ = 0;
   loginLockUntilMs_ = 0;
   if (!sessions_.create(sessionTokenOut, sessionTokenCapacity, now)) {
-    copyError(error, errorCapacity, "session_failed");
+    util::copyCString(error, errorCapacity, "session_failed");
     return false;
   }
-  copyError(error, errorCapacity, "");
+  util::copyCString(error, errorCapacity, "");
   return true;
 }
 
