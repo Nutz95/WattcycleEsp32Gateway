@@ -23,8 +23,10 @@ The gateway:
   - `WIFI_SSID`
   - `WIFI_PASS`
   - `BMS_BLE_ADDRESS` (BLE MAC only — required for BMS connect; no serial/password)
-- Web UI auth: salted SHA-256 hashes in NVS (`wg_auth`); sessions are RAM-only; telemetry APIs must be gated server-side (never trust the browser).
+- Web UI auth: salted SHA-256 hashes in NVS (`wg_auth`); sessions are RAM-only (max 4; oldest-expiring eviction); telemetry APIs must be gated server-side (never trust the browser).
+- Auth ISP: `IAuthSessionService` (web: begin/status/setup/login/logout) + `IAuthPhysicalConfirm` (buttons/display); physical confirm/reset transitions are private on `AuthService`, not on the web port. Display renders `auth::AuthPrompt` directly — no parallel Display DTO.
 - First-time setup / password reset require physical confirm (GPIO35 = OK, GPIO0 = Cancel; hold GPIO0 3s to request reset).
+- HTTP on LAN is intentional (classic ESP32 + NimBLE: in-process TLS freezes under load). Do not expose port 6789 publicly.
 - Do not commit `.env` files, private keys, or captured telemetry dumps with PII.
 
 ### Architecture (SOLID + DI)
@@ -35,7 +37,9 @@ The gateway:
   - `Bms/` protocol + BLE transport
   - `Telemetry/` store + polling + binary codec + gateway status
   - `Auth/` NVS-hashed web credentials + RAM sessions + physical confirm
-  - `Wifi/`, `Ota/`, `Web/`, `Display/`, `Config/`, `CompositionRoot/`
+  - `Wifi/`, `Ota/`, `Web/`, `Display/`, `Esp/`, `Util/`, `Config/`, `CompositionRoot/`
+  - `web/` SPA sources → `scripts/bundle_web.ps1` → LittleFS `data/` (gitignored)
+- Browser chart history is localStorage-only (not on-device long-term storage).
 - No nested classes.
 - No god-objects: **≤ 400 lines per file**, **≤ 30 methods per class**.
 - Run `scripts/check_guardrails.ps1` (also invoked by `scripts/run_tests.ps1`).
@@ -81,5 +85,6 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"
 ## Out of scope (unless explicitly requested)
 
 - Writing charge/discharge control commands to the BMS.
-- Storing long-term history (no SD card — keep the design ephemeral + live JSON).
+- Storing long-term history on the ESP (no SD card — live binary telemetry; optional browser localStorage charts only).
 - Migrating to ESP32-S3 / different display boards without an architecture note.
+- Shipping in-process HTTPS on classic ESP32 + NimBLE until a lighter TLS path exists.

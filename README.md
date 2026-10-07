@@ -119,9 +119,11 @@ src/
     Models/          # BatteryTelemetry, warnings, product info
     Protocol/        # CRC, frames, parsers (unit-tested)
     Ble/             # NimBLE adapter
-  Telemetry/         # Store, poller, JSON serializer
-  Wifi/  Ota/  Web/  Display/data/                # LittleFS web UI (index/css/js)
-scripts/             # run_tests / flash_usb / flash_ota / guardrails
+  Telemetry/         # Store, poller, binary codec, gateway status
+  Auth/              # NVS credentials, RAM sessions, physical confirm (ISP-split)
+  Wifi/  Ota/  Web/  Display/  Esp/  Util/
+web/                 # SPA sources (bundled → data/ LittleFS)
+scripts/             # run_tests / flash_usb / flash_ota / guardrails / bundle_web
 test/                # PlatformIO native Unity tests
 ```
 
@@ -260,7 +262,7 @@ pio device monitor -p COM19 -b 115200
 | `WIFI_SSID` / `WIFI_PASS` | Station credentials (build-time inject) |
 | `BMS_BLE_ADDRESS` | Target BMS MAC `AA:BB:CC:DD:EE:FF` |
 | `WEB_SERVER_PORT` | Default **6789** |
-| `BMS_POLL_INTERVAL_MS` | Default **5000** |
+| `BMS_POLL_INTERVAL_MS` | Default **2000** (UI refresh matches) |
 | `OTA_HOSTNAME` | Default `wattcycle-gateway` |
 
 ---
@@ -275,6 +277,8 @@ classDiagram
   class IOtaUpdater
   class IWebGateway
   class IStatusDisplay
+  class IAuthSessionService
+  class IAuthPhysicalConfirm
   class GatewayApplication
   class TelemetryPoller
 
@@ -282,13 +286,18 @@ classDiagram
   GatewayApplication --> IOtaUpdater
   GatewayApplication --> IWebGateway
   GatewayApplication --> IStatusDisplay
+  GatewayApplication --> IAuthPhysicalConfirm
   GatewayApplication --> TelemetryPoller
   TelemetryPoller --> IBmsBleClient
   TelemetryPoller --> ITelemetryStore
   IWebGateway --> ITelemetryStore
+  IWebGateway --> IAuthSessionService
+  IStatusDisplay ..> AuthPrompt : renders
 ```
 
-`src/main.cpp` constructs concrete adapters and injects them into `GatewayApplication` (interfaces only).
+`src/main.cpp` constructs concrete adapters and injects them into `GatewayApplication` (interfaces only); auth `begin()` runs in `main` before the composition root.
+Auth is ISP-split: `EspWebGateway` depends on `IAuthSessionService` (login/setup start only — physical confirm/reset stay private on `AuthService`); display/buttons use `IAuthPhysicalConfirm` + shared `auth::AuthPrompt`.
+Browser chart history is **localStorage only** (up to 24 h, ephemeral per device) — not stored on the ESP.
 `scripts/check_guardrails.ps1` fails if files grow past limits or concrete adapter headers leak outside `main.cpp` / their domain.
 
 ---
