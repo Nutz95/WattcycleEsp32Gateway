@@ -2,7 +2,10 @@
 
 #ifndef UNIT_TEST
 
+#include "Auth/CredentialPolicy.h"
 #include "Telemetry/BinaryTelemetryCodec.h"
+#include "Util/SafeCopy.h"
+#include "Web/JsonField.h"
 
 #include <FS.h>
 #include <LittleFS.h>
@@ -42,7 +45,8 @@ bool computeFileEtag(const char* path, char* out, size_t capacity) {
 
 }  // namespace
 
-EspWebGateway::EspWebGateway(telemetry::ITelemetryStore& store) : store_(store) {}
+EspWebGateway::EspWebGateway(telemetry::ITelemetryStore& store, auth::IAuthService& authService)
+    : store_(store), authService_(authService) {}
 
 bool EspWebGateway::begin(uint16_t port) {
   if (!LittleFS.begin(true)) {
@@ -54,9 +58,13 @@ bool EspWebGateway::begin(uint16_t port) {
   computeFileEtag("/app.js", jsEtag_, sizeof(jsEtag_));
 
   server_ = std::unique_ptr<WebServer>(new WebServer(port));
-  const char* collectHeaders[] = {"If-None-Match"};
-  server_->collectHeaders(collectHeaders, 1);
+  const char* collectHeaders[] = {"If-None-Match", "Cookie"};
+  server_->collectHeaders(collectHeaders, 2);
   server_->on("/", HTTP_GET, [this]() { handleRoot(); });
+  server_->on("/api/auth/status", HTTP_GET, [this]() { handleAuthStatus(); });
+  server_->on("/api/auth/setup", HTTP_POST, [this]() { handleAuthSetup(); });
+  server_->on("/api/auth/login", HTTP_POST, [this]() { handleAuthLogin(); });
+  server_->on("/api/auth/logout", HTTP_POST, [this]() { handleAuthLogout(); });
   server_->on("/api/telemetry", HTTP_GET, [this]() { handleApiTelemetryBinary(); });
   server_->on("/api/telemetry.bin", HTTP_GET, [this]() { handleApiTelemetryBinary(); });
   server_->onNotFound([this]() { handleNotFound(); });
@@ -69,6 +77,66 @@ void EspWebGateway::loop() {
   if (started_ && server_) {
     server_->handleClient();
   }
+}
+
+void EspWebGateway::collectSessionToken(char* out, size_t capacity) const {
+  out[0] = '\0';
+  if (!server_->hasHeader("Cookie")) {
+    return;
+  }
+  const String cookie = server_->header("Cookie");
+  const int idx = cookie.indexOf("wg_session=");
+  if (idx < 0) {
+    return;
+  }
+  int start = idx + 11;
+  int end = cookie.indexOf(';', start);
+  if (end < 0) {
+    end = cookie.length();
+  }
+  wattcycle::util::copyCString(out, capacity, cookie.substring(start, end).c_str());
+}
+
+bool EspWebGateway::readAuthBody(char* body, size_t capacity, size_t& length, char* error,
+                                 size_t errorCapacity) {
+  length = 0;
+  if (!server_->hasArg("plain")) {
+    wattcycle::util::copyCString(error, errorCapacity, "invalid_json");
+    return false;
+  }
+  const String plain = server_->arg("plain");
+  const size_t contentLength = plain.length();
+  if (contentLength == 0 || contentLength > auth::CredentialPolicy::kMaxJsonBodyBytes ||
+      contentLength >= capacity) {
+    wattcycle::util::copyCString(error, errorCapacity,
+                                 contentLength > auth::CredentialPolicy::kMaxJsonBodyBytes
+                                     ? "payload_too_large"
+                                     : "invalid_json");
+    return false;
+  }
+  std::memcpy(body, plain.c_str(), contentLength);
+  body[contentLength] = '\0';
+  length = contentLength;
+  return auth::CredentialPolicy::validateAuthJsonBody(body, length, error, errorCapacity);
+}
+
+void EspWebGateway::sendJson(int code, const char* json) {
+  server_->sendHeader("Cache-Control", "no-store");
+  server_->send(code, "application/json", json);
+}
+
+void EspWebGateway::sendUnauthorized() {
+  sendJson(401, "{\"error\":\"unauthorized\"}");
+}
+
+bool EspWebGateway::requireAuth() {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  if (!authService_.isAuthenticated(token)) {
+    sendUnauthorized();
+    return false;
+  }
+  return true;
 }
 
 bool EspWebGateway::trySendCached(const char* path, const char* contentType) {
@@ -85,8 +153,7 @@ bool EspWebGateway::trySendCached(const char* path, const char* contentType) {
     return false;
   }
 
-  if (server_->hasHeader("If-None-Match") &&
-      server_->header("If-None-Match") == String(etag)) {
+  if (server_->hasHeader("If-None-Match") && server_->header("If-None-Match") == String(etag)) {
     server_->send(304, contentType, "");
     return true;
   }
@@ -119,7 +186,87 @@ void EspWebGateway::handleRoot() {
   sendWithEtag("/index.html", "text/html");
 }
 
+void EspWebGateway::handleAuthStatus() {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  const auto st = authService_.status(token);
+  char json[160];
+  std::snprintf(json, sizeof(json),
+                "{\"configured\":%s,\"pendingSetup\":%s,\"pendingReset\":%s,\"authenticated\":%s}",
+                st.configured ? "true" : "false", st.pendingSetup ? "true" : "false",
+                st.pendingReset ? "true" : "false", st.authenticated ? "true" : "false");
+  sendJson(200, json);
+}
+
+bool EspWebGateway::parseAuthCredentials(char* username, size_t usernameCapacity, char* password,
+                                         size_t passwordCapacity) {
+  char body[auth::CredentialPolicy::kMaxJsonBodyBytes + 1] = {};
+  size_t length = 0;
+  char error[32] = {};
+  if (!readAuthBody(body, sizeof(body), length, error, sizeof(error))) {
+    char json[80];
+    std::snprintf(json, sizeof(json), "{\"error\":\"%s\"}", error[0] ? error : "invalid_json");
+    sendJson(400, json);
+    return false;
+  }
+  if (!extractJsonStringField(body, "username", username, usernameCapacity) ||
+      !extractJsonStringField(body, "password", password, passwordCapacity)) {
+    sendJson(400, "{\"error\":\"invalid_json\"}");
+    return false;
+  }
+  return true;
+}
+
+void EspWebGateway::handleAuthSetup() {
+  char username[auth::kMaxUsernameLen + 1] = {};
+  char password[auth::kMaxPasswordLen + 1] = {};
+  if (!parseAuthCredentials(username, sizeof(username), password, sizeof(password))) {
+    return;
+  }
+  char error[32] = {};
+  if (!authService_.beginSetup(username, password, error, sizeof(error))) {
+    char json[80];
+    std::snprintf(json, sizeof(json), "{\"error\":\"%s\"}", error[0] ? error : "rejected");
+    sendJson(400, json);
+    return;
+  }
+  sendJson(202, "{\"ok\":true,\"needsPhysicalConfirm\":true}");
+}
+
+void EspWebGateway::handleAuthLogin() {
+  char username[auth::kMaxUsernameLen + 1] = {};
+  char password[auth::kMaxPasswordLen + 1] = {};
+  if (!parseAuthCredentials(username, sizeof(username), password, sizeof(password))) {
+    return;
+  }
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  char error[32] = {};
+  if (!authService_.login(username, password, token, sizeof(token), error, sizeof(error))) {
+    char json[80];
+    std::snprintf(json, sizeof(json), "{\"error\":\"%s\"}", error[0] ? error : "rejected");
+    const int code = (std::strcmp(error, "locked") == 0) ? 429 : 401;
+    sendJson(code, json);
+    return;
+  }
+  char cookie[96];
+  std::snprintf(cookie, sizeof(cookie),
+                "wg_session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400", token);
+  server_->sendHeader("Set-Cookie", cookie);
+  sendJson(200, "{\"ok\":true}");
+}
+
+void EspWebGateway::handleAuthLogout() {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  authService_.logout(token);
+  server_->sendHeader("Set-Cookie", "wg_session=; Path=/; Max-Age=0");
+  sendJson(200, "{\"ok\":true}");
+}
+
 void EspWebGateway::handleApiTelemetryBinary() {
+  if (!requireAuth()) {
+    return;
+  }
   uint8_t payload[telemetry::BinaryTelemetryCodec::kMaxEncodedBytes];
   const size_t written =
       telemetry::BinaryTelemetryCodec::encode(store_, payload, sizeof(payload));

@@ -1,3 +1,5 @@
+#include "Auth/AuthService.h"
+#include "Auth/NvsCredentialStore.h"
 #include "Bms/Ble/WattcycleBleClient.h"
 #include "CompositionRoot/GatewayApplication.h"
 #include "Config/AppConfig.h"
@@ -33,12 +35,14 @@ void setup() {
   static wattcycle::ota::ArduinoOtaUpdater otaUpdater;
   static wattcycle::bms::WattcycleBleClient bleClient;
   static wattcycle::telemetry::InMemoryTelemetryStore telemetryStore;
-  static wattcycle::web::EspWebGateway webGateway(telemetryStore);
+  static wattcycle::auth::NvsCredentialStore credentialStore;
+  static wattcycle::auth::AuthService authService(credentialStore);
+  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService);
   static wattcycle::display::TtgoStatusDisplay statusDisplay;
 
   static wattcycle::composition::GatewayApplication application(
       config, wifiConnector, otaUpdater, bleClient, telemetryStore, webGateway,
-      statusDisplay);
+      statusDisplay, authService);
   gApplication = &application;
 
   if (!application.begin()) {
