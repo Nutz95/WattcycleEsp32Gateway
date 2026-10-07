@@ -1,12 +1,29 @@
 #include "CompositionRoot/GatewayApplication.h"
 
 #include "Config/TimingConstants.h"
+#include "Util/SafeCopy.h"
 
 #ifndef UNIT_TEST
 #include <Arduino.h>
 #endif
 
 namespace wattcycle::composition {
+namespace {
+
+display::DisplayAuthKind mapAuthKind(auth::AuthPromptKind kind) {
+  switch (kind) {
+    case auth::AuthPromptKind::ConfirmSetup:
+      return display::DisplayAuthKind::ConfirmSetup;
+    case auth::AuthPromptKind::ConfirmReset:
+      return display::DisplayAuthKind::ConfirmReset;
+    case auth::AuthPromptKind::None:
+    default:
+      return display::DisplayAuthKind::None;
+  }
+}
+
+}  // namespace
+
 
 GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        wifi::IWifiConnector& wifiConnector,
@@ -14,7 +31,8 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        bms::IBmsBleClient& bleClient,
                                        telemetry::ITelemetryStore& telemetryStore,
                                        web::IWebGateway& webGateway,
-                                       display::IStatusDisplay& statusDisplay)
+                                       display::IStatusDisplay& statusDisplay,
+                                       auth::IAuthService& authService)
     : appConfig_(appConfig),
       wifiConnector_(wifiConnector),
       otaUpdater_(otaUpdater),
@@ -22,19 +40,21 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
       telemetryStore_(telemetryStore),
       telemetryPoller_(bleClient, telemetryStore, appConfig),
       webGateway_(webGateway),
-      statusDisplay_(statusDisplay) {}
+      statusDisplay_(statusDisplay),
+      authService_(authService) {}
 
 bool GatewayApplication::begin() {
   statusDisplay_.begin();
   buttonNavigator_.begin();
   espHealthSampler_.begin();
+  authService_.begin();
   lastInputMs_ = millis();
 
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
     telemetryStore_.setWifiState(false, "");
     telemetryStore_.setBleState(false, appConfig_.bmsBleAddress,
                                 "WIFI_SSID/WIFI_PASS missing");
-    statusDisplay_.render(telemetryStore_);
+    renderCurrentDisplay();
     startDisplayTask();
     return false;
   }
@@ -43,18 +63,19 @@ bool GatewayApplication::begin() {
       appConfig_.wifiSsid, appConfig_.wifiPassword, appConfig_.wifiConnectTimeoutMs);
   refreshWifiStatus(millis());
   if (!wifiOk) {
-    statusDisplay_.render(telemetryStore_);
+    renderCurrentDisplay();
     startDisplayTask();
     return false;
   }
 
   otaUpdater_.begin(appConfig_.otaHostname);
   webGateway_.begin(appConfig_.webServerPort);
+  telemetryStore_.setWebPort(appConfig_.webServerPort);
   telemetryPoller_.begin();
   startBleTask();
   refreshWifiStatus(millis());
   sampleEspHealth();
-  statusDisplay_.render(telemetryStore_);
+  renderCurrentDisplay();
   startDisplayTask();
 #ifndef UNIT_TEST
   Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
@@ -99,14 +120,60 @@ void GatewayApplication::refreshWifiStatus(uint32_t nowMs) {
   lastWifiStatusMs_ = nowMs;
 }
 
+void GatewayApplication::notifyDisplay() {
+  lastDisplayFingerprint_ = 0;
+#ifndef UNIT_TEST
+  if (displayTaskHandle_ != nullptr) {
+    xTaskNotifyGive(displayTaskHandle_);
+  }
+#endif
+}
+
+bool GatewayApplication::authUiActive() const {
+  return authService_.prompt().kind != auth::AuthPromptKind::None;
+}
+
+display::DisplayAuthPrompt GatewayApplication::toDisplayAuthPrompt() const {
+  const auth::AuthPrompt prompt = authService_.prompt();
+  display::DisplayAuthPrompt out;
+  out.kind = mapAuthKind(prompt.kind);
+  util::copyCString(out.username, sizeof(out.username), prompt.username);
+  return out;
+}
+
+bool GatewayApplication::handleAuthUi(const display::ButtonEvent& event, uint32_t nowMs) {
+  const bool wasActive = authUiActive();
+  authService_.onCancelHeld(event.cancelHeld, nowMs);
+  if (!authUiActive()) {
+    return false;
+  }
+
+  if (displayAsleep_ || !wasActive) {
+    wakeDisplay(nowMs);
+    notifyDisplay();
+  } else {
+    lastInputMs_ = nowMs;
+  }
+
+  if (event.action == display::ButtonAction::Next) {
+    authService_.onConfirmPressed();
+    notifyDisplay();
+  } else if (event.action == display::ButtonAction::Previous) {
+    authService_.onCancelPressed();
+    notifyDisplay();
+  }
+  return true;
+}
+
 void GatewayApplication::handleButtons(uint32_t nowMs) {
   const display::ButtonEvent event = buttonNavigator_.poll(nowMs);
+  if (handleAuthUi(event, nowMs)) {
+    return;
+  }
   if (!event.anyPress) {
     return;
   }
-
   if (displayAsleep_) {
-    // First press while sleeping only wakes the panel (no page change).
     wakeDisplay(nowMs);
     return;
   }
@@ -117,16 +184,11 @@ void GatewayApplication::handleButtons(uint32_t nowMs) {
   } else if (event.action == display::ButtonAction::Next) {
     statusDisplay_.nextPage();
   }
-  lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
-  if (displayTaskHandle_ != nullptr) {
-    xTaskNotifyGive(displayTaskHandle_);
-  }
-#endif
+  notifyDisplay();
 }
 
 void GatewayApplication::sleepDisplay() {
-  if (displayAsleep_) {
+  if (displayAsleep_ || authUiActive()) {
     return;
   }
   displayAsleep_ = true;
@@ -155,7 +217,7 @@ void GatewayApplication::wakeDisplay(uint32_t nowMs) {
 }
 
 void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
-  if (displayAsleep_) {
+  if (displayAsleep_ || authUiActive()) {
     return;
   }
   if ((nowMs - lastInputMs_) < config::TimingConstants::kDisplaySleepMs) {
@@ -164,14 +226,26 @@ void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
   sleepDisplay();
 }
 
+void GatewayApplication::renderCurrentDisplay() {
+  if (authUiActive()) {
+    statusDisplay_.renderAuthPrompt(toDisplayAuthPrompt());
+    return;
+  }
+  statusDisplay_.render(telemetryStore_);
+}
+
 uint32_t GatewayApplication::displayFingerprint() const {
+  if (authUiActive()) {
+    return 0xA0000000u | static_cast<uint32_t>(authService_.prompt().kind);
+  }
   const auto battery = telemetryStore_.battery();
   const auto esp = telemetryStore_.espHealth();
   const auto gateway = telemetryStore_.status();
   return (static_cast<uint32_t>(statusDisplay_.pageIndex()) << 24) ^ battery.updatedAtMs ^
          (static_cast<uint32_t>(battery.stateOfChargePercent) << 16) ^
          (static_cast<uint32_t>(esp.cpuCore0Percent) << 8) ^ esp.cpuCore1Percent ^
-         (gateway.wifiConnected ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u);
+         (gateway.wifiConnected ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u) ^
+         (static_cast<uint32_t>(gateway.webPort) << 4);
 }
 
 #ifndef UNIT_TEST
@@ -216,18 +290,16 @@ void GatewayApplication::displayTaskTrampoline(void* context) {
 void GatewayApplication::displayTaskLoop() {
   for (;;) {
     if (displayAsleep_) {
-      // Suspended by sleepDisplay(); if we ever run while flagged asleep, wait.
       ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
       continue;
     }
 
     const uint32_t fingerprint = displayFingerprint();
     if (fingerprint != lastDisplayFingerprint_) {
-      statusDisplay_.render(telemetryStore_);
+      renderCurrentDisplay();
       lastDisplayFingerprint_ = fingerprint;
     }
 
-    // Wake early on page change / explicit wake notify.
     ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(config::TimingConstants::kDisplayRefreshMs));
   }
 }

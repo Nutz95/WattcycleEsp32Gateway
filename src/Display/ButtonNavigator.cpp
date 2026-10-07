@@ -10,33 +10,34 @@
 namespace wattcycle::display {
 
 void ButtonNavigator::begin() {
-  pinMode(kButtonPrevGpio, INPUT_PULLUP);
-  pinMode(kButtonNextGpio, INPUT);
+  pinMode(kButtonCancelGpio, INPUT_PULLUP);
+  pinMode(kButtonConfirmGpio, INPUT);
 }
 
 ButtonEvent ButtonNavigator::poll(uint32_t nowMs) {
   ButtonEvent event;
-  const bool prevPressed = digitalRead(kButtonPrevGpio) == LOW;
-  const bool nextPressed = digitalRead(kButtonNextGpio) == LOW;
+  const bool cancelPressed = digitalRead(kButtonCancelGpio) == LOW;
+  const bool confirmPressed = digitalRead(kButtonConfirmGpio) == LOW;
+  event.cancelHeld = cancelPressed;
 
   if ((nowMs - lastEdgeMs_) < config::TimingConstants::kButtonDebounceMs) {
-    prevWasPressed_ = prevPressed;
-    nextWasPressed_ = nextPressed;
+    prevWasPressed_ = cancelPressed;
+    nextWasPressed_ = confirmPressed;
     return event;
   }
 
-  if (prevPressed && !prevWasPressed_) {
+  if (cancelPressed && !prevWasPressed_) {
     event.action = ButtonAction::Previous;
     event.anyPress = true;
     lastEdgeMs_ = nowMs;
-  } else if (nextPressed && !nextWasPressed_) {
+  } else if (confirmPressed && !nextWasPressed_) {
     event.action = ButtonAction::Next;
     event.anyPress = true;
     lastEdgeMs_ = nowMs;
   }
 
-  prevWasPressed_ = prevPressed;
-  nextWasPressed_ = nextPressed;
+  prevWasPressed_ = cancelPressed;
+  nextWasPressed_ = confirmPressed;
   return event;
 }
 

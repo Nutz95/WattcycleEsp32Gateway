@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Auth/IAuthService.h"
 #include "Bms/Ble/IBmsBleClient.h"
 #include "Config/AppConfig.h"
 #include "Display/ButtonNavigator.h"
@@ -23,7 +24,7 @@ class GatewayApplication {
   GatewayApplication(const config::AppConfig& appConfig, wifi::IWifiConnector& wifiConnector,
                      ota::IOtaUpdater& otaUpdater, bms::IBmsBleClient& bleClient,
                      telemetry::ITelemetryStore& telemetryStore, web::IWebGateway& webGateway,
-                     display::IStatusDisplay& statusDisplay);
+                     display::IStatusDisplay& statusDisplay, auth::IAuthService& authService);
 
   bool begin();
   void loop();
@@ -35,9 +36,14 @@ class GatewayApplication {
   void refreshWifiStatus(uint32_t nowMs);
   void sampleEspHealth();
   void handleButtons(uint32_t nowMs);
+  bool handleAuthUi(const display::ButtonEvent& event, uint32_t nowMs);
+  bool authUiActive() const;
+  display::DisplayAuthPrompt toDisplayAuthPrompt() const;
+  void notifyDisplay();
   void sleepDisplay();
   void wakeDisplay(uint32_t nowMs);
   void maybeSleepDisplay(uint32_t nowMs);
+  void renderCurrentDisplay();
   uint32_t displayFingerprint() const;
 
 #ifndef UNIT_TEST
@@ -55,6 +61,7 @@ class GatewayApplication {
   telemetry::TelemetryPoller telemetryPoller_;
   web::IWebGateway& webGateway_;
   display::IStatusDisplay& statusDisplay_;
+  auth::IAuthService& authService_;
   display::ButtonNavigator buttonNavigator_;
   esp_sys::EspHealthSampler espHealthSampler_;
   uint32_t lastWifiStatusMs_ = 0;

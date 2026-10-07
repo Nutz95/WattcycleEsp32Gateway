@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "Display/DisplayAuthPrompt.h"
 #include "Telemetry/ITelemetryStore.h"
 
 namespace wattcycle::display {
@@ -12,6 +13,7 @@ class IStatusDisplay {
 
   virtual void begin() = 0;
   virtual void render(const telemetry::ITelemetryStore& store) = 0;
+  virtual void renderAuthPrompt(const DisplayAuthPrompt& prompt) = 0;
   virtual void nextPage() = 0;
   virtual void previousPage() = 0;
   virtual uint8_t pageIndex() const = 0;

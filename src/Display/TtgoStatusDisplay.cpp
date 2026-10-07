@@ -119,6 +119,11 @@ void TtgoStatusDisplay::drawOverview(const telemetry::ITelemetryStore& store) {
   sprite_.drawString(gateway.wifiConnected ? "WiFi" : "WiFi!", 190, 36);
   sprite_.setTextColor(gateway.bleConnected ? kAccent : kDanger, kBg);
   sprite_.drawString(gateway.bleConnected ? "BLE" : "BLE!", 190, 52);
+  if (gateway.wifiConnected && gateway.wifiIp[0] != '\0' && gateway.webPort != 0) {
+    std::snprintf(line, sizeof(line), ":%u", gateway.webPort);
+    sprite_.setTextColor(kMuted, kBg);
+    sprite_.drawString(line, 190, 68);
+  }
 }
 
 void TtgoStatusDisplay::drawCells(const telemetry::ITelemetryStore& store) {
@@ -210,8 +215,14 @@ void TtgoStatusDisplay::drawGateway(const telemetry::ITelemetryStore& store) {
   drawChrome(kPageTitles[4]);
   const auto gateway = store.status();
   const auto product = store.product();
+  char line[40];
+  if (gateway.webPort != 0) {
+    std::snprintf(line, sizeof(line), "%s:%u", gateway.wifiIp, gateway.webPort);
+  } else {
+    std::snprintf(line, sizeof(line), "%s", gateway.wifiIp);
+  }
   sprite_.setTextColor(kText, kBg);
-  sprite_.drawString(gateway.wifiIp, 12, 36);
+  sprite_.drawString(line, 12, 36);
   sprite_.drawString(gateway.bleAddress, 12, 54);
   sprite_.setTextColor(kMuted, kBg);
   sprite_.drawString(product.manufacturerName, 12, 78);
@@ -260,6 +271,41 @@ void TtgoStatusDisplay::render(const telemetry::ITelemetryStore& store) {
       drawOverview(store);
       break;
   }
+  sprite_.pushSprite(0, 0);
+}
+
+void TtgoStatusDisplay::renderAuthPrompt(const DisplayAuthPrompt& prompt) {
+  if (!ready_ || prompt.kind == DisplayAuthKind::None) {
+    return;
+  }
+
+  sprite_.fillSprite(kBg);
+  sprite_.fillRoundRect(4, 4, 232, 20, 5, kCard);
+  sprite_.setTextColor(kAccent, kCard);
+  sprite_.setTextSize(1);
+  if (prompt.kind == DisplayAuthKind::ConfirmSetup) {
+    sprite_.drawString("Confirm web login", 10, 9);
+    sprite_.setTextColor(kText, kBg);
+    sprite_.drawString("User:", 12, 36);
+    sprite_.setTextColor(kAccent, kBg);
+    sprite_.drawString(prompt.username, 52, 36);
+    sprite_.setTextColor(kMuted, kBg);
+    sprite_.drawString("Press TOP to save to NVS", 12, 54);
+  } else {
+    sprite_.drawString("Reset web password", 10, 9);
+    sprite_.setTextColor(kWarn, kBg);
+    sprite_.drawString("Clear stored credentials?", 12, 40);
+    sprite_.setTextColor(kMuted, kBg);
+    sprite_.drawString("Then create a new login", 12, 56);
+  }
+
+  // Button hints: GPIO35 top / GPIO0 bottom on the right bezel.
+  sprite_.fillRoundRect(150, 78, 82, 22, 4, kCard);
+  sprite_.setTextColor(kAccent, kCard);
+  sprite_.drawString("TOP: OK", 158, 84);
+  sprite_.fillRoundRect(150, 106, 82, 22, 4, kCard);
+  sprite_.setTextColor(kDanger, kCard);
+  sprite_.drawString("BOT: Cancel", 154, 112);
   sprite_.pushSprite(0, 0);
 }
 

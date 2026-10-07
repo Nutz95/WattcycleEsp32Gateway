@@ -1,5 +1,7 @@
 #include "Telemetry/InMemoryTelemetryStore.h"
 
+#include "Util/SafeCopy.h"
+
 #include <cstring>
 
 namespace wattcycle::telemetry {
@@ -56,12 +58,13 @@ void InMemoryTelemetryStore::updateWarnings(const bms::WarningFlags& warnings) {
 void InMemoryTelemetryStore::setWifiState(bool connected, const char* ipAddress) {
   lock();
   status_.wifiConnected = connected;
-  if (ipAddress == nullptr) {
-    status_.wifiIp[0] = '\0';
-  } else {
-    std::strncpy(status_.wifiIp, ipAddress, sizeof(status_.wifiIp) - 1);
-    status_.wifiIp[sizeof(status_.wifiIp) - 1] = '\0';
-  }
+  wattcycle::util::copyCString(status_.wifiIp, sizeof(status_.wifiIp), ipAddress);
+  unlock();
+}
+
+void InMemoryTelemetryStore::setWebPort(uint16_t port) {
+  lock();
+  status_.webPort = port;
   unlock();
 }
 
@@ -70,12 +73,10 @@ void InMemoryTelemetryStore::setBleState(bool connected, const char* address,
   lock();
   status_.bleConnected = connected;
   if (address != nullptr) {
-    std::strncpy(status_.bleAddress, address, sizeof(status_.bleAddress) - 1);
-    status_.bleAddress[sizeof(status_.bleAddress) - 1] = '\0';
+    wattcycle::util::copyCString(status_.bleAddress, sizeof(status_.bleAddress), address);
   }
   if (error != nullptr) {
-    std::strncpy(status_.lastError, error, sizeof(status_.lastError) - 1);
-    status_.lastError[sizeof(status_.lastError) - 1] = '\0';
+    wattcycle::util::copyCString(status_.lastError, sizeof(status_.lastError), error);
   }
   unlock();
 }

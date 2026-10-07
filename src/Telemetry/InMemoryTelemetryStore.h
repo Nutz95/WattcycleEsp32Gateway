@@ -18,6 +18,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   void updateProduct(const bms::ProductInfo& product) override;
   void updateWarnings(const bms::WarningFlags& warnings) override;
   void setWifiState(bool connected, const char* ipAddress) override;
+  void setWebPort(uint16_t port) override;
   void setBleState(bool connected, const char* address, const char* error) override;
   void setTelemetryFresh(bool fresh) override;
   void updateEspHealth(const EspHealth& health) override;

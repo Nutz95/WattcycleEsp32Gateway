@@ -15,6 +15,7 @@ class ITelemetryStore {
   virtual void updateProduct(const bms::ProductInfo& product) = 0;
   virtual void updateWarnings(const bms::WarningFlags& warnings) = 0;
   virtual void setWifiState(bool connected, const char* ipAddress) = 0;
+  virtual void setWebPort(uint16_t port) = 0;
   virtual void setBleState(bool connected, const char* address, const char* error) = 0;
   virtual void setTelemetryFresh(bool fresh) = 0;
   virtual void updateEspHealth(const EspHealth& health) = 0;
