@@ -8,16 +8,6 @@
     return Number(value).toFixed(digits) + (suffix ? " " + suffix : "");
   }
 
-  function toPoints(history, key) {
-    return (history || [])
-      .filter(function (sample) {
-        return typeof sample.t === "number" && typeof sample[key] === "number";
-      })
-      .map(function (sample) {
-        return { t: sample.t, v: sample[key] };
-      });
-  }
-
   function clearChartCanvases() {
     const empty = [{ points: [] }];
     global.WattcycleCharts.drawSeries(document.getElementById("chartVoltage"), empty);
@@ -62,12 +52,12 @@
 
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartVoltage"),
-      [{ name: "V", color: "#60a5fa", points: toPoints(history, "v") }],
+      [{ name: "V", color: "#60a5fa", points: global.WattcycleHistory.toPoints(history, "v") }],
       { unit: "V", yDigits: 2 }
     );
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartCurrent"),
-      [{ name: "I", points: toPoints(history, "i") }],
+      [{ name: "I", points: global.WattcycleHistory.toPoints(history, "i") }],
       {
         unit: "A",
         yDigits: 2,
@@ -79,7 +69,7 @@
     );
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartPower"),
-      [{ name: "P", points: toPoints(history, "p") }],
+      [{ name: "P", points: global.WattcycleHistory.toPoints(history, "p") }],
       {
         unit: "W",
         yDigits: 0,
@@ -99,7 +89,7 @@
     }
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartCapacity"),
-      [{ name: "Ah", color: "#c084fc", points: toPoints(history, "ah") }],
+      [{ name: "Ah", color: "#c084fc", points: global.WattcycleHistory.toPoints(history, "ah") }],
       { unit: "Ah", yDigits: 1, guides: capacityGuides }
     );
   }

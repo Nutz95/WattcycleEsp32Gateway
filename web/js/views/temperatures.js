@@ -3,16 +3,6 @@
     return value == null || Number.isNaN(value) ? "-- °C" : value.toFixed(1) + " °C";
   }
 
-  function toPoints(history, key) {
-    return (history || [])
-      .filter(function (sample) {
-        return typeof sample.t === "number" && typeof sample[key] === "number";
-      })
-      .map(function (sample) {
-        return { t: sample.t, v: sample[key] };
-      });
-  }
-
   function renderTemperatures(data, history) {
     document.getElementById("mosTemp").textContent = fmt(data.mosTemp);
     document.getElementById("pcbTemp").textContent = fmt(data.pcbTemp);
@@ -26,8 +16,8 @@
     });
 
     global.WattcycleCharts.drawSeries(document.getElementById("chartTemps"), [
-      { name: "MOS", color: "#fb7185", points: toPoints(history, "mos") },
-      { name: "PCB", color: "#38bdf8", points: toPoints(history, "pcb") }
+      { name: "MOS", color: "#fb7185", points: global.WattcycleHistory.toPoints(history, "mos") },
+      { name: "PCB", color: "#38bdf8", points: global.WattcycleHistory.toPoints(history, "pcb") }
     ], { legend: "MOS / PCB", unit: "°C", yDigits: 1 });
   }
 

@@ -93,5 +93,20 @@
     return memoryPoints;
   }
 
-  global.WattcycleHistory = { pushSample: pushSample, all: all, clear: clear };
+  function toPoints(history, key) {
+    return (history || [])
+      .filter(function (sample) {
+        return typeof sample.t === "number" && typeof sample[key] === "number";
+      })
+      .map(function (sample) {
+        return { t: sample.t, v: sample[key] };
+      });
+  }
+
+  global.WattcycleHistory = {
+    pushSample: pushSample,
+    all: all,
+    clear: clear,
+    toPoints: toPoints
+  };
 })(window);
