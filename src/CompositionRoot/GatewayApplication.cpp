@@ -26,12 +26,16 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
 
 bool GatewayApplication::begin() {
   statusDisplay_.begin();
+  buttonNavigator_.begin();
+  espHealthSampler_.begin();
+  lastInputMs_ = millis();
 
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
     telemetryStore_.setWifiState(false, "");
     telemetryStore_.setBleState(false, appConfig_.bmsBleAddress,
                                 "WIFI_SSID/WIFI_PASS missing");
     statusDisplay_.render(telemetryStore_);
+    startDisplayTask();
     return false;
   }
 
@@ -40,6 +44,7 @@ bool GatewayApplication::begin() {
   refreshWifiStatus(millis());
   if (!wifiOk) {
     statusDisplay_.render(telemetryStore_);
+    startDisplayTask();
     return false;
   }
 
@@ -48,7 +53,9 @@ bool GatewayApplication::begin() {
   telemetryPoller_.begin();
   startBleTask();
   refreshWifiStatus(millis());
+  sampleEspHealth();
   statusDisplay_.render(telemetryStore_);
+  startDisplayTask();
 #ifndef UNIT_TEST
   Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
                 appConfig_.webServerPort);
@@ -66,7 +73,19 @@ void GatewayApplication::loop() {
   const uint32_t nowMs = millis();
   serviceNetwork();
   refreshWifiStatus(nowMs);
-  maybeRefreshDisplay(nowMs);
+  sampleEspHealth();
+  handleButtons(nowMs);
+  maybeSleepDisplay(nowMs);
+#ifndef UNIT_TEST
+  delay(config::TimingConstants::kAppLoopDelayMs);
+#endif
+}
+
+void GatewayApplication::sampleEspHealth() {
+  if (!espHealthSampler_.sample()) {
+    return;
+  }
+  telemetryStore_.updateEspHealth(espHealthSampler_.snapshot());
 }
 
 void GatewayApplication::refreshWifiStatus(uint32_t nowMs) {
@@ -80,13 +99,79 @@ void GatewayApplication::refreshWifiStatus(uint32_t nowMs) {
   lastWifiStatusMs_ = nowMs;
 }
 
-void GatewayApplication::maybeRefreshDisplay(uint32_t nowMs) {
-  if (lastDisplayMs_ != 0 &&
-      (nowMs - lastDisplayMs_) < config::TimingConstants::kDisplayRefreshMs) {
+void GatewayApplication::handleButtons(uint32_t nowMs) {
+  const display::ButtonEvent event = buttonNavigator_.poll(nowMs);
+  if (!event.anyPress) {
     return;
   }
-  statusDisplay_.render(telemetryStore_);
-  lastDisplayMs_ = nowMs;
+
+  if (displayAsleep_) {
+    // First press while sleeping only wakes the panel (no page change).
+    wakeDisplay(nowMs);
+    return;
+  }
+
+  lastInputMs_ = nowMs;
+  if (event.action == display::ButtonAction::Previous) {
+    statusDisplay_.previousPage();
+  } else if (event.action == display::ButtonAction::Next) {
+    statusDisplay_.nextPage();
+  }
+  lastDisplayFingerprint_ = 0;
+#ifndef UNIT_TEST
+  if (displayTaskHandle_ != nullptr) {
+    xTaskNotifyGive(displayTaskHandle_);
+  }
+#endif
+}
+
+void GatewayApplication::sleepDisplay() {
+  if (displayAsleep_) {
+    return;
+  }
+  displayAsleep_ = true;
+  statusDisplay_.setBacklight(false);
+#ifndef UNIT_TEST
+  if (displayTaskHandle_ != nullptr) {
+    vTaskSuspend(displayTaskHandle_);
+  }
+#endif
+}
+
+void GatewayApplication::wakeDisplay(uint32_t nowMs) {
+  lastInputMs_ = nowMs;
+  if (!displayAsleep_) {
+    return;
+  }
+  displayAsleep_ = false;
+  statusDisplay_.setBacklight(true);
+  lastDisplayFingerprint_ = 0;
+#ifndef UNIT_TEST
+  if (displayTaskHandle_ != nullptr) {
+    vTaskResume(displayTaskHandle_);
+    xTaskNotifyGive(displayTaskHandle_);
+  }
+#endif
+}
+
+void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
+  if (displayAsleep_) {
+    return;
+  }
+  if ((nowMs - lastInputMs_) < config::TimingConstants::kDisplaySleepMs) {
+    return;
+  }
+  sleepDisplay();
+}
+
+uint32_t GatewayApplication::displayFingerprint() const {
+  const auto battery = telemetryStore_.battery();
+  const auto esp = telemetryStore_.espHealth();
+  const auto gateway = telemetryStore_.status();
+  return (static_cast<uint32_t>(statusDisplay_.pageIndex()) << 24) ^ battery.updatedAtMs ^
+         (static_cast<uint32_t>(battery.stateOfChargePercent) << 16) ^
+         (static_cast<uint32_t>(esp.cpuCore0Percent) << 8) ^ esp.cpuCore1Percent ^
+         (gateway.wifiConnected ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u);
 }
 
 #ifndef UNIT_TEST
@@ -113,9 +198,45 @@ void GatewayApplication::bleTaskLoop() {
   }
 }
 
+void GatewayApplication::startDisplayTask() {
+  if (displayTaskHandle_ != nullptr) {
+    return;
+  }
+  xTaskCreatePinnedToCore(
+      &GatewayApplication::displayTaskTrampoline, "displayUi",
+      config::TimingConstants::kDisplayTaskStackWords, this,
+      config::TimingConstants::kDisplayTaskPriority, &displayTaskHandle_,
+      config::TimingConstants::kAppCoreId);
+}
+
+void GatewayApplication::displayTaskTrampoline(void* context) {
+  static_cast<GatewayApplication*>(context)->displayTaskLoop();
+}
+
+void GatewayApplication::displayTaskLoop() {
+  for (;;) {
+    if (displayAsleep_) {
+      // Suspended by sleepDisplay(); if we ever run while flagged asleep, wait.
+      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+      continue;
+    }
+
+    const uint32_t fingerprint = displayFingerprint();
+    if (fingerprint != lastDisplayFingerprint_) {
+      statusDisplay_.render(telemetryStore_);
+      lastDisplayFingerprint_ = fingerprint;
+    }
+
+    // Wake early on page change / explicit wake notify.
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(config::TimingConstants::kDisplayRefreshMs));
+  }
+}
+
 #else
 
 void GatewayApplication::startBleTask() {}
+
+void GatewayApplication::startDisplayTask() {}
 
 #endif
 

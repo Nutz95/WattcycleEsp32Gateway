@@ -2,7 +2,9 @@
 
 #include "Bms/Ble/IBmsBleClient.h"
 #include "Config/AppConfig.h"
+#include "Display/ButtonNavigator.h"
 #include "Display/IStatusDisplay.h"
+#include "Esp/EspHealthSampler.h"
 #include "Ota/IOtaUpdater.h"
 #include "Telemetry/ITelemetryStore.h"
 #include "Telemetry/TelemetryPoller.h"
@@ -16,7 +18,6 @@
 
 namespace wattcycle::composition {
 
-/// Owns the application loop; depends only on interfaces (wired in main).
 class GatewayApplication {
  public:
   GatewayApplication(const config::AppConfig& appConfig, wifi::IWifiConnector& wifiConnector,
@@ -30,12 +31,20 @@ class GatewayApplication {
 
  private:
   void startBleTask();
+  void startDisplayTask();
   void refreshWifiStatus(uint32_t nowMs);
-  void maybeRefreshDisplay(uint32_t nowMs);
+  void sampleEspHealth();
+  void handleButtons(uint32_t nowMs);
+  void sleepDisplay();
+  void wakeDisplay(uint32_t nowMs);
+  void maybeSleepDisplay(uint32_t nowMs);
+  uint32_t displayFingerprint() const;
 
 #ifndef UNIT_TEST
   static void bleTaskTrampoline(void* context);
   void bleTaskLoop();
+  static void displayTaskTrampoline(void* context);
+  void displayTaskLoop();
 #endif
 
   config::AppConfig appConfig_;
@@ -46,10 +55,15 @@ class GatewayApplication {
   telemetry::TelemetryPoller telemetryPoller_;
   web::IWebGateway& webGateway_;
   display::IStatusDisplay& statusDisplay_;
-  uint32_t lastDisplayMs_ = 0;
+  display::ButtonNavigator buttonNavigator_;
+  esp_sys::EspHealthSampler espHealthSampler_;
   uint32_t lastWifiStatusMs_ = 0;
+  uint32_t lastInputMs_ = 0;
+  uint32_t lastDisplayFingerprint_ = 0;
+  volatile bool displayAsleep_ = false;
 #ifndef UNIT_TEST
   TaskHandle_t bleTaskHandle_ = nullptr;
+  TaskHandle_t displayTaskHandle_ = nullptr;
 #endif
 };
 
