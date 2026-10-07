@@ -84,7 +84,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   USB["USB-C / CP210x"] --> ESP["ESP32-D0WDQ6"]
-  ESP --> TFT["ST7789V 1.14\""]
+  ESP --> TFT["ST7789V 1.14 inch"]
   ESP --> WIFI["Wi-Fi STA"]
   ESP --> BT["Bluetooth LE"]
   BT --> PACK["Wattcycle 51.2V pack"]
