@@ -12,10 +12,26 @@
     <article><span>Cycles</span><strong id="cycles">--</strong></article>
     <article><span>SOH</span><strong id="soh">--%</strong></article>
   </div>
+  <div class="charts-toolbar">
+    <p class="hint">Hover a chart for the value at that instant. Current/power: <span class="ok">+ charge</span> / <span class="bad">− discharge</span>.</p>
+    <button type="button" id="clearHistoryBtn" class="ghost-btn">Clear chart history</button>
+  </div>
   <div class="charts">
-    <figure><figcaption>Voltage</figcaption><canvas id="chartVoltage" width="860" height="120"></canvas></figure>
-    <figure><figcaption>Current</figcaption><canvas id="chartCurrent" width="860" height="120"></canvas></figure>
-    <figure><figcaption>Power</figcaption><canvas id="chartPower" width="860" height="120"></canvas></figure>
-    <figure><figcaption>Capacity</figcaption><canvas id="chartCapacity" width="860" height="120"></canvas></figure>
+    <figure>
+      <figcaption>Voltage</figcaption>
+      <canvas id="chartVoltage" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Current (+ charge / − discharge)</figcaption>
+      <canvas id="chartCurrent" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Power (+ charge / − discharge)</figcaption>
+      <canvas id="chartPower" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Capacity (guides at 10% / 90% of pack)</figcaption>
+      <canvas id="chartCapacity" width="860" height="120"></canvas>
+    </figure>
   </div>
 </section>

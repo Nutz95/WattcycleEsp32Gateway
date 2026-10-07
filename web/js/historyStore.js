@@ -84,5 +84,14 @@
     return prune(ensureLoaded(), Date.now());
   }
 
-  global.WattcycleHistory = { pushSample: pushSample, all: all };
+  function clear() {
+    memoryPoints = [];
+    lastPersistMs = 0;
+    try {
+      localStorage.removeItem(KEY);
+    } catch (ignored) {}
+    return memoryPoints;
+  }
+
+  global.WattcycleHistory = { pushSample: pushSample, all: all, clear: clear };
 })(window);

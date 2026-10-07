@@ -26,9 +26,9 @@
     });
 
     global.WattcycleCharts.drawSeries(document.getElementById("chartTemps"), [
-      { color: "#fb7185", points: toPoints(history, "mos") },
-      { color: "#38bdf8", points: toPoints(history, "pcb") }
-    ], { legend: "MOS / PCB" });
+      { name: "MOS", color: "#fb7185", points: toPoints(history, "mos") },
+      { name: "PCB", color: "#38bdf8", points: toPoints(history, "pcb") }
+    ], { legend: "MOS / PCB", unit: "°C", yDigits: 1 });
   }
 
   global.WattcycleViews = global.WattcycleViews || {};
