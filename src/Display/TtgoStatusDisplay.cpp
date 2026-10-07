@@ -274,8 +274,8 @@ void TtgoStatusDisplay::render(const telemetry::ITelemetryStore& store) {
   sprite_.pushSprite(0, 0);
 }
 
-void TtgoStatusDisplay::renderAuthPrompt(const DisplayAuthPrompt& prompt) {
-  if (!ready_ || prompt.kind == DisplayAuthKind::None) {
+void TtgoStatusDisplay::renderAuthPrompt(const auth::AuthPrompt& prompt) {
+  if (!ready_ || prompt.kind == auth::AuthPromptKind::None) {
     return;
   }
 
@@ -283,7 +283,7 @@ void TtgoStatusDisplay::renderAuthPrompt(const DisplayAuthPrompt& prompt) {
   sprite_.fillRoundRect(4, 4, 232, 20, 5, kCard);
   sprite_.setTextColor(kAccent, kCard);
   sprite_.setTextSize(1);
-  if (prompt.kind == DisplayAuthKind::ConfirmSetup) {
+  if (prompt.kind == auth::AuthPromptKind::ConfirmSetup) {
     sprite_.drawString("Confirm web login", 10, 9);
     sprite_.setTextColor(kText, kBg);
     sprite_.drawString("User:", 12, 36);

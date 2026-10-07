@@ -13,7 +13,7 @@ class TtgoStatusDisplay : public IStatusDisplay {
  public:
   void begin() override;
   void render(const telemetry::ITelemetryStore& store) override;
-  void renderAuthPrompt(const DisplayAuthPrompt& prompt) override;
+  void renderAuthPrompt(const auth::AuthPrompt& prompt) override;
   void nextPage() override;
   void previousPage() override;
   uint8_t pageIndex() const override;
