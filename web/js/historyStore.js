@@ -1,9 +1,9 @@
-/* Browser-side 24h history (localStorage) with live tip updates each refresh. */
+/* Browser-side history: append every poll, grow window up to 24h. */
 (function (global) {
-  const KEY = "wattcycle.history.v2";
+  const KEY = "wattcycle.history.v3";
   const MAX_AGE_MS = 24 * 60 * 60 * 1000;
-  const MAX_POINTS = 2880; // 30s * 2880 ~= 24h
-  const APPEND_MS = 30000;
+  const MAX_POINTS = 2880;
+  const PERSIST_EVERY_MS = 15000;
 
   let memoryPoints = null;
   let lastPersistMs = 0;
@@ -23,11 +23,24 @@
     try {
       localStorage.setItem(KEY, JSON.stringify(points));
     } catch (error) {
-      const trimmed = points.slice(Math.floor(points.length / 2));
+      const trimmed = downsample(points, Math.floor(MAX_POINTS / 2));
       try {
         localStorage.setItem(KEY, JSON.stringify(trimmed));
       } catch (ignored) {}
     }
+  }
+
+  function downsample(points, targetCount) {
+    if (points.length <= targetCount) {
+      return points.slice();
+    }
+    const out = [];
+    const lastIndex = points.length - 1;
+    for (let i = 0; i < targetCount; i += 1) {
+      const index = Math.round((i * lastIndex) / (targetCount - 1));
+      out.push(points[index]);
+    }
+    return out;
   }
 
   function prune(points, now) {
@@ -35,7 +48,7 @@
       return now - point.t <= MAX_AGE_MS;
     });
     if (next.length > MAX_POINTS) {
-      next = next.slice(next.length - MAX_POINTS);
+      next = downsample(next, MAX_POINTS);
     }
     return next;
   }
@@ -51,14 +64,16 @@
     const now = Date.now();
     let points = prune(ensureLoaded(), now);
     const last = points[points.length - 1];
-    if (!last || now - last.t >= APPEND_MS) {
-      points.push(sample);
-    } else {
+    // Always append a new point per poll so the curve forms; replace only if
+    // two samples land in the same millisecond (unlikely).
+    if (last && sample.t === last.t) {
       points[points.length - 1] = sample;
+    } else {
+      points.push(sample);
     }
     points = prune(points, now);
     memoryPoints = points;
-    if (lastPersistMs === 0 || now - lastPersistMs >= APPEND_MS) {
+    if (lastPersistMs === 0 || now - lastPersistMs >= PERSIST_EVERY_MS) {
       savePersisted(points);
       lastPersistMs = now;
     }

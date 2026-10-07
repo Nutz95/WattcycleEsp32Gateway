@@ -6,6 +6,16 @@
     return Number(value).toFixed(digits) + (suffix ? " " + suffix : "");
   }
 
+  function toPoints(history, key) {
+    return (history || [])
+      .filter(function (sample) {
+        return typeof sample.t === "number" && typeof sample[key] === "number";
+      })
+      .map(function (sample) {
+        return { t: sample.t, v: sample[key] };
+      });
+  }
+
   function renderOverview(data, history) {
     document.getElementById("soc").textContent = data.valid ? data.soc + "%" : "--%";
     document.getElementById("summary").textContent = data.valid
@@ -19,18 +29,17 @@
     document.getElementById("cycles").textContent = data.cycles ?? "--";
     document.getElementById("soh").textContent = data.soh != null ? data.soh + "%" : "--%";
 
-    const points = history || [];
     global.WattcycleCharts.drawSeries(document.getElementById("chartVoltage"), [
-      { color: "#60a5fa", values: points.map(function (p) { return p.v; }) }
+      { color: "#60a5fa", points: toPoints(history, "v") }
     ]);
     global.WattcycleCharts.drawSeries(document.getElementById("chartCurrent"), [
-      { color: "#3ecf8e", values: points.map(function (p) { return p.i; }) }
+      { color: "#3ecf8e", points: toPoints(history, "i") }
     ]);
     global.WattcycleCharts.drawSeries(document.getElementById("chartPower"), [
-      { color: "#f0b429", values: points.map(function (p) { return p.p; }) }
+      { color: "#f0b429", points: toPoints(history, "p") }
     ]);
     global.WattcycleCharts.drawSeries(document.getElementById("chartCapacity"), [
-      { color: "#c084fc", values: points.map(function (p) { return p.ah; }) }
+      { color: "#c084fc", points: toPoints(history, "ah") }
     ]);
   }
 
