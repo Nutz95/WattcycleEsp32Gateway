@@ -1,5 +1,11 @@
 <section class="view" data-view="cells" hidden>
   <h2>Cell voltages</h2>
-  <p class="hint">Individual cell readings from the BMS analog quantity frame.</p>
+  <div class="metrics">
+    <article><span>Highest</span><strong id="cellMax">-- V</strong></article>
+    <article><span>Lowest</span><strong id="cellMin">-- V</strong></article>
+    <article><span>Delta</span><strong id="cellDelta">-- mV</strong></article>
+    <article><span>Average</span><strong id="cellAvg">-- V</strong></article>
+    <article><span>Balance current</span><strong id="balanceCurrent">-- A</strong></article>
+  </div>
   <div id="cells" class="cells"></div>
 </section>

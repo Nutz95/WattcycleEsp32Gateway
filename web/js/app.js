@@ -22,11 +22,23 @@
       }
       const buffer = await response.arrayBuffer();
       const data = window.WattcycleBinary.decodeTelemetry(buffer);
-      window.WattcycleViews.overview(data);
+      const history = data.valid
+        ? window.WattcycleHistory.pushSample({
+            t: Date.now(),
+            v: data.voltage,
+            i: data.current,
+            p: data.power,
+            ah: data.remainingAh,
+            mos: data.mosTemp,
+            pcb: data.pcbTemp
+          })
+        : window.WattcycleHistory.all();
+      window.WattcycleViews.overview(data, history);
       window.WattcycleViews.cells(data);
-      window.WattcycleViews.temperatures(data);
+      window.WattcycleViews.temperatures(data, history);
       window.WattcycleViews.warnings(data);
       window.WattcycleViews.gateway(data);
+      window.WattcycleViews.esp(data);
     } catch (error) {
       const summary = document.getElementById("summary");
       if (summary) {
@@ -37,5 +49,6 @@
 
   activateTab("overview");
   refresh();
-  setInterval(refresh, 3000);
+  // Match BMS poll cadence (~2s); ESP/CPU still updates on the same payload.
+  setInterval(refresh, 2000);
 })();

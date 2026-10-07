@@ -1,6 +1,7 @@
-/* Wattcycle gateway binary telemetry decoder (little-endian, version 1). */
+/* Wattcycle gateway binary telemetry decoder (little-endian). */
 (function (global) {
-  const MAGIC = 0x4d475457; // WTGM
+  const MAGIC = 0x4d475457;
+  const VERSION = 1;
 
   function u8(view, offset) { return view.getUint8(offset); }
   function u16(view, offset) { return view.getUint16(offset, true); }
@@ -21,13 +22,14 @@
       throw new Error("Invalid telemetry magic");
     }
     const version = u8(view, 4);
-    if (version !== 1) {
+    if (version !== VERSION) {
       throw new Error("Unsupported telemetry version " + version);
     }
 
     let o = 5;
     const flags = u8(view, o); o += 1;
     const data = {
+      version: version,
       valid: (flags & 0x01) !== 0,
       gateway: {
         wifi: (flags & 0x02) !== 0,
@@ -37,7 +39,9 @@
       warnings: {
         protection: (flags & 0x08) !== 0,
         fault: (flags & 0x10) !== 0
-      }
+      },
+      esp: {},
+      balancing: []
     };
 
     data.soc = u8(view, o); o += 1;
@@ -45,6 +49,7 @@
     data.voltage = u16(view, o) / 100; o += 2;
     data.current = i16(view, o) / 10; o += 2;
     data.power = i16(view, o); o += 2;
+    data.balanceCurrent = i16(view, o) / 10; o += 2;
     data.remainingAh = u16(view, o) / 10; o += 2;
     data.totalAh = u16(view, o) / 10; o += 2;
     data.designAh = u16(view, o) / 10; o += 2;
@@ -58,6 +63,20 @@
     for (let i = 0; i < cellCount; i += 1) {
       data.cells.push(u16(view, o) / 1000);
       o += 2;
+    }
+
+    const balanceByteCount = Math.ceil(cellCount / 8);
+    for (let i = 0; i < cellCount; i += 1) {
+      data.balancing[i] = false;
+    }
+    for (let byteIndex = 0; byteIndex < balanceByteCount; byteIndex += 1) {
+      const bits = u8(view, o); o += 1;
+      for (let bit = 0; bit < 8; bit += 1) {
+        const cellIndex = byteIndex * 8 + bit;
+        if (cellIndex < cellCount) {
+          data.balancing[cellIndex] = ((bits >> bit) & 1) === 1;
+        }
+      }
     }
 
     const cellTempCount = u8(view, o); o += 1;
@@ -81,7 +100,13 @@
     o += 60;
     data.gateway.ip = readFixedString(bytes, o, 16); o += 16;
     data.gateway.bleAddress = readFixedString(bytes, o, 18); o += 18;
-    data.gateway.error = readFixedString(bytes, o, 64);
+    data.gateway.error = readFixedString(bytes, o, 64); o += 64;
+
+    data.esp.cpu0 = u8(view, o); o += 1;
+    data.esp.cpu1 = u8(view, o); o += 1;
+    data.esp.chipTemp = i16(view, o) / 10; o += 2;
+    data.esp.heapKb = u16(view, o); o += 2;
+    data.esp.uptimeSec = u32(view, o);
 
     return data;
   }
