@@ -102,7 +102,15 @@ bool AnalogQuantityParser::parse(const uint8_t* data, size_t length, BatteryTele
   telemetry.stateOfChargePercent = readUint16Be(data, offset);
   offset += 2;
 
-  if (hasEnough(length, offset, ProtocolScaling::kStateOfHealthFieldBytes)) {
+  // New-protocol tail: SOH + cumulative + remainingTime + reserved + balanceCurrent.
+  if (hasEnough(length, offset, 18)) {
+    telemetry.stateOfHealthPercent = readUint16Be(data, offset);
+    offset += 2;
+    offset += 4;  // cumulative capacity
+    offset += 4;  // remaining time
+    offset += 6;  // reserved
+    telemetry.balanceCurrentAmps = parseSignedCurrent(data[offset], data[offset + 1]);
+  } else if (hasEnough(length, offset, ProtocolScaling::kStateOfHealthFieldBytes)) {
     telemetry.stateOfHealthPercent = readUint16Be(data, offset);
   }
 

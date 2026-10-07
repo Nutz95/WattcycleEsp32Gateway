@@ -34,9 +34,28 @@ void test_parse_two_cell_pack() {
   TEST_ASSERT_EQUAL(12, telemetry.cycleNumber);
 }
 
+void test_parse_balance_current_extension() {
+  // Base two-cell payload + SOH 99 + cumulative/time/reserved + balance 1.5A
+  const uint8_t payload[] = {
+      0x02, 0x0C, 0xE4, 0x0C, 0xEE, 0x02, 0x0B, 0xA4, 0x0B, 0xA4, 0x40, 0x64,
+      0x14, 0x00, 0x03, 0x20, 0x03, 0xE8, 0x00, 0x0C, 0x03, 0xE8, 0x00, 0x50,
+      0x00, 0x63,                   // SOH 99
+      0x00, 0x00, 0x03, 0xE8,       // cumulative
+      0x00, 0x00, 0x00, 0x0A,       // remaining time
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // reserved
+      0x40, 0x0F                    // balance current 1.5A (decimal, raw 15)
+  };
+
+  BatteryTelemetry telemetry;
+  TEST_ASSERT_TRUE(AnalogQuantityParser::parse(payload, sizeof(payload), telemetry));
+  TEST_ASSERT_EQUAL(99, telemetry.stateOfHealthPercent);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.5f, telemetry.balanceCurrentAmps);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_parse_signed_current_decimal_negative);
   RUN_TEST(test_parse_two_cell_pack);
+  RUN_TEST(test_parse_balance_current_extension);
   return UNITY_END();
 }

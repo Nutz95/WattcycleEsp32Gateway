@@ -10,8 +10,14 @@ bool WarningInfoParser::parse(const uint8_t* data, size_t length, WarningFlags& 
   WarningFlags flags;
   size_t offset = 0;
   const uint8_t cellCount = data[offset++];
-  if (cellCount == 0 || offset + cellCount >= length) {
+  if (cellCount == 0 || cellCount > kMaxCellCount || offset + cellCount > length) {
     return false;
+  }
+  flags.cellCount = cellCount;
+
+  // Per-cell state byte: non-zero typically means balancing in Wattcycle UI.
+  for (uint8_t i = 0; i < cellCount; ++i) {
+    flags.cellBalancing[i] = data[offset + i] != 0;
   }
   offset += cellCount;
 
@@ -19,7 +25,7 @@ bool WarningInfoParser::parse(const uint8_t* data, size_t length, WarningFlags& 
     return false;
   }
   const uint8_t temperatureCount = data[offset++];
-  if (temperatureCount < 2 || offset + temperatureCount >= length) {
+  if (temperatureCount < 2 || offset + temperatureCount > length) {
     return false;
   }
   offset += temperatureCount;
@@ -34,7 +40,7 @@ bool WarningInfoParser::parse(const uint8_t* data, size_t length, WarningFlags& 
   }
   flags.statusRegister1 = data[offset++];
   flags.statusRegister2 = data[offset++];
-  offset += 1;  // status register 3 (unused in gateway summary)
+  offset += 1;  // status register 3
 
   if (offset + 1 > length) {
     return false;
@@ -56,6 +62,17 @@ bool WarningInfoParser::parse(const uint8_t* data, size_t length, WarningFlags& 
   }
   flags.warningRegister1 = data[offset++];
   flags.warningRegister2 = data[offset++];
+
+  // Trailing balance bitfield: ceil(cellCount / 8) bytes.
+  const size_t balanceBytes = (static_cast<size_t>(cellCount) + 7u) / 8u;
+  if (offset + balanceBytes <= length) {
+    for (uint8_t i = 0; i < cellCount; ++i) {
+      const uint8_t bit = static_cast<uint8_t>((data[offset + (i / 8)] >> (i % 8)) & 0x01);
+      if (bit != 0) {
+        flags.cellBalancing[i] = true;
+      }
+    }
+  }
 
   flags.hasActiveProtection =
       (flags.statusRegister1 != 0) || (flags.statusRegister2 != 0);
