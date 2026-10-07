@@ -1,0 +1,24 @@
+<section class="view" data-view="account" hidden>
+  <h2>Account</h2>
+  <p class="hint">Session cookies stay on this gateway only (HttpOnly, SameSite=Strict).</p>
+  <div class="account-actions">
+    <button type="button" id="logoutBtn" class="primary-btn">Sign out</button>
+    <p class="error" id="logoutError" hidden></p>
+  </div>
+  <h3>Reset credentials</h3>
+  <ol class="steps">
+    <li>On the TTGO, hold the <strong>bottom</strong> button (GPIO0) for about 3 seconds until the reset prompt appears.</li>
+    <li>Press the <strong>top</strong> button (GPIO35) to confirm wiping the stored login, or bottom to cancel.</li>
+    <li>Open the dashboard again and create a new username/password, then confirm on the device.</li>
+  </ol>
+  <h3>Password rules</h3>
+  <ul class="steps">
+    <li>Username: up to 32 characters — letters, digits, <code>.</code> <code>_</code> <code>-</code> only.</li>
+    <li>Password: 8–64 printable ASCII characters (no control / non-ASCII bytes).</li>
+  </ul>
+  <h3>Network</h3>
+  <p class="hint">
+    The UI is served over HTTP on the LAN (<code>http://&lt;ip&gt;:6789</code>).
+    TLS was tried on this board but freezes the gateway when combined with BLE — keep the port off the public internet.
+  </p>
+</section>

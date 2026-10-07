@@ -57,6 +57,76 @@ body {
 .cell-max { outline: 1px solid var(--accent); color: var(--accent); }
 .cell-min { outline: 1px solid var(--danger); color: var(--danger); }
 .cell-balancing { outline: 1px solid #f0b429; color: #f0b429; }
+.cell-legend {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.cell-legend .swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: -0.05rem;
+}
+.swatch-max { background: var(--accent); }
+.swatch-min { background: var(--danger); }
+.swatch-bal { background: #f0b429; }
+.account-actions { margin: 1rem 0 1.5rem; }
+.primary-btn {
+  border: 1px solid var(--accent);
+  background: rgba(62, 207, 142, 0.2);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+}
+.steps {
+  color: var(--muted);
+  padding-left: 1.2rem;
+  line-height: 1.5;
+}
+.steps code {
+  color: var(--ink);
+  font-size: 0.9em;
+}
+.view h3 { margin: 1.25rem 0 0.5rem; font-size: 1.05rem; }
+.auth-shell {
+  max-width: 420px;
+  margin: 3rem auto;
+  padding: 1.25rem;
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+}
+.auth-shell h1 { margin-top: 0; font-size: 1.4rem; }
+.auth-shell label { display: block; color: var(--muted); margin: 0.75rem 0 0.3rem; }
+.auth-shell input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.35);
+  color: var(--ink);
+}
+.auth-shell button {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: rgba(62,207,142,0.18);
+  color: var(--ink);
+  cursor: pointer;
+}
+.auth-shell .hint { color: var(--muted); font-size: 0.9rem; }
+.auth-shell .error { color: var(--danger); margin-top: 0.75rem; }
 .status-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
 .ok { color: var(--accent); }
 .bad { color: var(--danger); }

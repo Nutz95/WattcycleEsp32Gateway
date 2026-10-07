@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="/app.css" />
 </head>
 <body>
-  <main class="shell">
+  <div id="authRoot" class="shell" hidden></div>
+  <main id="appShell" class="shell" hidden>
     <nav class="tabs" aria-label="Telemetry views">
       <button type="button" class="tab active" data-tab="overview">Overview</button>
       <button type="button" class="tab" data-tab="cells">Cells</button>
@@ -15,6 +16,7 @@
       <button type="button" class="tab" data-tab="warnings">Alerts</button>
       <button type="button" class="tab" data-tab="gateway">Gateway</button>
       <button type="button" class="tab" data-tab="esp">ESP</button>
+      <button type="button" class="tab" data-tab="account">Account</button>
     </nav>
     <div id="views">
       <!--VIEW:overview-->
@@ -23,6 +25,7 @@
       <!--VIEW:warnings-->
       <!--VIEW:gateway-->
       <!--VIEW:esp-->
+      <!--VIEW:account-->
     </div>
   </main>
   <script src="/app.js"></script>

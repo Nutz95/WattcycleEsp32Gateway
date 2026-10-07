@@ -1,4 +1,6 @@
 (function () {
+  let refreshTimer = null;
+
   function activateTab(name) {
     document.querySelectorAll(".tab").forEach(function (tab) {
       tab.classList.toggle("active", tab.getAttribute("data-tab") === name);
@@ -16,7 +18,18 @@
 
   async function refresh() {
     try {
-      const response = await fetch("/api/telemetry.bin", { cache: "no-store" });
+      const response = await fetch("/api/telemetry.bin", {
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+      if (response.status === 401) {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }
+        window.WattcycleAuth.handleUnauthorized();
+        return;
+      }
       if (!response.ok) {
         throw new Error("HTTP " + response.status);
       }
@@ -39,6 +52,7 @@
       window.WattcycleViews.warnings(data);
       window.WattcycleViews.gateway(data);
       window.WattcycleViews.esp(data);
+      window.WattcycleViews.account();
     } catch (error) {
       const summary = document.getElementById("summary");
       if (summary) {
@@ -47,8 +61,15 @@
     }
   }
 
-  activateTab("overview");
-  refresh();
-  // Match BMS poll cadence (~2s); ESP/CPU still updates on the same payload.
-  setInterval(refresh, 2000);
+  function startDashboard() {
+    window.WattcycleAuth.showApp();
+    activateTab("overview");
+    refresh();
+    if (refreshTimer) {
+      clearInterval(refreshTimer);
+    }
+    refreshTimer = setInterval(refresh, 2000);
+  }
+
+  window.WattcycleAuth.bootstrap(startDashboard);
 })();
