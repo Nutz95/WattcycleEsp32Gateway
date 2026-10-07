@@ -60,7 +60,17 @@ flowchart LR
 | Probed port | **COM19** |
 | MAC (example unit) | `24:6F:28:25:18:14` |
 
-### Display pinout (from `Resources/Esp32-TTGO_Pinout.png`)
+### ESP TTGO used on this project as the bluetooth-wifi gateway + display
+
+<p align="center">
+  <img src="Resources/ESP_TTGO.jpg" alt="LILYGO TTGO T-Display ESP32" width="720" />
+</p>
+
+### Display pinout
+
+<p align="center">
+  <img src="Resources/Esp32-TTGO_Pinout.png" alt="LILYGO TTGO T-Display ESP32 pinout" width="720" />
+</p>
 
 | Signal | GPIO |
 |--------|------|
@@ -179,6 +189,49 @@ http://<esp-ip>:6789/api/telemetry.bin
 Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets). The `data/` folder is gitignored — regenerate with the bundle script / PlatformIO pre-script.
 
 TTGO buttons: **GPIO0 (bottom)** = previous page / Cancel; **GPIO35 (top)** = next page / Validate. No touchscreen. Backlight sleeps after **60 s** without input; the display UI task is suspended while asleep and resumes on the next button press (wake only, no page change). Gateway/overview show **`ip:port`** for the web UI.
+
+### Web UI screenshots
+
+Each image matches one dashboard tab (same order as the SPA nav).
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <p><strong>Overview</strong></p>
+      <img src="Resources/overview.png" alt="Overview tab — SoC, live metrics and charts" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <p><strong>Cells</strong></p>
+      <img src="Resources/Cells.jpg" alt="Cells tab — per-cell voltages" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <p><strong>Temps</strong></p>
+      <img src="Resources/Temps.jpg" alt="Temps tab — MOS / PCB / cell temperatures" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <p><strong>Alerts</strong></p>
+      <img src="Resources/Alerts.jpg" alt="Alerts tab — BMS warning flags" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <p><strong>Gateway</strong></p>
+      <img src="Resources/Gateway.jpg" alt="Gateway tab — Wi-Fi / BLE / poll status" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <p><strong>ESP</strong></p>
+      <img src="Resources/ESP.png" alt="ESP tab — CPU, heap, chip temperature" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <p><strong>Account</strong></p>
+      <img src="Resources/Account.jpg" alt="Account tab — logout and credential reset help" width="40%" />
+    </td>
+  </tr>
+</table>
 
 ### 4. Later updates over the air
 
