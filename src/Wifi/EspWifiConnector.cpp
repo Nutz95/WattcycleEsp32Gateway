@@ -2,6 +2,8 @@
 
 #ifndef UNIT_TEST
 
+#include "Util/SafeCopy.h"
+
 #include <WiFi.h>
 #include <cstring>
 
@@ -34,9 +36,7 @@ void EspWifiConnector::copyIpAddress(char* buffer, size_t capacity) const {
   if (buffer == nullptr || capacity == 0) {
     return;
   }
-  const String ip = WiFi.localIP().toString();
-  std::strncpy(buffer, ip.c_str(), capacity - 1);
-  buffer[capacity - 1] = '\0';
+  wattcycle::util::copyCString(buffer, capacity, WiFi.localIP().toString().c_str());
 }
 
 void EspWifiConnector::loop() {
