@@ -76,3 +76,6 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Bundled LittleFS assets (source of truth is web/)
+data/

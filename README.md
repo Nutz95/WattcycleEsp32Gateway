@@ -167,7 +167,9 @@ Binary telemetry API (decoded in the browser):
 http://<esp-ip>:6789/api/telemetry.bin
 ```
 
-Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets).
+Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets). The `data/` folder is gitignored — regenerate with the bundle script / PlatformIO pre-script.
+
+TTGO buttons: **GPIO0** = previous page, **GPIO35** = next page (Overview → Cells → Temps → Alerts → Gateway → ESP). This board has **no touchscreen** — wake/sleep uses the two buttons only. Backlight sleeps after **60 s** without input; the display UI task is suspended while asleep and resumes on the next button press (wake only, no page change).
 
 ### 4. Later updates over the air
 
