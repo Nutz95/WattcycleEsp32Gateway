@@ -1,0 +1,101 @@
+:root {
+  --bg0: #0b1220;
+  --bg1: #132038;
+  --ink: #e8eefc;
+  --muted: #93a4c7;
+  --accent: #3ecf8e;
+  --warn: #f0b429;
+  --danger: #ff6b6b;
+  --card: rgba(255, 255, 255, 0.06);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #1d4ed8 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #065f46 0%, transparent 50%),
+    linear-gradient(160deg, var(--bg0), var(--bg1));
+}
+
+.shell {
+  width: min(920px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.hero {
+  margin-bottom: 1.5rem;
+}
+.eyebrow {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.hero h1 {
+  margin: 0.2rem 0;
+  font-size: clamp(3rem, 10vw, 5rem);
+  line-height: 1;
+}
+.tagline { color: var(--muted); margin: 0; }
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.metrics article {
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+}
+.metrics span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.35rem;
+}
+.metrics strong { font-size: 1.15rem; }
+
+.panel {
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  margin-top: 1rem;
+}
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 0.5rem;
+}
+.cell {
+  background: rgba(0,0,0,0.25);
+  border-radius: 10px;
+  padding: 0.55rem 0.4rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cell small { display: block; color: var(--muted); }
+.status ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.ok { color: var(--accent); }
+.bad { color: var(--danger); }
+.warn { color: var(--warn); }

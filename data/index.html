@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wattcycle Gateway</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">Wattcycle ESP32 Gateway</p>
+      <h1 id="soc">--%</h1>
+      <p class="tagline" id="summary">Waiting for BLE telemetry…</p>
+    </header>
+
+    <section class="metrics" aria-label="Battery metrics">
+      <article><span>Voltage</span><strong id="voltage">-- V</strong></article>
+      <article><span>Current</span><strong id="current">-- A</strong></article>
+      <article><span>Power</span><strong id="power">-- W</strong></article>
+      <article><span>Capacity</span><strong id="capacity">-- / -- Ah</strong></article>
+      <article><span>Cycles</span><strong id="cycles">--</strong></article>
+      <article><span>Temps</span><strong id="temps">MOS --° / PCB --°</strong></article>
+    </section>
+
+    <section class="panel">
+      <h2>Cells</h2>
+      <div id="cells" class="cells"></div>
+    </section>
+
+    <section class="panel status">
+      <h2>Gateway</h2>
+      <ul>
+        <li>Wi-Fi: <span id="wifi">--</span></li>
+        <li>BLE: <span id="ble">--</span></li>
+        <li>BMS: <span id="bleAddress">--</span></li>
+        <li>Error: <span id="error">none</span></li>
+      </ul>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
