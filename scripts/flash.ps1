@@ -57,7 +57,7 @@ function Ensure-EspNowMacEnv {
   if (-not $needPair) {
     return
   }
-  Write-Host "==> ESP-NOW MACs incomplete — auto-detecting via pair_espnow_link.ps1" -ForegroundColor Yellow
+  Write-Host "==> ESP-NOW MACs incomplete -- auto-detecting via pair_espnow_link.ps1" -ForegroundColor Yellow
   & "$PSScriptRoot\pair_espnow_link.ps1" -HubPort $HubPort -BmsBridgePort $BmsBridgePort `
     -XtBridgePort $XtBridgePort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

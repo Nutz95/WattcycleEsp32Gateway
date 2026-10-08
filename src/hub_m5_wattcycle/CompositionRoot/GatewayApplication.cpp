@@ -245,11 +245,16 @@ uint32_t GatewayApplication::displayFingerprint() const {
   const auto solar = telemetryStore_.solar();
   const auto esp = telemetryStore_.espHealth();
   const auto gateway = telemetryStore_.status();
-  return (static_cast<uint32_t>(statusDisplay_.pageIndex()) << 24) ^ battery.updatedAtMs ^
-         solar.seq ^ (static_cast<uint32_t>(battery.stateOfChargePercent) << 16) ^
-         (static_cast<uint32_t>(esp.cpuCore0Percent) << 8) ^ esp.cpuCore1Percent ^
+  // Coarse fingerprint: avoid redrawing every ESP-NOW seq tick (canvas still
+  // double-buffers, but less CPU / SPI thrash).
+  const uint32_t solarMilliV = static_cast<uint32_t>(solar.voltageV * 10.0f);
+  const uint32_t batteryDeciV = static_cast<uint32_t>(battery.moduleVoltage * 10.0f);
+  return (static_cast<uint32_t>(statusDisplay_.pageIndex()) << 24) ^
+         (static_cast<uint32_t>(battery.stateOfChargePercent) << 16) ^
+         (batteryDeciV << 8) ^ solarMilliV ^
+         (static_cast<uint32_t>(esp.cpuCore0Percent) << 4) ^
          (gateway.wifiConnected ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u) ^
-         (solar.linkFresh ? 4u : 0u);
+         (solar.linkFresh ? 4u : 0u) ^ (solar.meterValid ? 8u : 0u);
 }
 
 #ifndef UNIT_TEST
