@@ -84,7 +84,7 @@ bool EspNowTelemetryReceiver::begin(const char* bmsBridgeMac, const char* xtBrid
 }
 
 void EspNowTelemetryReceiver::loop() {
-  if (pendingKind_ != PendingKind::None) {
+  if (pendingSolar_ || pendingBmsTelemetry_ || pendingBmsProduct_) {
     applyPending();
   }
 #ifndef UNIT_TEST
@@ -132,12 +132,12 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
     }
     xt369p_bridge::EspNowPacketV1 packet = {};
     std::memcpy(&packet, data, static_cast<size_t>(requiredLen));
-    pendingSolar_ = packet;
+    solarPacket_ = packet;
     if (mac != nullptr) {
       std::memcpy(xtPeerMac_, mac, 6);
       hasXtPeer_ = true;
     }
-    pendingKind_ = PendingKind::Solar;
+    pendingSolar_ = true;
     return;
   }
 
@@ -145,8 +145,8 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
     if (len < static_cast<int>(sizeof(wattcycle_bridge::EspNowTelemetryPacketV1))) {
       return;
     }
-    std::memcpy(&pendingBms_, data, sizeof(pendingBms_));
-    pendingKind_ = PendingKind::BmsTelemetry;
+    std::memcpy(&bmsPacket_, data, sizeof(bmsPacket_));
+    pendingBmsTelemetry_ = true;
     return;
   }
 
@@ -154,8 +154,8 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
     if (len < static_cast<int>(sizeof(wattcycle_bridge::EspNowProductPacketV1))) {
       return;
     }
-    std::memcpy(&pendingProduct_, data, sizeof(pendingProduct_));
-    pendingKind_ = PendingKind::BmsProduct;
+    std::memcpy(&productPacket_, data, sizeof(productPacket_));
+    pendingBmsProduct_ = true;
   }
 }
 
@@ -289,20 +289,17 @@ void EspNowTelemetryReceiver::applyBmsProduct(
 }
 
 void EspNowTelemetryReceiver::applyPending() {
-  const PendingKind kind = pendingKind_;
-  pendingKind_ = PendingKind::None;
-  switch (kind) {
-    case PendingKind::Solar:
-      applySolar(pendingSolar_);
-      break;
-    case PendingKind::BmsTelemetry:
-      applyBmsTelemetry(pendingBms_);
-      break;
-    case PendingKind::BmsProduct:
-      applyBmsProduct(pendingProduct_);
-      break;
-    case PendingKind::None:
-      break;
+  if (pendingSolar_) {
+    pendingSolar_ = false;
+    applySolar(solarPacket_);
+  }
+  if (pendingBmsTelemetry_) {
+    pendingBmsTelemetry_ = false;
+    applyBmsTelemetry(bmsPacket_);
+  }
+  if (pendingBmsProduct_) {
+    pendingBmsProduct_ = false;
+    applyBmsProduct(productPacket_);
   }
 }
 

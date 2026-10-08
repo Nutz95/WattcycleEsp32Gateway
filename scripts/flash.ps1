@@ -43,6 +43,27 @@ function Import-UserEnv {
   }
 }
 
+function Ensure-EspNowMacEnv {
+  param(
+    [string]$HubPort,
+    [string]$BmsBridgePort,
+    [string]$XtBridgePort
+  )
+  Import-UserEnv @("ESPNOW_PEER_MAC", "ESPNOW_BMS_BRIDGE_MAC", "ESPNOW_BRIDGE_MAC", "ESPNOW_PMK")
+  $needPair = [string]::IsNullOrWhiteSpace($env:ESPNOW_PEER_MAC) -or
+              [string]::IsNullOrWhiteSpace($env:ESPNOW_BMS_BRIDGE_MAC) -or
+              [string]::IsNullOrWhiteSpace($env:ESPNOW_BRIDGE_MAC) -or
+              [string]::IsNullOrWhiteSpace($env:ESPNOW_PMK)
+  if (-not $needPair) {
+    return
+  }
+  Write-Host "==> ESP-NOW MACs incomplete — auto-detecting via pair_espnow_link.ps1" -ForegroundColor Yellow
+  & "$PSScriptRoot\pair_espnow_link.ps1" -HubPort $HubPort -BmsBridgePort $BmsBridgePort `
+    -XtBridgePort $XtBridgePort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  Import-UserEnv @("ESPNOW_PEER_MAC", "ESPNOW_BMS_BRIDGE_MAC", "ESPNOW_BRIDGE_MAC", "ESPNOW_PMK")
+}
+
 function Flash-HubM5 {
   param([string]$UploadPort)
   Import-UserEnv @("WIFI_SSID", "WIFI_PASS", "ESPNOW_PMK", "ESPNOW_BRIDGE_MAC", "ESPNOW_BMS_BRIDGE_MAC")
@@ -144,6 +165,7 @@ switch ($Target) {
     Flash-BridgeXt369p -UploadPort $XtBridgePort
   }
   "All" {
+    Ensure-EspNowMacEnv -HubPort $HubPort -BmsBridgePort $BmsBridgePort -XtBridgePort $XtBridgePort
     Flash-HubM5 -UploadPort $HubPort
     Flash-BridgeTtgoWattcycle -UploadPort $BmsBridgePort
     Flash-BridgeXt369p -UploadPort $XtBridgePort

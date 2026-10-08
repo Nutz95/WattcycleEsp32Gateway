@@ -1,31 +1,43 @@
 <#
 .SYNOPSIS
-  First-time ESP-NOW pairing in the monorepo: read MACs, set env, optionally flash both.
+  Auto-detect STA MACs on the three Phase 2 boards, write User env, optionally flash All.
 
 .DESCRIPTION
-  BRIDGE = XT369P solar ESP (usually COM22)  — env: bridge_xt369p
-  HUB    = Wattcycle BMS ESP (usually COM19) — env: hub_ttgo_wattcycle
+  HUB         = M5Stack Basic (usually COM23) — env: hub_m5_wattcycle
+  BMS_BRIDGE  = TTGO Wattcycle BLE (usually COM19) — env: bridge_ttgo_wattcycle
+  XT_BRIDGE   = TTGO XT369P SPP (usually COM22) — env: bridge_xt369p
 
-  BRIDGE  --ESP-NOW-->  HUB
+  Both bridges TX ESP-NOW → HUB.
 
-  ESPNOW_PEER_MAC   (on BRIDGE) = HUB MAC
-  ESPNOW_BRIDGE_MAC (on HUB)    = BRIDGE MAC
-  ESPNOW_PMK        (on BOTH)   = same 32-char hex secret
+  ESPNOW_PEER_MAC        (on BOTH bridges) = HUB MAC
+  ESPNOW_BMS_BRIDGE_MAC  (on HUB)          = BMS bridge MAC
+  ESPNOW_BRIDGE_MAC      (on HUB)          = XT bridge MAC
+  ESPNOW_PMK             (on ALL three)    = same 32-char hex secret
 
 .EXAMPLE
-  .\scripts\pair_espnow_link.ps1 -HubPort COM19 -BridgePort COM22 -Flash
+  .\scripts\pair_espnow_link.ps1 -Flash
+.EXAMPLE
+  .\scripts\pair_espnow_link.ps1 -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22 -Flash
 #>
 [CmdletBinding()]
 param(
-  [string]$HubPort = "COM19",
-  [string]$BridgePort = "COM22",
+  [string]$HubPort = "COM23",
+  [string]$BmsBridgePort = "COM19",
+  [string]$XtBridgePort = "COM22",
+  # Legacy Phase 1 aliases
+  [string]$BridgePort = "",
   [switch]$Flash,
-  [switch]$RegeneratePmk
+  [switch]$RegeneratePmk,
+  [switch]$LegacyTwoBoard
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
+
+if ($BridgePort) {
+  $XtBridgePort = $BridgePort
+}
 
 function Get-EsptoolPath {
   $path = Join-Path $env:USERPROFILE ".platformio\packages\tool-esptoolpy\esptool.py"
@@ -68,58 +80,79 @@ function Get-OrCreatePmk {
 }
 
 Write-Host ""
-Write-Host "ESP-NOW pairing (monorepo)" -ForegroundColor Cyan
+Write-Host "ESP-NOW pairing (auto MAC detect)" -ForegroundColor Cyan
+
+if ($LegacyTwoBoard) {
+  Write-Host @"
+
+  Legacy two-board mode (hub_ttgo + XT only):
+  HUB=$HubPort  XT=$XtBridgePort
+
+"@
+  if ($HubPort -eq $XtBridgePort) {
+    throw "HubPort and XtBridgePort must differ."
+  }
+  $hubMac = Read-Esp32StaMac -Port $HubPort -Label "HUB"
+  $xtMac = Read-Esp32StaMac -Port $XtBridgePort -Label "XT bridge"
+  $pmk = Get-OrCreatePmk -ForceNew:$RegeneratePmk
+  Set-UserEnv -Name "ESPNOW_PEER_MAC" -Value $hubMac
+  Set-UserEnv -Name "ESPNOW_BRIDGE_MAC" -Value $xtMac
+  Set-UserEnv -Name "ESPNOW_PMK" -Value $pmk
+  Write-Host "Saved: PEER=$hubMac  BRIDGE(XT)=$xtMac" -ForegroundColor Green
+  if ($Flash) {
+    & "$PSScriptRoot\flash.ps1" -Target Both -HubPort $HubPort -BridgePort $XtBridgePort
+    exit $LASTEXITCODE
+  }
+  exit 0
+}
+
 Write-Host @"
 
-  BRIDGE = XT369P solar ESP     ($BridgePort)  [bridge_xt369p]
-  HUB    = Wattcycle BMS ESP    ($HubPort)  [hub_ttgo_wattcycle]
+  HUB        = M5Stack Basic     ($HubPort)  [hub_m5_wattcycle]
+  BMS_BRIDGE = TTGO Wattcycle    ($BmsBridgePort)  [bridge_ttgo_wattcycle]
+  XT_BRIDGE  = TTGO XT369P       ($XtBridgePort)  [bridge_xt369p]
 
-  BRIDGE  ===== ESP-NOW =====>  HUB
-
-  On BRIDGE:  ESPNOW_PEER_MAC   = HUB MAC
-  On HUB:     ESPNOW_BRIDGE_MAC = BRIDGE MAC
-  On BOTH:    ESPNOW_PMK        = same secret
+  BMS + XT  ===== ESP-NOW =====>  HUB
 
 "@
 
-if ($HubPort -eq $BridgePort) {
-  throw "HubPort and BridgePort must be different (got $HubPort for both)."
+$ports = @($HubPort, $BmsBridgePort, $XtBridgePort)
+if (($ports | Select-Object -Unique).Count -ne 3) {
+  throw "HubPort, BmsBridgePort and XtBridgePort must be three different COM ports."
 }
 
-$hubMac = Read-Esp32StaMac -Port $HubPort -Label "HUB (Wattcycle)"
-$bridgeMac = Read-Esp32StaMac -Port $BridgePort -Label "BRIDGE (XT369P)"
+$hubMac = Read-Esp32StaMac -Port $HubPort -Label "HUB (M5)"
+$bmsMac = Read-Esp32StaMac -Port $BmsBridgePort -Label "BMS bridge (TTGO)"
+$xtMac = Read-Esp32StaMac -Port $XtBridgePort -Label "XT bridge (TTGO)"
 $pmk = Get-OrCreatePmk -ForceNew:$RegeneratePmk
 
 Write-Host ""
 Write-Host "Discovered:" -ForegroundColor Yellow
-Write-Host "  HUB    (Wattcycle) MAC = $hubMac"
-Write-Host "  BRIDGE (XT369P)   MAC = $bridgeMac"
+Write-Host "  HUB        MAC = $hubMac"
+Write-Host "  BMS_BRIDGE MAC = $bmsMac"
+Write-Host "  XT_BRIDGE  MAC = $xtMac"
 Write-Host ""
 
+# Bridges peer the hub; hub peers both bridges.
 Set-UserEnv -Name "ESPNOW_PEER_MAC" -Value $hubMac
-Set-UserEnv -Name "ESPNOW_BRIDGE_MAC" -Value $bridgeMac
+Set-UserEnv -Name "ESPNOW_BMS_BRIDGE_MAC" -Value $bmsMac
+Set-UserEnv -Name "ESPNOW_BRIDGE_MAC" -Value $xtMac
 Set-UserEnv -Name "ESPNOW_PMK" -Value $pmk
 
 Write-Host "Saved Windows User env:" -ForegroundColor Green
-Write-Host "  ESPNOW_PEER_MAC   = $hubMac     (for bridge_xt369p flash)"
-Write-Host "  ESPNOW_BRIDGE_MAC = $bridgeMac  (for hub_ttgo_wattcycle flash)"
-Write-Host "  ESPNOW_PMK        = (32-char secret, not printed again here)"
+Write-Host "  ESPNOW_PEER_MAC       = $hubMac   (both bridges)"
+Write-Host "  ESPNOW_BMS_BRIDGE_MAC = $bmsMac   (M5 hub)"
+Write-Host "  ESPNOW_BRIDGE_MAC     = $xtMac    (M5 hub, XT peer)"
+Write-Host "  ESPNOW_PMK            = (32-char secret, not printed)"
 Write-Host ""
 
 if (-not $Flash) {
-  Write-Host "Next: flash both boards (env is already set):" -ForegroundColor Yellow
-  Write-Host "  .\scripts\flash.ps1 -Target HubTtgoWattcycle -Port $HubPort"
-  Write-Host "  .\scripts\flash.ps1 -Target BridgeXt369p -Port $BridgePort"
-  Write-Host "  .\scripts\flash.ps1 -Target Both -HubPort $HubPort -BridgePort $BridgePort"
-  Write-Host ""
-  Write-Host "Or re-run with -Flash to do both now." -ForegroundColor DarkGray
+  Write-Host "Next:" -ForegroundColor Yellow
+  Write-Host "  .\scripts\flash.ps1 -Target All -HubPort $HubPort -BmsBridgePort $BmsBridgePort -XtBridgePort $XtBridgePort"
+  Write-Host "Or re-run with -Flash." -ForegroundColor DarkGray
   exit 0
 }
 
-Write-Host "==> Flashing both targets" -ForegroundColor Cyan
-& "$PSScriptRoot\flash.ps1" -Target Both -HubPort $HubPort -BridgePort $BridgePort
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host ""
-Write-Host "Done. Serial should show enc=1 on both boards." -ForegroundColor Green
-exit 0
+Write-Host "==> Flashing all three targets" -ForegroundColor Cyan
+& "$PSScriptRoot\flash.ps1" -Target All -HubPort $HubPort -BmsBridgePort $BmsBridgePort -XtBridgePort $XtBridgePort
+exit $LASTEXITCODE

@@ -20,8 +20,6 @@ class EspNowTelemetryReceiver : public IEspNowTelemetryReceiver {
   bool sendMeterCommand(uint8_t command) override;
 
  private:
-  enum class PendingKind : uint8_t { None, Solar, BmsTelemetry, BmsProduct };
-
   static void onReceiveTrampoline(const uint8_t* mac, const uint8_t* data, int len);
   void onReceive(const uint8_t* mac, const uint8_t* data, int len);
   void applyPending();
@@ -36,10 +34,13 @@ class EspNowTelemetryReceiver : public IEspNowTelemetryReceiver {
   uint8_t lmk_[16] = {};
   uint8_t xtPeerMac_[6] = {};
   bool hasXtPeer_ = false;
-  volatile PendingKind pendingKind_ = PendingKind::None;
-  xt369p_bridge::EspNowPacketV1 pendingSolar_{};
-  wattcycle_bridge::EspNowTelemetryPacketV1 pendingBms_{};
-  wattcycle_bridge::EspNowProductPacketV1 pendingProduct_{};
+  // Independent pending flags — dual bridges must not overwrite each other.
+  volatile bool pendingSolar_ = false;
+  volatile bool pendingBmsTelemetry_ = false;
+  volatile bool pendingBmsProduct_ = false;
+  xt369p_bridge::EspNowPacketV1 solarPacket_{};
+  wattcycle_bridge::EspNowTelemetryPacketV1 bmsPacket_{};
+  wattcycle_bridge::EspNowProductPacketV1 productPacket_{};
   static EspNowTelemetryReceiver* instance_;
 };
 
