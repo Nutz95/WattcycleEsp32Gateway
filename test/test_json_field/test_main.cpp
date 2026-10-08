@@ -3,7 +3,7 @@
 extern "C" void setUp(void) {}
 extern "C" void tearDown(void) {}
 
-#include "Web/JsonField.h"
+#include "HttpApi/JsonField.h"
 
 void test_extract_username_password() {
   const char* json = "{\"username\":\"alice\",\"password\":\"s3cret!!\"}";

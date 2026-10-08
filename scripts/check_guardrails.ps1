@@ -26,7 +26,10 @@ $concreteAdapterHeaders = @(
   "AuthService.h",
   "EspNowTelemetryReceiver.h",
   "EspNowTelemetryPublisher.h",
-  "AtorchSppClient.h"
+  "AtorchSppClient.h",
+  "NtpClock.h",
+  "SdDailyHistory.h",
+  "NullDailyHistoryStore.h"
 )
 
 $targetPrefixes = @(
@@ -34,7 +37,8 @@ $targetPrefixes = @(
   "hub_m5_wattcycle/",
   "bridge_ttgo_wattcycle/",
   "bridge_xt369p/",
-  "common/"
+  "common/",
+  "hub_common/"
 )
 
 function Get-RelativeInTarget {

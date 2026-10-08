@@ -10,7 +10,7 @@
 #include "Ota/IOtaUpdater.h"
 #include "Telemetry/ITelemetryStore.h"
 #include "Telemetry/TelemetryPoller.h"
-#include "Web/IWebGateway.h"
+#include "HttpApi/IWebGateway.h"
 #include "Wifi/IWifiConnector.h"
 
 #ifndef UNIT_TEST

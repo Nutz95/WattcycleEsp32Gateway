@@ -6,11 +6,14 @@
 #include "Display/TtgoStatusDisplay.h"
 #include "EspNow/EspNowTelemetryReceiver.h"
 #include "Ota/ArduinoOtaUpdater.h"
+#include "Storage/NullDailyHistoryStore.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
-#include "Web/EspWebGateway.h"
+#include "HttpApi/EspWebGateway.h"
 #include "Wifi/EspWifiConnector.h"
 
 #include <Arduino.h>
+#include <WebServer.h>  // force LDF to link framework WebServer
+#include <WiFi.h>
 
 namespace {
 
@@ -40,8 +43,11 @@ void setup() {
   static wattcycle::auth::NvsCredentialStore credentialStore;
   static wattcycle::auth::AuthService authService(credentialStore);
   authService.begin();
-  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService, espNowReceiver);
+  static wattcycle::storage::NullDailyHistoryStore nullHistory;
+  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService, espNowReceiver,
+                                                  nullHistory);
   static wattcycle::display::TtgoStatusDisplay statusDisplay;
+  webGateway.setDeviceIdentity("ttgo_hub", "", "", "");
 
   static wattcycle::composition::GatewayApplication application(
       config, wifiConnector, otaUpdater, bleClient, telemetryStore, webGateway,
@@ -51,6 +57,8 @@ void setup() {
   if (!application.begin()) {
     Serial.println(F("Gateway boot incomplete — check Serial / display errors"));
   }
+  webGateway.setDeviceIdentity("ttgo_hub", WiFi.macAddress().c_str(), "",
+                               config.espNowBridgeMac);
 }
 
 void loop() {
