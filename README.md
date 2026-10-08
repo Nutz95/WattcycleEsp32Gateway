@@ -1,7 +1,7 @@
 # Wattcycle ESP32 Gateway
 
-> Turn a **LILYGO TTGO T-Display** into a local **BLE → Wi-Fi** bridge for a
-> Wattcycle / XDZN **51.2 V** smart BMS — then browse live telemetry on your LAN.
+> Monorepo: **Wattcycle BMS hub** (BLE → Wi‑Fi web) + **XT369P solar bridge**
+> (Classic SPP → ESP-NOW) on LILYGO TTGO T-Display boards — one dashboard on the LAN.
 
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32-orange)](https://platformio.org/)
 [![Protocol](https://img.shields.io/badge/BLE-Wattcycle%20%2F%20XDZN-blue)](https://github.com/qume/wattcycle_ble)
@@ -14,39 +14,46 @@
 Wattcycle packs expose rich BMS data over **Bluetooth**, but they do **not** ship a
 routable web server. Phones work locally; remote / LAN dashboards do not.
 
-This project makes the ESP32 a **small always-on gateway**. It can also receive
-**solar wattmeter** telemetry over ESP-NOW from the companion bridge
-[XT369P_SPP_Gateway](https://github.com/Nutz95/XT369P_SPP_Gateway). Prefer
-`.\scripts\pair_espnow_link.ps1` for first-time MAC + PMK setup:
+Two firmwares, one repo:
 
 ```mermaid
 flowchart LR
-  subgraph Battery
-    BMS["Wattcycle BMS<br/>BLE GATT 0xFFF0"]
-  end
-
-  subgraph TTGO["TTGO T-Display ESP32"]
-    BLE["NimBLE client"]
-    STORE["Telemetry store"]
-    WEB["HTTP :6789<br/>LittleFS UI"]
-    TFT["ST7789V status"]
-    OTA["ArduinoOTA"]
-  end
-
-  subgraph LAN
-    BROWSER["Browser / Home automation"]
-    DEV["Dev PC (OTA / USB)"]
-  end
-
-  BMS <-->|HiLink auth + Modbus-like frames| BLE
-  BLE --> STORE
-  STORE --> WEB
-  STORE --> TFT
-  WEB --> BROWSER
-  DEV <-->|Wi-Fi OTA or USB COM19| OTA
+  BMS["Wattcycle BMS BLE"] --> Hub["hub_ttgo_wattcycle COM19"]
+  XT["XT369P SPP"] --> Bridge["bridge_xt369p COM22"]
+  Bridge -->|"ESP-NOW + PMK"| Hub
+  Hub -->|"HTTP :6789 fused binary"| Browser
 ```
 
-**No SD card required** — the dashboard (`data/`) is flashed into **LittleFS** on the ESP.
+Prefer `.\scripts\pair_espnow_link.ps1` for first-time MAC + PMK setup, then
+`.\scripts\flash.ps1 -Target Both`.
+
+**No SD card required on the hub** — the dashboard (`data/`) is flashed into **LittleFS**.
+
+### Roadmap (Phase 2)
+
+Later: move the web hub to an **M5Stack Basic** (COM23, classic ESP32) and demote both
+TTGOs to ESP-NOW transport-only bridges. Target shape:
+
+```mermaid
+flowchart TB
+  subgraph bridges [Passerelles TTGO]
+    BMS2["BMS BLE"] --> BridgeBms["bridge_ttgo_wattcycle COM19"]
+    XT2["XT369P SPP"] --> BridgeXt["bridge_xt369p COM22"]
+  end
+  subgraph hub [Hub M5Stack Basic COM23]
+    EspNowRx["ESP-NOW RX multi-peer"]
+    Store["Telemetry store + SD history"]
+    Web["HTTP SPA + auth"]
+    Ntp["NTP clock"]
+    PairUi["Web: scan / associate / NVS keys"]
+  end
+  BridgeBms -->|"ESP-NOW encrypted"| EspNowRx
+  BridgeXt -->|"ESP-NOW encrypted"| EspNowRx
+  EspNowRx --> Store --> Web
+  PairUi --> EspNowRx
+  Store --> SD[(SD card)]
+  Ntp --> Store
+```
 
 ---
 
@@ -96,10 +103,14 @@ flowchart TB
 
 ---
 
-## BLE protocol (short version)
+## Protocols
 
-Based on the excellent reverse engineering in
-[`qume/wattcycle_ble`](https://github.com/qume/wattcycle_ble):
+| Device | Doc |
+|--------|-----|
+| Wattcycle / XDZN BMS (BLE) | [docs/WATTCYCLE_PROTOCOL.md](docs/WATTCYCLE_PROTOCOL.md) · upstream [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble) |
+| ATorch XT369P (Classic SPP) | [docs/XT369P_PROTOCOL.md](docs/XT369P_PROTOCOL.md) |
+
+### Wattcycle BLE (short)
 
 | Step | Detail |
 |------|--------|
@@ -110,25 +121,38 @@ Based on the excellent reverse engineering in
 | Framing | Head `0x7E` (or `0x1E`) … Modbus CRC16 … tail `0x0D` |
 | Main DP | Analog Quantity **140** (`0x8C`) — SoC, V, I, cells, temps… |
 
+### XT369P solar meter
+
+<p align="center">
+  <img src="Resources/xt369p.png" alt="ATorch XT369P wattmeter" width="420" />
+</p>
+
+<p align="center">
+  <img src="Resources/xt369p_front_back.png" alt="XT369P front and back" width="560" />
+</p>
+
+Classic SPP name `XT369P_SPP` → TTGO `bridge_xt369p` → ESP-NOW → hub. Frame layout and checksum notes are in the protocol doc above.
+
 ---
 
-## Repository layout (domain folders)
+## Repository layout (monorepo)
 
 ```text
 src/
-  CompositionRoot/   # DI wiring only
-  Config/            # Build-flag / env configuration
-  Bms/
-    Models/          # BatteryTelemetry, warnings, product info
-    Protocol/        # CRC, frames, parsers (unit-tested)
-    Ble/             # NimBLE adapter
-  Telemetry/         # Store, poller, binary codec, gateway status
-  Auth/              # NVS credentials, RAM sessions, physical confirm (ISP-split)
-  Wifi/  Ota/  Web/  Display/  Esp/  Util/
-web/                 # SPA sources (bundled → data/ LittleFS)
-scripts/             # run_tests / flash_usb / flash_ota / pair_espnow_link / guardrails / bundle_web
-test/                # PlatformIO native Unity tests
+  common/                 # Shared Util + ESP-NOW wire protocol
+  hub_ttgo_wattcycle/     # BMS BLE hub: Auth, Web, Wifi, Ota, EspNow RX, Display
+  bridge_xt369p/          # XT369P Classic SPP → EspNow TX + Display
+web/                      # SPA (hub LittleFS only)
+docs/                     # WATTCYCLE_PROTOCOL.md + XT369P_PROTOCOL.md
+scripts/                  # flash.ps1 / pair_espnow_link / run_tests / …
+test/                     # native Unity tests (hub parsers)
 ```
+
+| PlatformIO env | Port | Role |
+|----------------|------|------|
+| `hub_ttgo_wattcycle` | COM19 | Web hub + BMS BLE + ESP-NOW RX |
+| `bridge_xt369p` | COM22 | SPP → ESP-NOW TX (no web) |
+| `native` | — | Host unit tests |
 
 Design goals: **SOLID**, constructor injection, files **&lt; 400 lines**, classes **&lt; 30 methods**, **no nested classes**.
 
@@ -140,13 +164,16 @@ Design goals: **SOLID**, constructor injection, files **&lt; 400 lines**, classe
 
 - [PlatformIO Core](https://platformio.org/install/cli) (`pio` on PATH)
 - PowerShell 5+ / 7+
-- ESP32 on USB (**COM19** by default)
+- Hub TTGO on USB (**COM19**); optional XT369P bridge on **COM22**
 - Environment variables (**required**, never commit secrets):
 
 ```powershell
 $env:WIFI_SSID = "YourWifiName"
-$env:WIFI_PASS = "YourWifiPassword"
+$env:WIFI_PASS = "YourWifiPassword"          # hub STA join (bridge uses SSID for channel only)
 $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # BLE MAC only — no serial / password needed
+# Optional solar bridge:
+# $env:XT369P_BT_ADDRESS = "AA:BB:CC:DD:EE:FF"
+# ESPNOW_* set by pair_espnow_link.ps1
 ```
 
 > **BMS connection:** only the BLE MAC (`BMS_BLE_ADDRESS`) is required. Auth uses the fixed Wattcycle `HiLink` key over GATT (no pairing, no serial number). Find the MAC in the phone app or any BLE scanner (`XDZN…` / `WT…` names).
@@ -159,15 +186,22 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # BLE MAC only — no serial / pass
 .\scripts\run_tests.ps1
 ```
 
-### 2. First flash (USB)
+### 2. Flash firmwares (USB)
 
 ```powershell
-.\scripts\flash_usb.ps1 -Port COM19
+# Hub only (firmware + LittleFS)
+.\scripts\flash.ps1 -Target HubTtgoWattcycle -Port COM19
+
+# Bridge only
+.\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
+
+# Both (distinct COM ports)
+.\scripts\flash.ps1 -Target Both -HubPort COM19 -BridgePort COM22
 ```
 
-This uploads firmware **and** the LittleFS web assets.
+`.\scripts\flash_usb.ps1` remains a thin alias for the hub.
 
-### 2b. Optional — pair XT369P solar bridge (ESP-NOW)
+### 2b. Pair XT369P solar bridge (ESP-NOW)
 
 Plug **both** ESPs (hub COM19 + bridge COM22):
 
@@ -176,10 +210,10 @@ Plug **both** ESPs (hub COM19 + bridge COM22):
 ```
 
 ```text
-BRIDGE (XT369P)  --ESP-NOW-->  HUB (this Wattcycle board)
+BRIDGE (XT369P COM22)  --ESP-NOW-->  HUB (Wattcycle COM19)
 
 ESPNOW_PEER_MAC   on BRIDGE = HUB MAC
-ESPNOW_BRIDGE_MAC on HUB    = BRIDGE MAC   <- not this board's own MAC
+ESPNOW_BRIDGE_MAC on HUB    = BRIDGE MAC   <- not the hub's own MAC
 ESPNOW_PMK        on BOTH   = same secret
 ```
 
@@ -266,9 +300,11 @@ Each image matches one dashboard tab (same order as the SPA nav).
 
 ```powershell
 pio test -e native
-pio run -e ttgo-tdisplay
-pio run -e ttgo-tdisplay -t upload --upload-port COM19
-pio run -e ttgo-tdisplay -t uploadfs --upload-port COM19
+pio run -e hub_ttgo_wattcycle
+pio run -e bridge_xt369p
+pio run -e hub_ttgo_wattcycle -t upload --upload-port COM19
+pio run -e hub_ttgo_wattcycle -t uploadfs --upload-port COM19
+pio run -e bridge_xt369p -t upload --upload-port COM22
 pio device monitor -p COM19 -b 115200
 ```
 
@@ -276,13 +312,18 @@ pio device monitor -p COM19 -b 115200
 
 ## Configuration reference
 
-| Variable / flag | Purpose |
-|-----------------|---------|
-| `WIFI_SSID` / `WIFI_PASS` | Station credentials (build-time inject) |
-| `BMS_BLE_ADDRESS` | Target BMS MAC `AA:BB:CC:DD:EE:FF` |
-| `WEB_SERVER_PORT` | Default **6789** |
-| `BMS_POLL_INTERVAL_MS` | Default **2000** (UI refresh matches) |
-| `OTA_HOSTNAME` | Default `wattcycle-gateway` |
+| Variable / flag | Purpose | Target |
+|-----------------|---------|--------|
+| `WIFI_SSID` / `WIFI_PASS` | Hub STA credentials | hub |
+| `WIFI_SSID` | Bridge channel discovery (no join) | bridge |
+| `BMS_BLE_ADDRESS` | Wattcycle BLE MAC | hub |
+| `XT369P_BT_ADDRESS` | Optional Classic BT MAC (else name `XT369P_SPP`) | bridge |
+| `ESPNOW_BRIDGE_MAC` | Bridge STA MAC (RX peer) | hub |
+| `ESPNOW_PEER_MAC` | Hub STA MAC (TX peer) | bridge |
+| `ESPNOW_PMK` | Shared 32-char hex secret | both |
+| `WEB_SERVER_PORT` | Default **6789** | hub |
+| `BMS_POLL_INTERVAL_MS` | Default **2000** | hub |
+| `OTA_HOSTNAME` | Default `wattcycle-gateway` | hub |
 
 ---
 
