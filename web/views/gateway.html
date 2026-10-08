@@ -4,16 +4,29 @@
     <hr class="brand-rule" />
     <p class="page-title">Gateway</p>
   </header>
+
+  <h3 class="section-title">Hub TTGO (COM19)</h3>
   <ul class="status-list">
     <li>Wi-Fi: <span id="wifi">--</span></li>
-    <li>BLE: <span id="ble">--</span></li>
+    <li>Web port: <span id="webPort">6789</span></li>
+    <li>Last hub error: <span id="hubError">none</span></li>
+  </ul>
+
+  <h3 class="section-title">Wattcycle BMS (BLE)</h3>
+  <ul class="status-list">
+    <li>Link: <span id="ble">--</span></li>
     <li>BMS MAC: <span id="bleAddress">--</span></li>
-    <li>Solar ESP-NOW: <span id="solarLink">--</span></li>
-    <li>XT369P SPP: <span id="solarSppGw">--</span></li>
-    <li>Solar target: <span id="solarTarget">--</span></li>
-    <li>Last error: <span id="error">none</span></li>
     <li>Firmware: <span id="fw">--</span></li>
     <li>Manufacturer: <span id="mfr">--</span></li>
     <li>Serial: <span id="sn">--</span></li>
+  </ul>
+
+  <h3 class="section-title">XT369P bridge (ESP-NOW)</h3>
+  <ul class="status-list">
+    <li>ESP-NOW link: <span id="solarLink">--</span></li>
+    <li>Encryption: <span id="espNowEnc">--</span></li>
+    <li>XT369P SPP: <span id="solarSppGw">--</span></li>
+    <li>SPP target: <span id="solarTarget">--</span></li>
+    <li>Bridge error: <span id="solarError">none</span></li>
   </ul>
 </section>

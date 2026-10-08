@@ -57,6 +57,14 @@
       : "No ESP-NOW link";
     setLink("solarPageLink", solarLink, solarLink ? "fresh" : "stale");
     setLink("solarPageSpp", sppOk, sppOk ? "connected" : "down");
+    const encrypted = !!solar.espNowEncrypted;
+    const encEl = document.getElementById("solarPageEnc");
+    if (encEl) {
+      encEl.textContent = solarLink || encrypted
+        ? (encrypted ? "secured" : "plaintext")
+        : "--";
+      encEl.className = encrypted ? "ok" : (solarLink ? "warn" : "bad");
+    }
     document.getElementById("solarPageVoltage").textContent = fmt(solar.voltage, "V", 2);
     document.getElementById("solarPageCurrent").textContent = fmt(solar.current, "A", 3);
     document.getElementById("solarPagePowerMetric").textContent = fmt(solar.power, "W", 2);

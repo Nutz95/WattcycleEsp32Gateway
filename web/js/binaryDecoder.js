@@ -1,7 +1,7 @@
 /* Wattcycle gateway binary telemetry decoder (little-endian). */
 (function (global) {
   const MAGIC = 0x4d475457;
-  const VERSION = 3;
+  const VERSION = 4;
 
   function u8(view, offset) { return view.getUint8(offset); }
   function u16(view, offset) { return view.getUint16(offset, true); }
@@ -27,8 +27,8 @@
       throw new Error("Unsupported telemetry version " + version);
     }
 
-    let o = 5;
-    const flags = u8(view, o); o += 1;
+    let offset = 5;
+    const flags = u8(view, offset); offset += 1;
     const data = {
       version: version,
       valid: (flags & 0x01) !== 0,
@@ -48,25 +48,25 @@
       balancing: []
     };
 
-    data.soc = u8(view, o); o += 1;
-    data.soh = u8(view, o); o += 1;
-    data.voltage = u16(view, o) / 100; o += 2;
-    data.current = i16(view, o) / 10; o += 2;
-    data.power = i16(view, o); o += 2;
-    data.balanceCurrent = i16(view, o) / 10; o += 2;
-    data.remainingAh = u16(view, o) / 10; o += 2;
-    data.totalAh = u16(view, o) / 10; o += 2;
-    data.designAh = u16(view, o) / 10; o += 2;
-    data.cycles = u16(view, o); o += 2;
-    data.mosTemp = i16(view, o) / 10; o += 2;
-    data.pcbTemp = i16(view, o) / 10; o += 2;
-    data.updatedAtMs = u32(view, o); o += 4;
+    data.soc = u8(view, offset); offset += 1;
+    data.soh = u8(view, offset); offset += 1;
+    data.voltage = u16(view, offset) / 100; offset += 2;
+    data.current = i16(view, offset) / 10; offset += 2;
+    data.power = i16(view, offset); offset += 2;
+    data.balanceCurrent = i16(view, offset) / 10; offset += 2;
+    data.remainingAh = u16(view, offset) / 10; offset += 2;
+    data.totalAh = u16(view, offset) / 10; offset += 2;
+    data.designAh = u16(view, offset) / 10; offset += 2;
+    data.cycles = u16(view, offset); offset += 2;
+    data.mosTemp = i16(view, offset) / 10; offset += 2;
+    data.pcbTemp = i16(view, offset) / 10; offset += 2;
+    data.updatedAtMs = u32(view, offset); offset += 4;
 
-    const cellCount = u8(view, o); o += 1;
+    const cellCount = u8(view, offset); offset += 1;
     data.cells = [];
     for (let i = 0; i < cellCount; i += 1) {
-      data.cells.push(u16(view, o) / 1000);
-      o += 2;
+      data.cells.push(u16(view, offset) / 1000);
+      offset += 2;
     }
 
     const balanceByteCount = Math.ceil(cellCount / 8);
@@ -74,7 +74,7 @@
       data.balancing[i] = false;
     }
     for (let byteIndex = 0; byteIndex < balanceByteCount; byteIndex += 1) {
-      const bits = u8(view, o); o += 1;
+      const bits = u8(view, offset); offset += 1;
       for (let bit = 0; bit < 8; bit += 1) {
         const cellIndex = byteIndex * 8 + bit;
         if (cellIndex < cellCount) {
@@ -83,53 +83,70 @@
       }
     }
 
-    const cellTempCount = u8(view, o); o += 1;
+    const cellTempCount = u8(view, offset); offset += 1;
     data.cellTemps = [];
     for (let i = 0; i < cellTempCount; i += 1) {
-      data.cellTemps.push(i16(view, o) / 10);
-      o += 2;
+      data.cellTemps.push(i16(view, offset) / 10);
+      offset += 2;
     }
 
-    data.warnings.status1 = u8(view, o); o += 1;
-    data.warnings.status2 = u8(view, o); o += 1;
-    data.warnings.status5 = u8(view, o); o += 1;
-    data.warnings.warn1 = u8(view, o); o += 1;
-    data.warnings.warn2 = u8(view, o); o += 1;
+    data.warnings.status1 = u8(view, offset); offset += 1;
+    data.warnings.status2 = u8(view, offset); offset += 1;
+    data.warnings.status5 = u8(view, offset); offset += 1;
+    data.warnings.warn1 = u8(view, offset); offset += 1;
+    data.warnings.warn2 = u8(view, offset); offset += 1;
 
     data.product = {
-      fw: readFixedString(bytes, o, 20),
-      mfr: readFixedString(bytes, o + 20, 20),
-      sn: readFixedString(bytes, o + 40, 20)
+      fw: readFixedString(bytes, offset, 20),
+      mfr: readFixedString(bytes, offset + 20, 20),
+      sn: readFixedString(bytes, offset + 40, 20)
     };
-    o += 60;
-    data.gateway.ip = readFixedString(bytes, o, 16); o += 16;
-    data.gateway.bleAddress = readFixedString(bytes, o, 18); o += 18;
-    data.gateway.error = readFixedString(bytes, o, 64); o += 64;
+    offset += 60;
+    data.gateway.ip = readFixedString(bytes, offset, 16); offset += 16;
+    data.gateway.bleAddress = readFixedString(bytes, offset, 18); offset += 18;
+    data.gateway.error = readFixedString(bytes, offset, 64); offset += 64;
 
-    data.esp.cpu0 = u8(view, o); o += 1;
-    data.esp.cpu1 = u8(view, o); o += 1;
-    data.esp.chipTemp = i16(view, o) / 10; o += 2;
-    data.esp.heapKb = u16(view, o); o += 2;
-    data.esp.uptimeSec = u32(view, o); o += 4;
+    data.esp.cpu0 = u8(view, offset); offset += 1;
+    data.esp.cpu1 = u8(view, offset); offset += 1;
+    data.esp.chipTemp = i16(view, offset) / 10; offset += 2;
+    data.esp.heapKb = u16(view, offset); offset += 2;
+    data.esp.uptimeSec = u32(view, offset); offset += 4;
 
-    if (o + 1 <= bytes.length) {
-      const solarFlags = u8(view, o); o += 1;
-      data.solar.valid = (solarFlags & 0x01) !== 0;
-      data.solar.checksumOk = (solarFlags & 0x02) !== 0;
-      data.solar.voltage = u16(view, o) / 100; o += 2;
-      data.solar.current = i32(view, o) / 1000; o += 4;
-      data.solar.power = i32(view, o) / 100; o += 4;
-      data.solar.capacityAh = u32(view, o) / 1000; o += 4;
-      data.solar.energyWh = u32(view, o) / 1000; o += 4;
-      data.solar.tempC = i16(view, o) / 10; o += 2;
-      data.solar.runtimeS = u32(view, o); o += 4;
-      data.solar.frameCount = u32(view, o); o += 4;
-      data.solar.seq = u32(view, o); o += 4;
-      data.solar.target = readFixedString(bytes, o, 16); o += 16;
-      data.solar.error = readFixedString(bytes, o, 24); o += 24;
-      data.solar.linkFresh = data.gateway.solarLink;
-      data.solar.sppConnected = data.gateway.spp;
+    // v4 fixed solar block + bridge ESP health trailer (fail closed).
+    const SOLAR_BLOCK_BYTES = 73;
+    const BRIDGE_ESP_BYTES = 10;
+    if (offset + SOLAR_BLOCK_BYTES + BRIDGE_ESP_BYTES > bytes.length) {
+      throw new Error("Truncated telemetry solar/bridge trailer");
     }
+    const solarFlags = u8(view, offset); offset += 1;
+    data.solar.valid = (solarFlags & 0x01) !== 0;
+    data.solar.checksumOk = (solarFlags & 0x02) !== 0;
+    data.solar.espNowEncrypted = (solarFlags & 0x04) !== 0;
+    data.solar.bridgeEspValid = (solarFlags & 0x08) !== 0;
+    data.solar.voltage = u16(view, offset) / 100; offset += 2;
+    data.solar.current = i32(view, offset) / 1000; offset += 4;
+    data.solar.power = i32(view, offset) / 100; offset += 4;
+    data.solar.capacityAh = u32(view, offset) / 1000; offset += 4;
+    data.solar.energyWh = u32(view, offset) / 1000; offset += 4;
+    data.solar.tempC = i16(view, offset) / 10; offset += 2;
+    data.solar.runtimeS = u32(view, offset); offset += 4;
+    data.solar.frameCount = u32(view, offset); offset += 4;
+    data.solar.seq = u32(view, offset); offset += 4;
+    data.solar.target = readFixedString(bytes, offset, 16); offset += 16;
+    data.solar.error = readFixedString(bytes, offset, 24); offset += 24;
+    data.solar.linkFresh = data.gateway.solarLink;
+    data.solar.sppConnected = data.gateway.spp;
+    data.gateway.espNowEncrypted = data.solar.espNowEncrypted;
+
+    data.bridgeEsp = {
+      cpu0: u8(view, offset),
+      cpu1: u8(view, offset + 1),
+      chipTemp: i16(view, offset + 2) / 10,
+      heapKb: u16(view, offset + 4),
+      uptimeSec: u32(view, offset + 6),
+      valid: data.solar.bridgeEspValid
+    };
+    offset += BRIDGE_ESP_BYTES;
 
     return data;
   }

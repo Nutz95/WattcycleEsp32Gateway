@@ -27,6 +27,8 @@
   const LINE_WIDTH = 1.6;
   const SINGLE_POINT_RADIUS = 2.5;
   const CROSSHAIR_RADIUS = 3;
+  /// Break the polyline when samples are farther apart than this (missing data).
+  const GAP_BREAK_MS = 60 * 1000;
   const chartState = new WeakMap();
 
   function syncCanvasSize(canvas) {
@@ -114,14 +116,26 @@
       graphics.fill();
       return;
     }
-    graphics.beginPath();
-    points.forEach(function (point, index) {
+    let pathOpen = false;
+    for (let index = 0; index < points.length; index += 1) {
+      const point = points[index];
       const x = mapX(point.t, tMin, span, box);
       const y = mapY(point.v, vMin, vMax, box);
-      if (index === 0) graphics.moveTo(x, y);
-      else graphics.lineTo(x, y);
-    });
-    graphics.stroke();
+      const gap = index > 0 && (point.t - points[index - 1].t) > GAP_BREAK_MS;
+      if (index === 0 || gap) {
+        if (pathOpen) {
+          graphics.stroke();
+        }
+        graphics.beginPath();
+        graphics.moveTo(x, y);
+        pathOpen = true;
+      } else {
+        graphics.lineTo(x, y);
+      }
+    }
+    if (pathOpen) {
+      graphics.stroke();
+    }
   }
 
   function drawSignedPolyline(graphics, points, tMin, span, vMin, vMax, box, posColor, negColor) {
@@ -134,9 +148,15 @@
     }
     for (let i = 1; i < points.length; i += 1) {
       const point = points[i];
+      const prev = points[i - 1];
+      if ((point.t - prev.t) > GAP_BREAK_MS) {
+        flush();
+        segment = [point];
+        activeSign = signOf(point.v) || 1;
+        continue;
+      }
       const nextSign = signOf(point.v) || activeSign;
       if (nextSign !== activeSign) {
-        const prev = points[i - 1];
         const denom = Math.abs(prev.v) + Math.abs(point.v);
         const frac = denom > 0 ? Math.abs(prev.v) / denom : 0.5;
         const zeroPoint = { t: prev.t + (point.t - prev.t) * frac, v: 0 };
