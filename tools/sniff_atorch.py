@@ -68,9 +68,17 @@ def decode_dc_report(frame: bytes) -> DcReading | None:
     current = be24(frame, 7) * 0.001
     capacity = be24(frame, 10) * 0.01
     energy_raw = be32(frame, 13)
-    energy = energy_raw / 100.0
-    if energy_raw == 0 and capacity > 0 and voltage > 0.5:
-        energy = capacity * voltage
+    estimate = capacity * voltage if capacity > 0 and voltage > 0.5 else 0.0
+    if energy_raw == 0:
+        energy = estimate
+    else:
+        candidates = (energy_raw * 10.0, energy_raw / 100.0, energy_raw / 1000.0)
+        if estimate < 0.5:
+            energy = candidates[0]
+        else:
+            energy = min(candidates, key=lambda c: abs(c - estimate))
+            if energy < estimate * 0.2 or energy > estimate * 5.0:
+                energy = estimate
     price = be24(frame, 17) * 0.01
     temperature = float(be16(frame, 24))
     runtime = be16(frame, 26) * 3600 + frame[28] * 60 + frame[29]

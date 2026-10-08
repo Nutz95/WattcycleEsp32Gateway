@@ -42,6 +42,42 @@ uint16_t AtorchFrameParser::be16(const uint8_t* p) {
   return static_cast<uint16_t>((static_cast<uint16_t>(p[0]) << 8) | p[1]);
 }
 
+float AtorchFrameParser::resolveEnergyWh(uint32_t energyRaw, float capacityAh, float voltageV) {
+  const float estimateWh =
+      (capacityAh > 0.0f && voltageV > 0.5f) ? (capacityAh * voltageV) : 0.0f;
+  if (energyRaw == 0u) {
+    return estimateWh;
+  }
+
+  // Known DC scales: ESPHome DL24 (*10), NiceLabs (/100), some USB-like (/1000).
+  const float candidates[3] = {static_cast<float>(energyRaw) * 10.0f,
+                               static_cast<float>(energyRaw) / 100.0f,
+                               static_cast<float>(energyRaw) / 1000.0f};
+
+  if (estimateWh < 0.5f) {
+    // Too little charge to score scales — prefer ESPHome DC (*10).
+    return candidates[0];
+  }
+
+  float best = candidates[0];
+  float bestDelta = candidates[0] > estimateWh ? (candidates[0] - estimateWh)
+                                               : (estimateWh - candidates[0]);
+  for (size_t i = 1; i < 3; ++i) {
+    const float delta = candidates[i] > estimateWh ? (candidates[i] - estimateWh)
+                                                   : (estimateWh - candidates[i]);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = candidates[i];
+    }
+  }
+
+  // If every register scale is absurd vs Ah×V, trust the physical estimate.
+  if (best < estimateWh * 0.2f || best > estimateWh * 5.0f) {
+    return estimateWh;
+  }
+  return best;
+}
+
 bool AtorchFrameParser::feed(const uint8_t* data, size_t length, WattmeterTelemetry& out) {
   bool produced = false;
   for (size_t i = 0; i < length; ++i) {
@@ -107,12 +143,7 @@ bool AtorchFrameParser::tryConsume(WattmeterTelemetry& out) {
   // matches capacity here (Ah tracks the LCD; Wh register at 0x0D is often 0).
   const float capacity = static_cast<float>(be24(f + 10)) * 0.01f;
   const uint32_t energyRaw = be32(f + 13);
-  // Prefer /100 (Wh·100). ESPHome's "* 10" is a 10 Wh step — useless for small solar.
-  float energy = static_cast<float>(energyRaw) / 100.0f;
-  // XT369P often leaves the Wh register at 0 while LCD shows Ah·V — mirror that.
-  if (energyRaw == 0u && capacity > 0.0f && voltage > 0.5f) {
-    energy = capacity * voltage;
-  }
+  const float energy = resolveEnergyWh(energyRaw, capacity, voltage);
   const float price = static_cast<float>(be24(f + 17)) * 0.01f;
   const float temperature = static_cast<float>(be16(f + 24));
   const uint32_t runtime =

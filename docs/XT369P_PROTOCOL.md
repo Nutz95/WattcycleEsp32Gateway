@@ -42,7 +42,7 @@ FF 55 01 02 .... .... CK
 | 4 | 3 | Voltage | `u24 BE * 0.1` → V |
 | 7 | 3 | Current | `u24 BE * 0.001` → A |
 | 10 | 3 | Capacity | `u24 BE * 0.01` → Ah |
-| 13 | 4 | Energy | `u32 BE / 100` → Wh (often 0 on XT369P → fallback Ah×V) |
+| 13 | 4 | Energy | `u32 BE` — scale varies by firmware (`*10` ESPHome DC, `/100` NiceLabs, `/1000` fine); decoder picks closest to Ah×V (raw `0` → Ah×V) |
 | 17 | 3 | Price / kWh | `u24 BE * 0.01` |
 | 20 | 4 | (unknown / reserved) | |
 | 24 | 2 | Temperature | `u16 BE` → °C |

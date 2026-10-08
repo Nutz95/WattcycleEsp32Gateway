@@ -15,6 +15,11 @@ class AtorchFrameParser {
 
   void reset();
 
+  /// Resolve DC energy (Wh) from the u32 register at offset 13.
+  /// Atorch DC firmwares disagree on scale (*10 vs /100 vs /1000); pick the
+  /// candidate closest to Ah×V when that estimate is meaningful.
+  static float resolveEnergyWh(uint32_t energyRaw, float capacityAh, float voltageV);
+
  private:
   static constexpr size_t kReportLen = 36;
   static constexpr size_t kBufCap = 96;
