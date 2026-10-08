@@ -9,18 +9,20 @@
 namespace wattcycle::display {
 namespace {
 #ifndef UNIT_TEST
-// Cool palette (RGB565; canvas is 8-bit so prefer primary-ish hues).
-constexpr uint16_t kColorBg = 0x10A2;       // near-black blue
-constexpr uint16_t kColorTileA = 0x0B5B;    // azure
-constexpr uint16_t kColorTileB = 0x0451;    // deep cyan
-constexpr uint16_t kColorTileC = 0x1A4C;    // indigo
-constexpr uint16_t kColorTileD = 0x1268;    // steel blue
-constexpr uint16_t kColorFooterTile = 0x18C3;
-constexpr uint16_t kColorMuted = 0x9CD3;
+// Windows Metro-style tiles: saturated fills + white labels (high contrast).
+// Canvas is 8-bit (RGB332) — pick vivid primaries that survive quantization.
+constexpr uint16_t kColorBg = 0x08C4;        // dark navy
+constexpr uint16_t kColorTileA = 0x03BF;     // Win blue
+constexpr uint16_t kColorTileB = 0x0451;     // teal
+constexpr uint16_t kColorTileC = 0xEAA0;     // vivid orange
+constexpr uint16_t kColorTileD = 0x901A;     // magenta / purple
+constexpr uint16_t kColorFooterTile = 0x0257;  // darker blue footer
+constexpr uint16_t kColorTitle = TFT_WHITE;  // never muted on tiles
 constexpr uint16_t kColorValue = TFT_WHITE;
-constexpr uint16_t kColorPos = 0x07E0;      // charge / OK
-constexpr uint16_t kColorNeg = 0xF800;      // discharge / bad
-constexpr uint16_t kColorWarn = 0xFDA0;     // pending / stale
+constexpr uint16_t kColorPos = 0x07E0;       // charge / OK
+constexpr uint16_t kColorNeg = 0xF800;       // discharge / bad
+constexpr uint16_t kColorWarn = 0xFE60;      // pending / stale (bright amber)
+constexpr int kTileRadius = 2;               // nearly flat Metro corners
 
 const char* kPageNames[kPageCount] = {"Overview", "Pack", "Solar",
                                       "Gateway", "ESP", "Temps"};
@@ -42,8 +44,8 @@ uint16_t signedValueColor(float value) {
 void drawTile(M5Canvas& canvas, int x, int y, int w, int h, uint16_t fill,
               const char* title, const char* value, uint16_t valueColor = kColorValue,
               uint8_t valueSize = 2) {
-  canvas.fillRoundRect(x, y, w, h, 6, fill);
-  canvas.setTextColor(kColorMuted, fill);
+  canvas.fillRoundRect(x, y, w, h, kTileRadius, fill);
+  canvas.setTextColor(kColorTitle, fill);
   canvas.setTextSize(1);
   canvas.setCursor(x + 8, y + 8);
   canvas.print(title != nullptr ? title : "");
@@ -56,12 +58,12 @@ void drawTile(M5Canvas& canvas, int x, int y, int w, int h, uint16_t fill,
 
 void drawFooterTile(M5Canvas& canvas, int x, int y, int w, int h, const char* top,
                     const char* bottom) {
-  canvas.fillRoundRect(x, y, w, h, 6, kColorFooterTile);
+  canvas.fillRoundRect(x, y, w, h, kTileRadius, kColorFooterTile);
   canvas.setTextSize(1);
   canvas.setTextColor(TFT_WHITE, kColorFooterTile);
   canvas.setCursor(x + 8, y + 6);
   canvas.print(top != nullptr ? top : "");
-  canvas.setTextColor(kColorMuted, kColorFooterTile);
+  canvas.setTextColor(TFT_WHITE, kColorFooterTile);
   canvas.setCursor(x + 8, y + 20);
   canvas.print(bottom != nullptr ? bottom : "");
 }
