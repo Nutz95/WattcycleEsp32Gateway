@@ -17,6 +17,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   void updateBattery(const bms::BatteryTelemetry& telemetry) override;
   void updateProduct(const bms::ProductInfo& product) override;
   void updateWarnings(const bms::WarningFlags& warnings) override;
+  void updateSolar(const SolarBridgeTelemetry& solar) override;
   void setWifiState(bool connected, const char* ipAddress) override;
   void setWebPort(uint16_t port) override;
   void setBleState(bool connected, const char* address, const char* error) override;
@@ -26,6 +27,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   bms::BatteryTelemetry battery() const override;
   bms::ProductInfo product() const override;
   bms::WarningFlags warnings() const override;
+  SolarBridgeTelemetry solar() const override;
   GatewayStatus status() const override;
   EspHealth espHealth() const override;
 
@@ -36,6 +38,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   bms::BatteryTelemetry battery_{};
   bms::ProductInfo product_{};
   bms::WarningFlags warnings_{};
+  SolarBridgeTelemetry solar_{};
   GatewayStatus status_{};
   EspHealth espHealth_{};
 #ifndef UNIT_TEST

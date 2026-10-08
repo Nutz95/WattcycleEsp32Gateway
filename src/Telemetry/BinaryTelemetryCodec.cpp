@@ -24,6 +24,10 @@ void writeU32(uint8_t*& cursor, uint32_t value) {
   writeU16(cursor, static_cast<uint16_t>((value >> 16) & 0xFFFF));
 }
 
+void writeI32(uint8_t*& cursor, int32_t value) {
+  writeU32(cursor, static_cast<uint32_t>(value));
+}
+
 void writeFixedString(uint8_t*& cursor, const char* text, size_t fieldLength) {
   const size_t textLength = text == nullptr ? 0 : std::strlen(text);
   const size_t copyLength = textLength < fieldLength ? textLength : fieldLength;
@@ -44,7 +48,7 @@ int16_t toDeciCelsius(float celsius) {
 
 size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffer,
                                     size_t capacity) {
-  if (buffer == nullptr || capacity < 64) {
+  if (buffer == nullptr || capacity < 128) {
     return 0;
   }
 
@@ -53,6 +57,7 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   const auto warnings = store.warnings();
   const auto gateway = store.status();
   const auto esp = store.espHealth();
+  const auto solar = store.solar();
 
   uint8_t* cursor = buffer;
   writeU32(cursor, kMagic);
@@ -76,6 +81,12 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   }
   if (gateway.telemetryFresh) {
     flags |= 0x20;
+  }
+  if (solar.linkFresh) {
+    flags |= 0x40;
+  }
+  if (solar.sppConnected) {
+    flags |= 0x80;
   }
   writeU8(cursor, flags);
 
@@ -138,6 +149,28 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeI16(cursor, toDeciCelsius(esp.chipTemperatureC));
   writeU16(cursor, static_cast<uint16_t>(esp.freeHeapBytes / 1024u));
   writeU32(cursor, esp.uptimeSeconds);
+
+  // v2: XT369P solar bridge (ESP-NOW)
+  uint8_t solarFlags = 0;
+  if (solar.meterValid) {
+    solarFlags |= 0x01;
+  }
+  if (solar.checksumOk) {
+    solarFlags |= 0x02;
+  }
+  writeU8(cursor, solarFlags);
+  // v3: match ESP-NOW resolution (mV/mA/cW/mAh/mWh) — v2 truncated power to whole watts.
+  writeU16(cursor, static_cast<uint16_t>(solar.voltageV * 100.0f + 0.5f));
+  writeI32(cursor, static_cast<int32_t>(solar.currentA * 1000.0f));
+  writeI32(cursor, static_cast<int32_t>(solar.powerW * 100.0f));
+  writeU32(cursor, static_cast<uint32_t>(solar.capacityAh * 1000.0f + 0.5f));
+  writeU32(cursor, static_cast<uint32_t>(solar.energyWh * 1000.0f + 0.5f));
+  writeI16(cursor, toDeciCelsius(solar.temperatureC));
+  writeU32(cursor, solar.runtimeS);
+  writeU32(cursor, solar.frameCount);
+  writeU32(cursor, solar.seq);
+  writeFixedString(cursor, solar.sppTarget, 16);
+  writeFixedString(cursor, solar.lastError, 24);
 
   const size_t written = static_cast<size_t>(cursor - buffer);
   if (written > capacity) {

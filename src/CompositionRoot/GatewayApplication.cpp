@@ -15,7 +15,8 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        telemetry::ITelemetryStore& telemetryStore,
                                        web::IWebGateway& webGateway,
                                        display::IStatusDisplay& statusDisplay,
-                                       auth::IAuthPhysicalConfirm& authConfirm)
+                                       auth::IAuthPhysicalConfirm& authConfirm,
+                                       espnow_rx::IEspNowTelemetryReceiver& espNowReceiver)
     : appConfig_(appConfig),
       wifiConnector_(wifiConnector),
       otaUpdater_(otaUpdater),
@@ -24,7 +25,8 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
       telemetryPoller_(bleClient, telemetryStore, appConfig),
       webGateway_(webGateway),
       statusDisplay_(statusDisplay),
-      authConfirm_(authConfirm) {}
+      authConfirm_(authConfirm),
+      espNowReceiver_(espNowReceiver) {}
 
 bool GatewayApplication::begin() {
   statusDisplay_.begin();
@@ -53,6 +55,11 @@ bool GatewayApplication::begin() {
   otaUpdater_.begin(appConfig_.otaHostname);
   webGateway_.begin(appConfig_.webServerPort);
   telemetryStore_.setWebPort(appConfig_.webServerPort);
+  if (!espNowReceiver_.begin(appConfig_.espNowBridgeMac, appConfig_.espNowPmk)) {
+#ifndef UNIT_TEST
+    Serial.println(F("ESP-NOW RX failed — solar bridge disabled"));
+#endif
+  }
   telemetryPoller_.begin();
   startBleTask();
   refreshWifiStatus(millis());
@@ -70,6 +77,7 @@ void GatewayApplication::serviceNetwork() {
   wifiConnector_.loop();
   otaUpdater_.loop();
   webGateway_.loop();
+  espNowReceiver_.loop();
 }
 
 void GatewayApplication::loop() {

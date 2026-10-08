@@ -46,8 +46,9 @@ bool computeFileEtag(const char* path, char* out, size_t capacity) {
 }  // namespace
 
 EspWebGateway::EspWebGateway(telemetry::ITelemetryStore& store,
-                             auth::IAuthSessionService& authSessions)
-    : store_(store), authSessions_(authSessions) {}
+                             auth::IAuthSessionService& authSessions,
+                             espnow_rx::IEspNowTelemetryReceiver& espNow)
+    : store_(store), authSessions_(authSessions), espNow_(espNow) {}
 
 bool EspWebGateway::begin(uint16_t port) {
   if (!LittleFS.begin(true)) {
@@ -68,6 +69,7 @@ bool EspWebGateway::begin(uint16_t port) {
   server_->on("/api/auth/logout", HTTP_POST, [this]() { handleAuthLogout(); });
   server_->on("/api/telemetry", HTTP_GET, [this]() { handleApiTelemetryBinary(); });
   server_->on("/api/telemetry.bin", HTTP_GET, [this]() { handleApiTelemetryBinary(); });
+  server_->on("/api/solar/command", HTTP_POST, [this]() { handleSolarCommand(); });
   server_->onNotFound([this]() { handleNotFound(); });
   server_->begin();
   started_ = true;
@@ -279,6 +281,44 @@ void EspWebGateway::handleApiTelemetryBinary() {
   server_->setContentLength(written);
   server_->send(200, "application/octet-stream", "");
   server_->sendContent(reinterpret_cast<const char*>(payload), written);
+}
+
+void EspWebGateway::handleSolarCommand() {
+  if (!requireAuth()) {
+    return;
+  }
+  char body[96] = {};
+  size_t length = 0;
+  char error[32] = {};
+  if (!readAuthBody(body, sizeof(body), length, error, sizeof(error))) {
+    sendJson(400, "{\"error\":\"invalid_json\"}");
+    return;
+  }
+  char command[24] = {};
+  if (!extractJsonStringField(body, "command", command, sizeof(command))) {
+    sendJson(400, "{\"error\":\"missing_command\"}");
+    return;
+  }
+
+  uint8_t wire = 0;
+  if (std::strcmp(command, "reset_wh") == 0) {
+    wire = 0x01;
+  } else if (std::strcmp(command, "reset_ah") == 0) {
+    wire = 0x02;
+  } else if (std::strcmp(command, "reset_duration") == 0) {
+    wire = 0x03;
+  } else if (std::strcmp(command, "reset_all") == 0) {
+    wire = 0x05;
+  } else {
+    sendJson(400, "{\"error\":\"unknown_command\"}");
+    return;
+  }
+
+  if (!espNow_.sendMeterCommand(wire)) {
+    sendJson(503, "{\"error\":\"espnow_send_failed\"}");
+    return;
+  }
+  sendJson(200, "{\"ok\":true}");
 }
 
 void EspWebGateway::handleNotFound() {

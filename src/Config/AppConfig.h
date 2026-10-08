@@ -8,6 +8,10 @@ struct AppConfig {
   const char* wifiSsid = "";
   const char* wifiPassword = "";
   const char* bmsBleAddress = "";
+  /// XT369P bridge STA MAC (required when ESPNOW_PMK is set).
+  const char* espNowBridgeMac = "";
+  /// Optional 16+ char shared ESP-NOW PMK/LMK (empty = plaintext).
+  const char* espNowPmk = "";
   const char* otaHostname = "wattcycle-gateway";
   uint16_t webServerPort = 6789;
   uint32_t bmsPollIntervalMs = 2000;

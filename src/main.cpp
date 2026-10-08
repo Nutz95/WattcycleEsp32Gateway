@@ -4,6 +4,7 @@
 #include "CompositionRoot/GatewayApplication.h"
 #include "Config/AppConfig.h"
 #include "Display/TtgoStatusDisplay.h"
+#include "EspNow/EspNowTelemetryReceiver.h"
 #include "Ota/ArduinoOtaUpdater.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
 #include "Web/EspWebGateway.h"
@@ -35,15 +36,16 @@ void setup() {
   static wattcycle::ota::ArduinoOtaUpdater otaUpdater;
   static wattcycle::bms::WattcycleBleClient bleClient;
   static wattcycle::telemetry::InMemoryTelemetryStore telemetryStore;
+  static wattcycle::espnow_rx::EspNowTelemetryReceiver espNowReceiver(telemetryStore);
   static wattcycle::auth::NvsCredentialStore credentialStore;
   static wattcycle::auth::AuthService authService(credentialStore);
   authService.begin();
-  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService);
+  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService, espNowReceiver);
   static wattcycle::display::TtgoStatusDisplay statusDisplay;
 
   static wattcycle::composition::GatewayApplication application(
       config, wifiConnector, otaUpdater, bleClient, telemetryStore, webGateway,
-      statusDisplay, authService);
+      statusDisplay, authService, espNowReceiver);
   gApplication = &application;
 
   if (!application.begin()) {

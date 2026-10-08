@@ -6,6 +6,7 @@
 #include "Display/ButtonNavigator.h"
 #include "Display/IStatusDisplay.h"
 #include "Esp/EspHealthSampler.h"
+#include "EspNow/IEspNowTelemetryReceiver.h"
 #include "Ota/IOtaUpdater.h"
 #include "Telemetry/ITelemetryStore.h"
 #include "Telemetry/TelemetryPoller.h"
@@ -25,7 +26,8 @@ class GatewayApplication {
                      ota::IOtaUpdater& otaUpdater, bms::IBmsBleClient& bleClient,
                      telemetry::ITelemetryStore& telemetryStore, web::IWebGateway& webGateway,
                      display::IStatusDisplay& statusDisplay,
-                     auth::IAuthPhysicalConfirm& authConfirm);
+                     auth::IAuthPhysicalConfirm& authConfirm,
+                     espnow_rx::IEspNowTelemetryReceiver& espNowReceiver);
 
   bool begin();
   void loop();
@@ -62,6 +64,7 @@ class GatewayApplication {
   web::IWebGateway& webGateway_;
   display::IStatusDisplay& statusDisplay_;
   auth::IAuthPhysicalConfirm& authConfirm_;
+  espnow_rx::IEspNowTelemetryReceiver& espNowReceiver_;
   display::ButtonNavigator buttonNavigator_;
   esp_sys::EspHealthSampler espHealthSampler_;
   uint32_t lastWifiStatusMs_ = 0;

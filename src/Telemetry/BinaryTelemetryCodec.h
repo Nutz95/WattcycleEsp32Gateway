@@ -12,8 +12,8 @@ namespace wattcycle::telemetry {
 class BinaryTelemetryCodec {
  public:
   static constexpr uint32_t kMagic = 0x4D475457u;  // 'WTGM' LE
-  static constexpr uint8_t kVersion = 1;
-  static constexpr size_t kMaxEncodedBytes = 512;
+  static constexpr uint8_t kVersion = 3;
+  static constexpr size_t kMaxEncodedBytes = 640;
 
   static size_t encode(const ITelemetryStore& store, uint8_t* buffer, size_t capacity);
 };

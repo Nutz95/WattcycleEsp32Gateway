@@ -55,6 +55,12 @@ void InMemoryTelemetryStore::updateWarnings(const bms::WarningFlags& warnings) {
   unlock();
 }
 
+void InMemoryTelemetryStore::updateSolar(const SolarBridgeTelemetry& solar) {
+  lock();
+  solar_ = solar;
+  unlock();
+}
+
 void InMemoryTelemetryStore::setWifiState(bool connected, const char* ipAddress) {
   lock();
   status_.wifiConnected = connected;
@@ -110,6 +116,13 @@ bms::ProductInfo InMemoryTelemetryStore::product() const {
 bms::WarningFlags InMemoryTelemetryStore::warnings() const {
   lock();
   const bms::WarningFlags copy = warnings_;
+  unlock();
+  return copy;
+}
+
+SolarBridgeTelemetry InMemoryTelemetryStore::solar() const {
+  lock();
+  const SolarBridgeTelemetry copy = solar_;
   unlock();
   return copy;
 }

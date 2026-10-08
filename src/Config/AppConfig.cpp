@@ -11,6 +11,12 @@
 #ifndef BMS_BLE_ADDRESS
 #define BMS_BLE_ADDRESS ""
 #endif
+#ifndef ESPNOW_BRIDGE_MAC
+#define ESPNOW_BRIDGE_MAC ""
+#endif
+#ifndef ESPNOW_PMK
+#define ESPNOW_PMK ""
+#endif
 #ifndef OTA_HOSTNAME
 #define OTA_HOSTNAME "wattcycle-gateway"
 #endif
@@ -28,6 +34,8 @@ AppConfig AppConfigFactory::fromBuildFlags() {
   config.wifiSsid = WIFI_SSID;
   config.wifiPassword = WIFI_PASS;
   config.bmsBleAddress = BMS_BLE_ADDRESS;
+  config.espNowBridgeMac = ESPNOW_BRIDGE_MAC;
+  config.espNowPmk = ESPNOW_PMK;
   config.otaHostname = OTA_HOSTNAME;
   config.webServerPort = static_cast<uint16_t>(WEB_SERVER_PORT);
   config.bmsPollIntervalMs = static_cast<uint32_t>(BMS_POLL_INTERVAL_MS);

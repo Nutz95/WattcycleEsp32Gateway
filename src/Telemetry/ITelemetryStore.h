@@ -3,6 +3,7 @@
 #include "Bms/Models/BatteryTelemetry.h"
 #include "Telemetry/EspHealth.h"
 #include "Telemetry/GatewayStatus.h"
+#include "Telemetry/SolarBridgeTelemetry.h"
 
 namespace wattcycle::telemetry {
 
@@ -14,6 +15,7 @@ class ITelemetryStore {
   virtual void updateBattery(const bms::BatteryTelemetry& telemetry) = 0;
   virtual void updateProduct(const bms::ProductInfo& product) = 0;
   virtual void updateWarnings(const bms::WarningFlags& warnings) = 0;
+  virtual void updateSolar(const SolarBridgeTelemetry& solar) = 0;
   virtual void setWifiState(bool connected, const char* ipAddress) = 0;
   virtual void setWebPort(uint16_t port) = 0;
   virtual void setBleState(bool connected, const char* address, const char* error) = 0;
@@ -23,6 +25,7 @@ class ITelemetryStore {
   virtual bms::BatteryTelemetry battery() const = 0;
   virtual bms::ProductInfo product() const = 0;
   virtual bms::WarningFlags warnings() const = 0;
+  virtual SolarBridgeTelemetry solar() const = 0;
   virtual GatewayStatus status() const = 0;
   virtual EspHealth espHealth() const = 0;
 };
