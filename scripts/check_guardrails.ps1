@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Enforces maintainability / DI guardrails for this repository.
+  Enforces maintainability / DI guardrails for this monorepo.
 #>
 [CmdletBinding()]
 param()
@@ -22,8 +22,27 @@ $concreteAdapterHeaders = @(
   "TtgoStatusDisplay.h",
   "InMemoryTelemetryStore.h",
   "NvsCredentialStore.h",
-  "AuthService.h"
+  "AuthService.h",
+  "EspNowTelemetryReceiver.h",
+  "EspNowTelemetryPublisher.h",
+  "AtorchSppClient.h"
 )
+
+$targetPrefixes = @(
+  "hub_ttgo_wattcycle/",
+  "bridge_xt369p/",
+  "common/"
+)
+
+function Get-RelativeInTarget {
+  param([string]$RelativeNorm)
+  foreach ($prefix in $targetPrefixes) {
+    if ($RelativeNorm.StartsWith($prefix)) {
+      return $RelativeNorm.Substring($prefix.Length)
+    }
+  }
+  return $RelativeNorm
+}
 
 foreach ($file in $sourceFiles) {
   $lines = @(Get-Content -Path $file.FullName)
@@ -50,9 +69,11 @@ foreach ($hit in $secretHits) {
   $failures += "HARDCODED SECRET: $($hit.Path):$($hit.LineNumber)"
 }
 
-# Concrete adapter headers may only be included from main.cpp, CompositionRoot, or their own domain folder.
 foreach ($file in $sourceFiles) {
   $relative = $file.FullName.Substring($srcRoot.Length).TrimStart('\', '/')
+  $relativeNorm = $relative -replace '\\', '/'
+  $relativeInTarget = Get-RelativeInTarget $relativeNorm
+
   $includes = Select-String -Path $file.FullName -Pattern '#include\s+"([^"]+)"' -AllMatches
   foreach ($match in $includes.Matches) {
     $included = Split-Path -Leaf $match.Groups[1].Value
@@ -61,24 +82,30 @@ foreach ($file in $sourceFiles) {
     }
 
     $allowed = $false
-    if ($relative -eq "main.cpp") { $allowed = $true }
-    if ($relative -like "CompositionRoot*") { $allowed = $true }
+    if ($relativeInTarget -eq "main.cpp") { $allowed = $true }
+    if ($relativeInTarget -like "CompositionRoot*") { $allowed = $true }
     if ($file.Name -eq $included) { $allowed = $true }
     if ($file.BaseName -eq ([IO.Path]::GetFileNameWithoutExtension($included))) { $allowed = $true }
 
-    # Same domain folder (e.g. Wifi/EspWifiConnector.cpp including its header) is OK
-    $includePath = $match.Groups[1].Value -replace '/', '\'
-    if ($relative -replace '\\', '/' -match ('^' + ($includePath -replace '\\', '/' -replace '\.h$', '') -replace '/', '\/')) {
-      $allowed = $true
-    }
-    $domain = ($includePath -split '[\\/]')[0]
-    if ($relative.StartsWith($domain + '\') -or $relative.StartsWith($domain + '/')) {
+    $includePath = ($match.Groups[1].Value -replace '\\', '/')
+    $domain = ($includePath -split '/')[0]
+    if ($relativeInTarget.StartsWith($domain + '/')) {
       $allowed = $true
     }
 
     if (-not $allowed) {
       $failures += "DI BOUNDARY: $($file.FullName) includes concrete adapter '$included'"
     }
+  }
+}
+
+# Bridge must not pull in hub web/auth/ota stacks
+$bridgeRoot = Join-Path $srcRoot "bridge_xt369p"
+if (Test-Path $bridgeRoot) {
+  $forbidden = Get-ChildItem -Path $bridgeRoot -Recurse -Include *.cpp, *.h |
+    Select-String -Pattern '#include\s+"(Auth|Web|Ota|Wifi|Bms)/'
+  foreach ($hit in $forbidden) {
+    $failures += "BRIDGE LEAK: $($hit.Path):$($hit.LineNumber) includes hub-only domain"
   }
 }
 

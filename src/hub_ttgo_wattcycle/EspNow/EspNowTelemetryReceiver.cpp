@@ -4,6 +4,7 @@
 #include "Util/MacAddress.h"
 #include "Util/SafeCopy.h"
 
+#include <cstddef>
 #include <cstring>
 
 #ifndef UNIT_TEST
@@ -61,6 +62,11 @@ bool EspNowTelemetryReceiver::begin(const char* bridgeMac, const char* pmk) {
 
   esp_now_register_recv_cb(&EspNowTelemetryReceiver::onReceiveTrampoline);
   ready_ = true;
+  {
+    telemetry::SolarBridgeTelemetry solar = store_.solar();
+    solar.espNowEncrypted = encrypt_;
+    store_.updateSolar(solar);
+  }
   Serial.printf("ESP-NOW RX listening (enc=%u) heap=%u\n", encrypt_ ? 1u : 0u,
                 ESP.getFreeHeap());
   return true;
@@ -102,14 +108,25 @@ void EspNowTelemetryReceiver::onReceiveTrampoline(const uint8_t* mac, const uint
 }
 
 void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data, int len) {
-  if (data == nullptr || len < static_cast<int>(sizeof(xt369p_bridge::EspNowPacketV1))) {
+  if (data == nullptr || len < 8) {
+    return;
+  }
+  const uint32_t magic = static_cast<uint32_t>(data[0]) | (static_cast<uint32_t>(data[1]) << 8) |
+                         (static_cast<uint32_t>(data[2]) << 16) |
+                         (static_cast<uint32_t>(data[3]) << 24);
+  const uint8_t version = data[4];
+  if (magic != xt369p_bridge::kMagic || version == 0 || version > xt369p_bridge::kVersion) {
+    return;
+  }
+  // v1: through lastError[]; v2+: full struct including bridge ESP health.
+  const int requiredLen = version >= 2
+                              ? static_cast<int>(sizeof(xt369p_bridge::EspNowPacketV1))
+                              : static_cast<int>(offsetof(xt369p_bridge::EspNowPacketV1, cpu0Percent));
+  if (len < requiredLen) {
     return;
   }
   xt369p_bridge::EspNowPacketV1 packet = {};
-  std::memcpy(&packet, data, sizeof(packet));
-  if (packet.magic != xt369p_bridge::kMagic || packet.version != xt369p_bridge::kVersion) {
-    return;
-  }
+  std::memcpy(&packet, data, static_cast<size_t>(requiredLen));
   pendingPacket_ = packet;
   if (mac != nullptr) {
     std::memcpy(pendingMac_, mac, 6);
@@ -170,6 +187,8 @@ void EspNowTelemetryReceiver::applyPending() {
   solar.sppConnected = (packet.flags & xt369p_bridge::kFlagSppConnected) != 0;
   solar.meterValid = (packet.flags & xt369p_bridge::kFlagMeterValid) != 0;
   solar.checksumOk = (packet.flags & xt369p_bridge::kFlagChecksumOk) != 0;
+  solar.espNowEncrypted =
+      encrypt_ || ((packet.flags & xt369p_bridge::kFlagEncrypted) != 0);
   solar.voltageV = packet.voltageCv / 100.0f;
   solar.currentA = packet.currentMa / 1000.0f;
   solar.powerW = packet.powerCw / 100.0f;
@@ -184,6 +203,14 @@ void EspNowTelemetryReceiver::applyPending() {
 #endif
   util::copyCString(solar.sppTarget, sizeof(solar.sppTarget), packet.sppTarget);
   util::copyCString(solar.lastError, sizeof(solar.lastError), packet.lastError);
+  if (packet.version >= 2) {
+    solar.bridgeEspValid = true;
+    solar.bridgeEsp.cpuCore0Percent = packet.cpu0Percent;
+    solar.bridgeEsp.cpuCore1Percent = packet.cpu1Percent;
+    solar.bridgeEsp.chipTemperatureC = packet.chipTempDc / 10.0f;
+    solar.bridgeEsp.freeHeapBytes = static_cast<uint32_t>(packet.heapKb) * 1024u;
+    solar.bridgeEsp.uptimeSeconds = packet.uptimeSec;
+  }
   store_.updateSolar(solar);
 }
 

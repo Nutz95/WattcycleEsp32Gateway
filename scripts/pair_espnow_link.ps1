@@ -1,23 +1,17 @@
 <#
 .SYNOPSIS
-  First-time ESP-NOW pairing: read both board MACs, set env vars, optionally flash both.
+  First-time ESP-NOW pairing in the monorepo: read MACs, set env, optionally flash both.
 
 .DESCRIPTION
-  Two boards, two roles - nothing else to memorize:
+  BRIDGE = XT369P solar ESP (usually COM22)  — env: bridge_xt369p
+  HUB    = Wattcycle BMS ESP (usually COM19) — env: hub_ttgo_wattcycle
 
-    BRIDGE = XT369P solar ESP (usually COM22)
-    HUB    = Wattcycle BMS ESP (usually COM19)
+  BRIDGE  --ESP-NOW-->  HUB
 
-    BRIDGE  --ESP-NOW-->  HUB
+  ESPNOW_PEER_MAC   (on BRIDGE) = HUB MAC
+  ESPNOW_BRIDGE_MAC (on HUB)    = BRIDGE MAC
+  ESPNOW_PMK        (on BOTH)   = same 32-char hex secret
 
-    ESPNOW_PEER_MAC   (on BRIDGE) = HUB MAC
-    ESPNOW_BRIDGE_MAC (on HUB)    = BRIDGE MAC
-    ESPNOW_PMK        (on BOTH)   = same 32-char hex secret
-
-  This script reads MACs with esptool (USB), writes User env vars, and can flash both repos.
-
-.EXAMPLE
-  .\scripts\pair_espnow_link.ps1
 .EXAMPLE
   .\scripts\pair_espnow_link.ps1 -HubPort COM19 -BridgePort COM22 -Flash
 #>
@@ -25,34 +19,13 @@
 param(
   [string]$HubPort = "COM19",
   [string]$BridgePort = "COM22",
-  [string]$HubRepo = "",
-  [string]$BridgeRepo = "",
   [switch]$Flash,
   [switch]$RegeneratePmk
 )
 
 $ErrorActionPreference = "Stop"
-
-function Resolve-RepoRoots {
-  param([string]$Hub, [string]$Bridge)
-  $here = Split-Path -Parent $PSScriptRoot
-  $parent = Split-Path -Parent $here
-  if ([string]::IsNullOrWhiteSpace($Hub)) {
-    if (Test-Path (Join-Path $here "src\Bms")) { $Hub = $here }
-    else { $Hub = Join-Path $parent "WattcycleEsp32Gateway" }
-  }
-  if ([string]::IsNullOrWhiteSpace($Bridge)) {
-    if (Test-Path (Join-Path $here "src\Meter")) { $Bridge = $here }
-    else { $Bridge = Join-Path $parent "XT369P_SPP_Gateway" }
-  }
-  if (-not (Test-Path (Join-Path $Hub "scripts\flash_usb.ps1"))) {
-    throw "Wattcycle hub repo not found: $Hub"
-  }
-  if (-not (Test-Path (Join-Path $Bridge "scripts\flash_usb.ps1"))) {
-    throw "XT369P bridge repo not found: $Bridge"
-  }
-  return @{ Hub = $Hub; Bridge = $Bridge }
-}
+$repoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $repoRoot
 
 function Get-EsptoolPath {
   $path = Join-Path $env:USERPROFILE ".platformio\packages\tool-esptoolpy\esptool.py"
@@ -94,14 +67,12 @@ function Get-OrCreatePmk {
   return $pmk
 }
 
-$roots = Resolve-RepoRoots -Hub $HubRepo -Bridge $BridgeRepo
-
 Write-Host ""
-Write-Host "ESP-NOW pairing (first-time setup)" -ForegroundColor Cyan
+Write-Host "ESP-NOW pairing (monorepo)" -ForegroundColor Cyan
 Write-Host @"
 
-  BRIDGE = XT369P solar ESP     ($BridgePort)
-  HUB    = Wattcycle BMS ESP    ($HubPort)
+  BRIDGE = XT369P solar ESP     ($BridgePort)  [bridge_xt369p]
+  HUB    = Wattcycle BMS ESP    ($HubPort)  [hub_ttgo_wattcycle]
 
   BRIDGE  ===== ESP-NOW =====>  HUB
 
@@ -130,30 +101,25 @@ Set-UserEnv -Name "ESPNOW_BRIDGE_MAC" -Value $bridgeMac
 Set-UserEnv -Name "ESPNOW_PMK" -Value $pmk
 
 Write-Host "Saved Windows User env:" -ForegroundColor Green
-Write-Host "  ESPNOW_PEER_MAC   = $hubMac     (for XT369P bridge flash)"
-Write-Host "  ESPNOW_BRIDGE_MAC = $bridgeMac  (for Wattcycle hub flash)"
+Write-Host "  ESPNOW_PEER_MAC   = $hubMac     (for bridge_xt369p flash)"
+Write-Host "  ESPNOW_BRIDGE_MAC = $bridgeMac  (for hub_ttgo_wattcycle flash)"
 Write-Host "  ESPNOW_PMK        = (32-char secret, not printed again here)"
 Write-Host ""
 
 if (-not $Flash) {
   Write-Host "Next: flash both boards (env is already set):" -ForegroundColor Yellow
-  Write-Host "  cd $($roots.Hub);    .\scripts\flash_usb.ps1 -Port $HubPort"
-  Write-Host "  cd $($roots.Bridge); .\scripts\flash_usb.ps1 -Port $BridgePort"
+  Write-Host "  .\scripts\flash.ps1 -Target HubTtgoWattcycle -Port $HubPort"
+  Write-Host "  .\scripts\flash.ps1 -Target BridgeXt369p -Port $BridgePort"
+  Write-Host "  .\scripts\flash.ps1 -Target Both -HubPort $HubPort -BridgePort $BridgePort"
   Write-Host ""
   Write-Host "Or re-run with -Flash to do both now." -ForegroundColor DarkGray
   exit 0
 }
 
-Write-Host "==> Flashing HUB (Wattcycle) on $HubPort" -ForegroundColor Cyan
-& (Join-Path $roots.Hub "scripts\flash_usb.ps1") -Port $HubPort
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "==> Flashing BRIDGE (XT369P) on $BridgePort" -ForegroundColor Cyan
-& (Join-Path $roots.Bridge "scripts\flash_usb.ps1") -Port $BridgePort
+Write-Host "==> Flashing both targets" -ForegroundColor Cyan
+& "$PSScriptRoot\flash.ps1" -Target Both -HubPort $HubPort -BridgePort $BridgePort
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Done. Serial should show enc=1 on both boards." -ForegroundColor Green
-Write-Host "  HUB:    ESP-NOW RX listening (enc=1)"
-Write-Host "  BRIDGE: ESP-NOW TX peer ... enc=1"
 exit 0

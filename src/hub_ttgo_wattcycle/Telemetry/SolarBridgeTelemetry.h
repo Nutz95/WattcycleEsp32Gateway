@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "Telemetry/EspHealth.h"
+
 namespace wattcycle::telemetry {
 
 /// Latest solar wattmeter snapshot bridged from the XT369P SPP ESP via ESP-NOW.
@@ -10,6 +12,8 @@ struct SolarBridgeTelemetry {
   bool sppConnected = false;
   bool meterValid = false;
   bool checksumOk = false;
+  bool espNowEncrypted = false;
+  bool bridgeEspValid = false;
   float voltageV = 0.0f;
   float currentA = 0.0f;
   float powerW = 0.0f;
@@ -22,6 +26,7 @@ struct SolarBridgeTelemetry {
   uint32_t receivedAtMs = 0;
   char sppTarget[32] = {};
   char lastError[64] = {};
+  EspHealth bridgeEsp{};
 };
 
 }  // namespace wattcycle::telemetry

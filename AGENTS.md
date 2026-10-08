@@ -1,48 +1,41 @@
-# Agent Rules — Wattcycle ESP32 Gateway
+# Agent Rules — Wattcycle ESP32 Gateway (monorepo)
 
 This file is the contract for humans and coding agents working in this repository.
 
 ## Mission
 
-Build and maintain a **BLE → Wi-Fi web gateway** for Wattcycle / XDZN BMS packs
-(51.2 V class) on a **LILYGO TTGO T-Display (ESP32-D0WDQ6, ST7789V 1.14")**.
+Maintain a **monorepo** with two classic-ESP32 TTGO firmwares:
 
-The gateway:
+1. **`hub_ttgo_wattcycle`** (COM19) — Wattcycle / XDZN BMS over BLE → Wi‑Fi web dashboard (:6789) + ESP-NOW RX (solar).
+2. **`bridge_xt369p`** (COM22) — ATorch XT369P over Classic SPP → ESP-NOW TX (no web / auth / OTA).
 
-1. Connects to the BMS over Bluetooth Low Energy (no pairing).
-2. Polls telemetry using the reverse-engineered Wattcycle protocol.
-3. Serves a static dashboard from **LittleFS** on TCP port **6789**.
-4. Supports **ArduinoOTA** updates after the first USB flash.
+Shared wire protocol and utils live in `src/common/`.
 
 ## Non-negotiable rules
 
 ### Security
 
-- **Never** hardcode Wi-Fi credentials, OTA passwords, web passwords, or BMS secrets in source.
+- **Never** hardcode Wi-Fi credentials, OTA passwords, web passwords, BMS secrets, or ESP-NOW PMK in source.
 - Inject secrets only via environment variables consumed by PlatformIO:
-  - `WIFI_SSID`
-  - `WIFI_PASS`
-  - `BMS_BLE_ADDRESS` (BLE MAC only — required for BMS connect; no serial/password)
-- Web UI auth: salted SHA-256 hashes in NVS (`wg_auth`); sessions are RAM-only (max 4; oldest-expiring eviction); telemetry APIs must be gated server-side (never trust the browser).
-- Auth ISP: `IAuthSessionService` (web: begin/status/setup/login/logout) + `IAuthPhysicalConfirm` (buttons/display); physical confirm/reset transitions are private on `AuthService`, not on the web port. Display renders `auth::AuthPrompt` directly — no parallel Display DTO.
-- First-time setup / password reset require physical confirm (GPIO35 = OK, GPIO0 = Cancel; hold GPIO0 3s to request reset).
-- HTTP on LAN is intentional (classic ESP32 + NimBLE: in-process TLS freezes under load). Do not expose port 6789 publicly.
-- Do not commit `.env` files, private keys, or captured telemetry dumps with PII.
+  - Hub: `WIFI_SSID`, `WIFI_PASS`, `BMS_BLE_ADDRESS`, `ESPNOW_BRIDGE_MAC`, `ESPNOW_PMK`
+  - Bridge: `WIFI_SSID` (channel only), `XT369P_BT_ADDRESS`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
+- Web UI auth (hub only): salted SHA-256 in NVS (`wg_auth`); RAM sessions (max 4; oldest-expiring eviction); telemetry APIs gated server-side.
+- Auth ISP: `IAuthSessionService` (web) + `IAuthPhysicalConfirm` (buttons/display); physical confirm/reset private on `AuthService`.
+- HTTP on LAN is intentional on the hub (classic ESP32 + NimBLE). Do not expose port 6789 publicly.
+- Do not commit `.env` files, private keys, or telemetry dumps with PII.
 
 ### Architecture (SOLID + DI)
 
 - Prefer **interfaces** (`I*`) at domain boundaries.
-- Construct concrete adapters only in `src/main.cpp`; `GatewayApplication` depends on interfaces.
-- Keep domain folders focused:
-  - `Bms/` protocol + BLE transport
-  - `Telemetry/` store + polling + binary codec + gateway status
-  - `Auth/` NVS-hashed web credentials + RAM sessions + physical confirm
-  - `Wifi/`, `Ota/`, `Web/`, `Display/`, `Esp/`, `Util/`, `Config/`, `CompositionRoot/`
-  - `web/` SPA sources → `scripts/bundle_web.ps1` → LittleFS `data/` (gitignored)
-- Browser chart history is localStorage-only (not on-device long-term storage).
-- No nested classes.
-- No god-objects: **≤ 400 lines per file**, **≤ 30 methods per class**.
-- Run `scripts/check_guardrails.ps1` (also invoked by `scripts/run_tests.ps1`).
+- Construct concrete adapters only in each target’s `main.cpp`; composition roots depend on interfaces.
+- Layout:
+  - `src/common/` — `Util/`, `EspNow/Xt369pEspNowProtocol.h` (single copy)
+  - `src/hub_ttgo_wattcycle/` — Bms, Auth, Web, Wifi, Ota, EspNow RX, Display, Telemetry, …
+  - `src/bridge_xt369p/` — Meter/SPP, EspNow TX, Display, Telemetry (bridge) — **no** Auth/Web/Ota/Wifi/Bms
+  - `web/` SPA → `scripts/bundle_web.ps1` → LittleFS `data/` (hub only)
+- Browser chart history is localStorage-only (Phase 1).
+- No nested classes; **≤ 400 lines per file**, **≤ 30 methods per class**.
+- Run `scripts/check_guardrails.ps1` (also via `scripts/run_tests.ps1`).
 
 ### Quality gates after meaningful changes
 
@@ -52,23 +45,22 @@ The gateway:
 
 ### Platform / hardware assumptions
 
-- Target MCU is classic **ESP32** (`ESP32-D0WDQ6`), **not** ESP32-S3.
-- Default USB port in scripts/config: **COM19**.
-- Display driver: ST7789V pins MOSI=19, SCLK=18, CS=5, DC=16, RST=23, BL=4.
-- Protocol reference: [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble) (`PROTOCOL.md`).
+- Classic **ESP32** (`ESP32-D0WDQ6`), **not** ESP32-S3 (Phase 1 targets).
+- Default ports: hub **COM19**, bridge **COM22**, future M5 hub **COM23**.
+- TTGO display: ST7789V pins MOSI=19, SCLK=18, CS=5, DC=16, RST=23, BL=4.
+- Protocol refs: [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble); `docs/XT369P_PROTOCOL.md`.
 
 ### Documentation style
 
 - README is **English**.
 - Prefer Mermaid diagrams and short Quick Start command blocks.
-- Explain *why* (no cloud on the BMS → local gateway) before *how*.
 
 ### Coding style
 
 - Clear, pronounceable names.
 - Headers declare intent; `.cpp` files stay boring and direct.
-- Prefer small pure parsers (CRC, frames, analog payload) that are unit-tested on `native`.
-- Hardware adapters (`Wifi`, `Ble`, `Web`, `Display`, `Ota`) stay behind interfaces.
+- Prefer small pure parsers unit-tested on `native`.
+- Hardware adapters stay behind interfaces.
 
 ## Useful commands
 
@@ -78,13 +70,16 @@ $env:WIFI_PASS = "your-password"
 $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"
 
 .\scripts\run_tests.ps1
-.\scripts\flash_usb.ps1 -Port COM19
+.\scripts\flash.ps1 -Target HubTtgoWattcycle -Port COM19
+.\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
+.\scripts\flash.ps1 -Target Both -HubPort COM19 -BridgePort COM22
+.\scripts\pair_espnow_link.ps1 -HubPort COM19 -BridgePort COM22 -Flash
 .\scripts\flash_ota.ps1 -Hostname wattcycle-gateway
 ```
 
 ## Out of scope (unless explicitly requested)
 
 - Writing charge/discharge control commands to the BMS.
-- Storing long-term history on the ESP (no SD card — live binary telemetry; optional browser localStorage charts only).
-- Migrating to ESP32-S3 / different display boards without an architecture note.
+- Storing long-term history on the TTGO hub (Phase 2 M5 + SD).
+- Migrating hub to M5 / ESP32-P4 without following the Phase 2 HAL plan.
 - Shipping in-process HTTPS on classic ESP32 + NimBLE until a lighter TLS path exists.

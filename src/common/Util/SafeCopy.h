@@ -17,3 +17,8 @@ inline void copyCString(char* dest, size_t destCapacity, const char* src) {
 }
 
 }  // namespace wattcycle::util
+
+// XT369P bridge TUs resolve `util::` under namespace xt369p::*.
+namespace xt369p::util {
+using wattcycle::util::copyCString;
+}

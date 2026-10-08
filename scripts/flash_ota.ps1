@@ -23,10 +23,10 @@ if (-not $env:WIFI_SSID -or -not $env:WIFI_PASS) {
 }
 
 Write-Host "==> Building firmware" -ForegroundColor Cyan
-pio run -e ttgo-tdisplay
+pio run -e hub_ttgo_wattcycle
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $target = if ($Ip) { $Ip } else { $Hostname }
 Write-Host "==> OTA upload to $target" -ForegroundColor Cyan
-pio run -e ttgo-tdisplay -t upload --upload-port $target
+pio run -e hub_ttgo_wattcycle -t upload --upload-port $target
 exit $LASTEXITCODE

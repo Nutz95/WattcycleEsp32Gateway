@@ -1,5 +1,7 @@
 #include "Telemetry/BinaryTelemetryCodec.h"
 
+#include "Bms/Protocol/ProtocolConstants.h"
+
 #include <cstring>
 
 namespace wattcycle::telemetry {
@@ -104,28 +106,40 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeI16(cursor, toDeciCelsius(battery.pcbTemperatureC));
   writeU32(cursor, battery.updatedAtMs);
 
-  writeU8(cursor, battery.cellCount);
-  for (uint8_t i = 0; i < battery.cellCount; ++i) {
+  const uint8_t cellCount =
+      battery.cellCount > bms::kMaxCellCount ? bms::kMaxCellCount : battery.cellCount;
+  // Worst-case remaining payload after header/fixed fields (cells + balance + temps + rest).
+  const size_t worstCaseTail = static_cast<size_t>(cellCount) * 2u +
+                               static_cast<size_t>((cellCount + 7u) / 8u) + 1u +
+                               static_cast<size_t>(bms::kMaxCellCount) * 2u + 220u;
+  if (static_cast<size_t>(cursor - buffer) + worstCaseTail > capacity) {
+    return 0;
+  }
+
+  writeU8(cursor, cellCount);
+  for (uint8_t i = 0; i < cellCount; ++i) {
     writeU16(cursor, static_cast<uint16_t>(battery.cellVoltages[i] * 1000.0f + 0.5f));
   }
 
-  const uint8_t balanceByteCount =
-      static_cast<uint8_t>((battery.cellCount + 7u) / 8u);
+  const uint8_t balanceByteCount = static_cast<uint8_t>((cellCount + 7u) / 8u);
   for (uint8_t byteIndex = 0; byteIndex < balanceByteCount; ++byteIndex) {
     uint8_t bits = 0;
     for (uint8_t bit = 0; bit < 8; ++bit) {
       const uint8_t cellIndex = static_cast<uint8_t>(byteIndex * 8 + bit);
-      if (cellIndex < battery.cellCount && warnings.cellBalancing[cellIndex]) {
+      if (cellIndex < cellCount && warnings.cellBalancing[cellIndex]) {
         bits |= static_cast<uint8_t>(1u << bit);
       }
     }
     writeU8(cursor, bits);
   }
 
-  const uint8_t cellTempCount =
+  uint8_t cellTempCount =
       battery.temperatureCount >= 2
           ? static_cast<uint8_t>(battery.temperatureCount - 2)
           : static_cast<uint8_t>(0);
+  if (cellTempCount > bms::kMaxCellCount) {
+    cellTempCount = bms::kMaxCellCount;
+  }
   writeU8(cursor, cellTempCount);
   for (uint8_t i = 0; i < cellTempCount; ++i) {
     writeI16(cursor, toDeciCelsius(battery.cellTemperaturesC[i]));
@@ -150,7 +164,7 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeU16(cursor, static_cast<uint16_t>(esp.freeHeapBytes / 1024u));
   writeU32(cursor, esp.uptimeSeconds);
 
-  // v2: XT369P solar bridge (ESP-NOW)
+  // XT369P solar bridge (ESP-NOW)
   uint8_t solarFlags = 0;
   if (solar.meterValid) {
     solarFlags |= 0x01;
@@ -158,8 +172,13 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   if (solar.checksumOk) {
     solarFlags |= 0x02;
   }
+  if (solar.espNowEncrypted) {
+    solarFlags |= 0x04;
+  }
+  if (solar.bridgeEspValid) {
+    solarFlags |= 0x08;
+  }
   writeU8(cursor, solarFlags);
-  // v3: match ESP-NOW resolution (mV/mA/cW/mAh/mWh) — v2 truncated power to whole watts.
   writeU16(cursor, static_cast<uint16_t>(solar.voltageV * 100.0f + 0.5f));
   writeI32(cursor, static_cast<int32_t>(solar.currentA * 1000.0f));
   writeI32(cursor, static_cast<int32_t>(solar.powerW * 100.0f));
@@ -171,6 +190,13 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeU32(cursor, solar.seq);
   writeFixedString(cursor, solar.sppTarget, 16);
   writeFixedString(cursor, solar.lastError, 24);
+
+  // v4: bridge ESP health (zeros when bridgeEspValid is false)
+  writeU8(cursor, solar.bridgeEsp.cpuCore0Percent);
+  writeU8(cursor, solar.bridgeEsp.cpuCore1Percent);
+  writeI16(cursor, toDeciCelsius(solar.bridgeEsp.chipTemperatureC));
+  writeU16(cursor, static_cast<uint16_t>(solar.bridgeEsp.freeHeapBytes / 1024u));
+  writeU32(cursor, solar.bridgeEsp.uptimeSeconds);
 
   const size_t written = static_cast<size_t>(cursor - buffer);
   if (written > capacity) {
