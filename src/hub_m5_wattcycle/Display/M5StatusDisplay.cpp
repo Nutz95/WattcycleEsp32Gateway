@@ -4,34 +4,54 @@
 #include "Display/DisplayPins.h"
 
 #include <cstdio>
+#include <cstring>
 
 namespace wattcycle::display {
 namespace {
 #ifndef UNIT_TEST
-constexpr uint16_t kColorBg = TFT_BLACK;
-constexpr uint16_t kColorTileA = 0x1A4B;  // deep blue
-constexpr uint16_t kColorTileB = 0x2284;  // teal
-constexpr uint16_t kColorTileC = 0x5120;  // amber-ish
-constexpr uint16_t kColorTileD = 0x4147;  // purple-gray
-constexpr uint16_t kColorFooterTile = 0x2124;
-constexpr uint16_t kColorMuted = 0x8410;
+// Cool palette (RGB565; canvas is 8-bit so prefer primary-ish hues).
+constexpr uint16_t kColorBg = 0x10A2;       // near-black blue
+constexpr uint16_t kColorTileA = 0x0B5B;    // azure
+constexpr uint16_t kColorTileB = 0x0451;    // deep cyan
+constexpr uint16_t kColorTileC = 0x1A4C;    // indigo
+constexpr uint16_t kColorTileD = 0x1268;    // steel blue
+constexpr uint16_t kColorFooterTile = 0x18C3;
+constexpr uint16_t kColorMuted = 0x9CD3;
+constexpr uint16_t kColorValue = TFT_WHITE;
+constexpr uint16_t kColorPos = 0x07E0;      // charge / OK
+constexpr uint16_t kColorNeg = 0xF800;      // discharge / bad
+constexpr uint16_t kColorWarn = 0xFDA0;     // pending / stale
+
+const char* kPageNames[kPageCount] = {"Overview", "Pack", "Solar",
+                                      "Gateway", "ESP", "Temps"};
+
+uint16_t statusValueColor(bool ok) {
+  return ok ? kColorPos : kColorNeg;
+}
+
+uint16_t signedValueColor(float value) {
+  if (value > 0.05f) {
+    return kColorPos;
+  }
+  if (value < -0.05f) {
+    return kColorNeg;
+  }
+  return kColorValue;
+}
 
 void drawTile(M5Canvas& canvas, int x, int y, int w, int h, uint16_t fill,
-              const char* title, const char* value) {
+              const char* title, const char* value, uint16_t valueColor = kColorValue,
+              uint8_t valueSize = 2) {
   canvas.fillRoundRect(x, y, w, h, 6, fill);
   canvas.setTextColor(kColorMuted, fill);
   canvas.setTextSize(1);
   canvas.setCursor(x + 8, y + 8);
   canvas.print(title != nullptr ? title : "");
-  canvas.setTextColor(TFT_WHITE, fill);
-  canvas.setTextSize(2);
-  canvas.setCursor(x + 8, y + 28);
+  canvas.setTextColor(valueColor, fill);
+  const uint8_t size = valueSize;
+  canvas.setTextSize(size);
+  canvas.setCursor(x + 8, y + (size >= 2 ? 28 : 30));
   canvas.print(value != nullptr ? value : "--");
-}
-
-void drawWideTile(M5Canvas& canvas, int x, int y, int w, int h, uint16_t fill,
-                  const char* title, const char* value) {
-  drawTile(canvas, x, y, w, h, fill, title, value);
 }
 
 void drawFooterTile(M5Canvas& canvas, int x, int y, int w, int h, const char* top,
@@ -39,10 +59,10 @@ void drawFooterTile(M5Canvas& canvas, int x, int y, int w, int h, const char* to
   canvas.fillRoundRect(x, y, w, h, 6, kColorFooterTile);
   canvas.setTextSize(1);
   canvas.setTextColor(TFT_WHITE, kColorFooterTile);
-  canvas.setCursor(x + 10, y + 6);
+  canvas.setCursor(x + 8, y + 6);
   canvas.print(top != nullptr ? top : "");
   canvas.setTextColor(kColorMuted, kColorFooterTile);
-  canvas.setCursor(x + 10, y + 20);
+  canvas.setCursor(x + 8, y + 20);
   canvas.print(bottom != nullptr ? bottom : "");
 }
 #endif
@@ -109,13 +129,17 @@ void M5StatusDisplay::drawButtonFooter(const char* centerLabel) {
   const int h = kFooterHeight - 4;
   const int gap = 4;
   const int tileW = (kDisplayWidth - 16 - gap * 2) / 3;
-  char pageLabel[12] = {};
-  std::snprintf(pageLabel, sizeof(pageLabel), "%u/%u", static_cast<unsigned>(pageIndex_ + 1),
+  const bool authMode = centerLabel != nullptr && std::strcmp(centerLabel, "OK") == 0;
+  const char* midTop =
+      authMode ? "OK"
+               : ((pageIndex_ < kPageCount) ? kPageNames[pageIndex_] : "Page");
+  const char* midBottom = authMode ? "confirm" : "B";
+  char nextLine[16] = {};
+  std::snprintf(nextLine, sizeof(nextLine), "next %u/%u", static_cast<unsigned>(pageIndex_ + 1),
                 static_cast<unsigned>(kPageCount));
   drawFooterTile(canvas_, 8, y, tileW, h, "A  <", "prev");
-  drawFooterTile(canvas_, 8 + tileW + gap, y, tileW, h,
-                 centerLabel != nullptr ? centerLabel : "B", pageLabel);
-  drawFooterTile(canvas_, 8 + (tileW + gap) * 2, y, tileW, h, ">  C", "next");
+  drawFooterTile(canvas_, 8 + tileW + gap, y, tileW, h, midTop, midBottom);
+  drawFooterTile(canvas_, 8 + (tileW + gap) * 2, y, tileW, h, ">  C", nextLine);
 #else
   (void)centerLabel;
 #endif
@@ -133,26 +157,31 @@ void M5StatusDisplay::drawOverview(const telemetry::ITelemetryStore& store) {
     std::snprintf(soc, sizeof(soc), "%u%%", battery.stateOfChargePercent);
   }
   char solarPower[20] = "XT --";
+  uint16_t solarColor = kColorValue;
   if (solar.linkFresh) {
     std::snprintf(solarPower, sizeof(solarPower), "%.0fW", static_cast<double>(solar.powerW));
+    solarColor = signedValueColor(solar.powerW);
   }
-  char wifi[16] = "WiFi DOWN";
+  char wifi[16] = "DOWN";
   if (gateway.wifiConnected) {
-    std::snprintf(wifi, sizeof(wifi), "WiFi OK");
+    std::snprintf(wifi, sizeof(wifi), "OK");
   }
   char clockTitle[16] = "CLOCK";
   char clockValue[16] = "NTP wait";
+  uint16_t clockColor = kColorWarn;
   if (gateway.ntpSynced && gateway.localTime[0] != '\0') {
     std::snprintf(clockTitle, sizeof(clockTitle), "%s", gateway.localDate);
     std::snprintf(clockValue, sizeof(clockValue), "%s", gateway.localTime);
+    clockColor = kColorPos;
   }
 
   drawTile(canvas_, 8, 8, 148, 72, kColorTileA, "PACK SOC", soc);
-  drawTile(canvas_, 164, 8, 148, 72, kColorTileB, "SOLAR", solarPower);
-  drawTile(canvas_, 8, 88, 148, 72, kColorTileC, "NETWORK", wifi);
-  drawTile(canvas_, 164, 88, 148, 72, kColorTileD, clockTitle, clockValue);
+  drawTile(canvas_, 164, 8, 148, 72, kColorTileB, "SOLAR", solarPower, solarColor);
+  drawTile(canvas_, 8, 88, 148, 72, kColorTileC, "NETWORK", wifi,
+           statusValueColor(gateway.wifiConnected));
+  drawTile(canvas_, 164, 88, 148, 72, kColorTileD, clockTitle, clockValue, clockColor);
 
-  drawButtonFooter("B");
+  drawButtonFooter("Overview");
   pushFrame();
 #else
   (void)store;
@@ -169,6 +198,8 @@ void M5StatusDisplay::drawPack(const telemetry::ITelemetryStore& store) {
   char amps[16] = "-- A";
   char watts[16] = "-- W";
   char ah[20] = "--/-- Ah";
+  uint16_t ampsColor = kColorValue;
+  uint16_t wattsColor = kColorValue;
   if (battery.valid) {
     std::snprintf(soc, sizeof(soc), "%u%%", battery.stateOfChargePercent);
     std::snprintf(volts, sizeof(volts), "%.1fV", static_cast<double>(battery.moduleVoltage));
@@ -176,15 +207,17 @@ void M5StatusDisplay::drawPack(const telemetry::ITelemetryStore& store) {
     std::snprintf(watts, sizeof(watts), "%.0fW", static_cast<double>(battery.powerWatts));
     std::snprintf(ah, sizeof(ah), "%.1f/%.1f", static_cast<double>(battery.remainingCapacityAh),
                   static_cast<double>(battery.totalCapacityAh));
+    ampsColor = signedValueColor(battery.currentAmps);
+    wattsColor = signedValueColor(battery.powerWatts);
   }
 
   drawTile(canvas_, 8, 8, 148, 58, kColorTileA, "SOC", soc);
   drawTile(canvas_, 164, 8, 148, 58, kColorTileB, "VOLTAGE", volts);
-  drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "CURRENT", amps);
-  drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "POWER", watts);
-  drawWideTile(canvas_, 8, 140, 304, 52, kColorTileA, "CAPACITY Ah", ah);
+  drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "CURRENT", amps, ampsColor);
+  drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "POWER", watts, wattsColor);
+  drawTile(canvas_, 8, 140, 304, 52, kColorTileA, "CAPACITY Ah", ah);
 
-  drawButtonFooter("B");
+  drawButtonFooter("Pack");
   pushFrame();
 #else
   (void)store;
@@ -201,22 +234,27 @@ void M5StatusDisplay::drawSolar(const telemetry::ITelemetryStore& store) {
   char watts[16] = "-- W";
   char energy[16] = "-- Wh";
   char spp[16] = "no link";
+  uint16_t ampsColor = kColorValue;
+  uint16_t wattsColor = kColorValue;
+  uint16_t sppColor = kColorNeg;
   if (solar.linkFresh) {
     std::snprintf(volts, sizeof(volts), "%.1fV", static_cast<double>(solar.voltageV));
     std::snprintf(amps, sizeof(amps), "%.2fA", static_cast<double>(solar.currentA));
     std::snprintf(watts, sizeof(watts), "%.1fW", static_cast<double>(solar.powerW));
     std::snprintf(energy, sizeof(energy), "%.1fWh", static_cast<double>(solar.energyWh));
     std::snprintf(spp, sizeof(spp), "%s", solar.sppConnected ? "SPP OK" : "SPP down");
+    ampsColor = signedValueColor(solar.currentA);
+    wattsColor = signedValueColor(solar.powerW);
+    sppColor = statusValueColor(solar.sppConnected);
   }
 
   drawTile(canvas_, 8, 8, 148, 58, kColorTileB, "SOLAR V", volts);
-  drawTile(canvas_, 164, 8, 148, 58, kColorTileA, "SOLAR I", amps);
-  drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "POWER", watts);
+  drawTile(canvas_, 164, 8, 148, 58, kColorTileA, "SOLAR I", amps, ampsColor);
+  drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "POWER", watts, wattsColor);
   drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "ENERGY", energy);
-  drawWideTile(canvas_, 8, 140, 304, 52, solar.sppConnected ? kColorTileB : kColorTileC, "XT LINK",
-               spp);
+  drawTile(canvas_, 8, 140, 304, 52, kColorTileB, "XT LINK", spp, sppColor);
 
-  drawButtonFooter("B");
+  drawButtonFooter("Solar");
   pushFrame();
 #else
   (void)store;
@@ -246,14 +284,20 @@ void M5StatusDisplay::drawGateway(const telemetry::ITelemetryStore& store) {
   char xtValue[16] = {};
   std::snprintf(xtValue, sizeof(xtValue), "%s", solar.linkFresh ? "fresh" : "stale");
 
-  drawTile(canvas_, 8, 8, 148, 58, kColorTileC, "WiFi", wifi);
-  drawTile(canvas_, 164, 8, 148, 58, kColorTileA, "IP", ip);
-  drawTile(canvas_, 8, 74, 148, 58, kColorTileB, "BMS BLE", bleValue);
-  drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "NTP", ntpValue);
-  drawTile(canvas_, 8, 140, 148, 52, kColorTileA, "XT LINK", xtValue);
-  drawTile(canvas_, 164, 140, 148, 52, kColorTileC, "WEB", web);
+  const uint16_t ntpColor = gateway.ntpSynced ? kColorPos : kColorWarn;
+  const uint16_t xtColor = solar.linkFresh ? kColorPos : kColorWarn;
 
-  drawButtonFooter("B");
+  drawTile(canvas_, 8, 8, 148, 58, kColorTileC, "WiFi", wifi,
+           statusValueColor(gateway.wifiConnected));
+  // IPv4 is long — keep size 1 so it stays inside the tile.
+  drawTile(canvas_, 164, 8, 148, 58, kColorTileA, "IP", ip, kColorValue, 1);
+  drawTile(canvas_, 8, 74, 148, 58, kColorTileB, "BMS BLE", bleValue,
+           statusValueColor(gateway.bleConnected));
+  drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "NTP", ntpValue, ntpColor);
+  drawTile(canvas_, 8, 140, 148, 52, kColorTileA, "XT LINK", xtValue, xtColor);
+  drawTile(canvas_, 164, 140, 148, 52, kColorTileC, "WEB", web, kColorPos);
+
+  drawButtonFooter("Gateway");
   pushFrame();
 #else
   (void)store;
@@ -281,16 +325,18 @@ void M5StatusDisplay::drawEsp(const telemetry::ITelemetryStore& store) {
   drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "CHIP", temp);
   drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "HEAP", heap);
 
-  char bridge[20] = "no BMS ESP";
+  char bridge[20] = "offline";
+  uint16_t bridgeColor = kColorNeg;
   if (store.bmsBridgeHealthValid()) {
     const auto b = store.bmsBridgeHealth();
     std::snprintf(bridge, sizeof(bridge), "%u%% %uKB", b.cpuCore0Percent,
                   b.freeHeapBytes / 1024u);
+    bridgeColor = kColorPos;
   }
   drawTile(canvas_, 8, 140, 148, 52, kColorTileB, "UPTIME", up);
-  drawTile(canvas_, 164, 140, 148, 52, kColorTileA, "BMS BRIDGE", bridge);
+  drawTile(canvas_, 164, 140, 148, 52, kColorTileA, "BMS BRIDGE", bridge, bridgeColor, 1);
 
-  drawButtonFooter("B");
+  drawButtonFooter("ESP");
   pushFrame();
 #else
   (void)store;
@@ -334,7 +380,7 @@ void M5StatusDisplay::drawTemps(const telemetry::ITelemetryStore& store) {
   drawTile(canvas_, 8, 140, 148, 52, kColorTileB, "CELL T3", t3);
   drawTile(canvas_, 164, 140, 148, 52, kColorTileC, "CELL T4", t4);
 
-  drawButtonFooter("B");
+  drawButtonFooter("Temps");
   pushFrame();
 #else
   (void)store;
@@ -378,11 +424,11 @@ void M5StatusDisplay::renderAuthPrompt(const auth::AuthPrompt& prompt) {
   }
   canvas_.fillSprite(kColorBg);
   if (prompt.kind == auth::AuthPromptKind::ConfirmSetup) {
-    drawWideTile(canvas_, 8, 8, 304, 72, kColorTileC, "CONFIRM LOGIN", prompt.username);
-    drawWideTile(canvas_, 8, 92, 304, 58, kColorTileA, "ACTION", "Press B to OK");
+    drawTile(canvas_, 8, 8, 304, 72, kColorTileC, "CONFIRM LOGIN", prompt.username);
+    drawTile(canvas_, 8, 92, 304, 58, kColorTileA, "ACTION", "Press B to OK", kColorPos);
   } else {
-    drawWideTile(canvas_, 8, 8, 304, 72, kColorTileC, "PASSWORD RESET", "Confirm on device");
-    drawWideTile(canvas_, 8, 92, 304, 58, kColorTileA, "ACTION", "Press B to OK");
+    drawTile(canvas_, 8, 8, 304, 72, kColorTileC, "PASSWORD RESET", "Confirm on device");
+    drawTile(canvas_, 8, 92, 304, 58, kColorTileA, "ACTION", "Press B to OK", kColorPos);
   }
   drawButtonFooter("OK");
   pushFrame();
