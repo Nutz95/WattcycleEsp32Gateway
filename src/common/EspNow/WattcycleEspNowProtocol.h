@@ -40,6 +40,9 @@ struct EspNowTelemetryPacketV1 {
   int16_t chipTempDc = 0;
   uint16_t heapKb = 0;
   uint32_t uptimeSec = 0;
+  // v2+: up to 4 pack cell-sensor temps (°C * 10). v1 peers leave these zero.
+  uint8_t cellSensorCount = 0;
+  int16_t cellTempDc[4] = {};
 };
 
 struct EspNowProductPacketV1 {
@@ -57,7 +60,9 @@ struct EspNowProductPacketV1 {
 
 static constexpr uint32_t kMagic = 0x31504357u;         // 'WCP1' LE
 static constexpr uint32_t kProductMagic = 0x31505257u;  // 'WRP1' LE
-static constexpr uint8_t kVersion = 1;
+static constexpr uint8_t kVersion = 2;
+/// Product frame layout is independent of telemetry v2 cell-sensor fields.
+static constexpr uint8_t kProductVersion = 1;
 static constexpr size_t kMaxCells = 16;
 static constexpr size_t kTelemetryPacketSize = sizeof(EspNowTelemetryPacketV1);
 static constexpr size_t kProductPacketSize = sizeof(EspNowProductPacketV1);

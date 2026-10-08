@@ -1,19 +1,21 @@
 #pragma once
 
+#include "EspNow/IEspNowCommandSender.h"
+
 #include <cstdint>
 
 namespace wattcycle::espnow_rx {
 
-class IEspNowTelemetryReceiver {
+class IEspNowTelemetryReceiver : public IEspNowCommandSender {
  public:
-  virtual ~IEspNowTelemetryReceiver() = default;
+  ~IEspNowTelemetryReceiver() override = default;
 
-  /// Wi-Fi must already be up. Register encrypted peers for BMS + XT bridges.
+  /// STA mode + matching 2.4 GHz channel required (IP optional).
+  /// channel 0 = use current Wi-Fi channel; 1-13 = force via esp_wifi_set_channel.
   virtual bool begin(const char* bmsBridgeMac = "", const char* xtBridgeMac = "",
-                     const char* pmk = "") = 0;
+                     const char* pmk = "", uint8_t channel = 0) = 0;
   virtual void loop() = 0;
   virtual bool isReady() const = 0;
-  virtual bool sendMeterCommand(uint8_t command) = 0;
 };
 
 }  // namespace wattcycle::espnow_rx

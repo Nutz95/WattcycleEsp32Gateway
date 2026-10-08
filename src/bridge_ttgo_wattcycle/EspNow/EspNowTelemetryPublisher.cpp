@@ -133,7 +133,7 @@ void EspNowTelemetryPublisher::publishProduct(const telemetry::ITelemetryStore& 
   const auto status = store.status();
   wattcycle_bridge::EspNowProductPacketV1 packet = {};
   packet.magic = wattcycle_bridge::kProductMagic;
-  packet.version = wattcycle_bridge::kVersion;
+  packet.version = wattcycle_bridge::kProductVersion;
   if (encrypt_) {
     packet.flags |= wattcycle_bridge::kFlagEncrypted;
   }
@@ -224,6 +224,18 @@ void EspNowTelemetryPublisher::publish(const telemetry::ITelemetryStore& store) 
   packet.chipTempDc = toDeciCelsius(esp.chipTemperatureC);
   packet.heapKb = static_cast<uint16_t>(esp.freeHeapBytes / 1024u);
   packet.uptimeSec = esp.uptimeSeconds;
+
+  uint8_t sensorCount =
+      battery.temperatureCount >= 2
+          ? static_cast<uint8_t>(battery.temperatureCount - 2)
+          : static_cast<uint8_t>(0);
+  if (sensorCount > 4) {
+    sensorCount = 4;
+  }
+  packet.cellSensorCount = sensorCount;
+  for (uint8_t i = 0; i < sensorCount; ++i) {
+    packet.cellTempDc[i] = toDeciCelsius(battery.cellTemperaturesC[i]);
+  }
 
   const esp_err_t err =
       esp_now_send(peerMac_, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet));

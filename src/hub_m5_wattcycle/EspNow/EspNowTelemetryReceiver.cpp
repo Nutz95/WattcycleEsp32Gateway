@@ -9,7 +9,9 @@
 
 #ifndef UNIT_TEST
 #include <Arduino.h>
+#include <WiFi.h>
 #include <esp_now.h>
+#include <esp_wifi.h>
 #endif
 
 namespace wattcycle::espnow_rx {
@@ -20,7 +22,7 @@ EspNowTelemetryReceiver::EspNowTelemetryReceiver(telemetry::ITelemetryStore& sto
     : store_(store) {}
 
 bool EspNowTelemetryReceiver::begin(const char* bmsBridgeMac, const char* xtBridgeMac,
-                                    const char* pmk) {
+                                    const char* pmk, uint8_t channel) {
 #ifndef UNIT_TEST
   instance_ = this;
   ready_ = false;
@@ -37,6 +39,20 @@ bool EspNowTelemetryReceiver::begin(const char* bmsBridgeMac, const char* xtBrid
   encrypt_ = pmk != nullptr && std::strlen(pmk) >= xt369p_bridge::kPmkBytes;
   if (encrypt_) {
     std::memcpy(lmk_, pmk, xt369p_bridge::kPmkBytes);
+  }
+
+  WiFi.mode(WIFI_STA);
+  if (channel >= 1 && channel <= 13) {
+    // Stop a stuck STA association so channel lock matches the bridges.
+    if (WiFi.status() != WL_CONNECTED) {
+      WiFi.disconnect(false, false);
+      delay(50);
+    }
+    if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
+      Serial.printf("ESP-NOW set_channel(%u) failed\n", channel);
+      return false;
+    }
+    Serial.printf("ESP-NOW RX channel locked to %u (IP optional)\n", channel);
   }
 
   if (esp_now_init() != ESP_OK) {
@@ -78,6 +94,7 @@ bool EspNowTelemetryReceiver::begin(const char* bmsBridgeMac, const char* xtBrid
   (void)bmsBridgeMac;
   (void)xtBridgeMac;
   (void)pmk;
+  (void)channel;
   ready_ = true;
   return true;
 #endif
@@ -138,19 +155,33 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
       hasXtPeer_ = true;
     }
     pendingSolar_ = true;
+    static uint32_t xtRxCount = 0;
+    if ((++xtRxCount % 10u) == 1u) {
+      Serial.printf("ESP-NOW RX XT seq=%u n=%u\n", packet.seq, xtRxCount);
+    }
     return;
   }
 
-  if (magic == wattcycle_bridge::kMagic && version == wattcycle_bridge::kVersion) {
-    if (len < static_cast<int>(sizeof(wattcycle_bridge::EspNowTelemetryPacketV1))) {
+  if (magic == wattcycle_bridge::kMagic && version > 0 && version <= wattcycle_bridge::kVersion) {
+    const int requiredLen =
+        version >= 2 ? static_cast<int>(sizeof(wattcycle_bridge::EspNowTelemetryPacketV1))
+                     : static_cast<int>(offsetof(wattcycle_bridge::EspNowTelemetryPacketV1,
+                                                 cellSensorCount));
+    if (len < requiredLen) {
       return;
     }
-    std::memcpy(&bmsPacket_, data, sizeof(bmsPacket_));
+    bmsPacket_ = {};
+    std::memcpy(&bmsPacket_, data, static_cast<size_t>(requiredLen));
     pendingBmsTelemetry_ = true;
+    static uint32_t bmsRxCount = 0;
+    if ((++bmsRxCount % 10u) == 1u) {
+      Serial.printf("ESP-NOW RX BMS soc=%u n=%u\n", bmsPacket_.socPercent, bmsRxCount);
+    }
     return;
   }
 
-  if (magic == wattcycle_bridge::kProductMagic && version == wattcycle_bridge::kVersion) {
+  if (magic == wattcycle_bridge::kProductMagic && version > 0 &&
+      version <= wattcycle_bridge::kProductVersion) {
     if (len < static_cast<int>(sizeof(wattcycle_bridge::EspNowProductPacketV1))) {
       return;
     }
@@ -252,12 +283,32 @@ void EspNowTelemetryReceiver::applyBmsTelemetry(
   for (uint8_t i = 0; i < battery.cellCount; ++i) {
     battery.cellVoltages[i] = packet.cellMv[i] / 1000.0f;
   }
+  // Cell sensor temps: packed after MOS/PCB in temperatureCount convention.
+  if (packet.version >= 2 && packet.cellSensorCount > 0) {
+    const uint8_t sensorCount =
+        packet.cellSensorCount > 4 ? static_cast<uint8_t>(4) : packet.cellSensorCount;
+    battery.temperatureCount = static_cast<uint8_t>(2 + sensorCount);
+    for (uint8_t i = 0; i < sensorCount; ++i) {
+      battery.cellTemperaturesC[i] = packet.cellTempDc[i] / 10.0f;
+    }
+  }
 #ifndef UNIT_TEST
   battery.updatedAtMs = millis();
 #endif
   store_.updateBattery(battery);
+  // Keep prior BLE MAC (product frame); only refresh connected bit here.
   store_.setBleState((packet.flags & wattcycle_bridge::kFlagBleConnected) != 0, "", "");
   store_.setTelemetryFresh(battery.valid);
+
+  if ((packet.flags & wattcycle_bridge::kFlagBridgeEspValid) != 0) {
+    telemetry::EspHealth bridgeEsp = {};
+    bridgeEsp.cpuCore0Percent = packet.cpu0Percent;
+    bridgeEsp.cpuCore1Percent = packet.cpu1Percent;
+    bridgeEsp.chipTemperatureC = packet.chipTempDc / 10.0f;
+    bridgeEsp.freeHeapBytes = static_cast<uint32_t>(packet.heapKb) * 1024u;
+    bridgeEsp.uptimeSeconds = packet.uptimeSec;
+    store_.updateBmsBridgeHealth(bridgeEsp, true);
+  }
 
   bms::WarningFlags warnings = {};
   warnings.valid = (packet.flags & wattcycle_bridge::kFlagWarningsValid) != 0;

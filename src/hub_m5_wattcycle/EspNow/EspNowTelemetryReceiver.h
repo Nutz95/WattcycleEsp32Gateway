@@ -14,7 +14,7 @@ class EspNowTelemetryReceiver : public IEspNowTelemetryReceiver {
   explicit EspNowTelemetryReceiver(telemetry::ITelemetryStore& store);
 
   bool begin(const char* bmsBridgeMac = "", const char* xtBridgeMac = "",
-             const char* pmk = "") override;
+             const char* pmk = "", uint8_t channel = 0) override;
   void loop() override;
   bool isReady() const override;
   bool sendMeterCommand(uint8_t command) override;
