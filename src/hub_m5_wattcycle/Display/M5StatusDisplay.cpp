@@ -214,7 +214,7 @@ void M5StatusDisplay::drawPack(const telemetry::ITelemetryStore& store) {
   char volts[16] = "-- V";
   char amps[16] = "-- A";
   char watts[16] = "-- W";
-  char ah[20] = "--/-- Ah";
+  char ah[24] = "-- / -- Ah";
   uint16_t ampsFill = kColorTileA;
   uint16_t wattsFill = kColorTileB;
   if (battery.valid) {
@@ -222,7 +222,9 @@ void M5StatusDisplay::drawPack(const telemetry::ITelemetryStore& store) {
     std::snprintf(volts, sizeof(volts), "%.1fV", static_cast<double>(battery.moduleVoltage));
     std::snprintf(amps, sizeof(amps), "%.1fA", static_cast<double>(battery.currentAmps));
     std::snprintf(watts, sizeof(watts), "%.0fW", static_cast<double>(battery.powerWatts));
-    std::snprintf(ah, sizeof(ah), "%.1f/%.1f", static_cast<double>(battery.remainingCapacityAh),
+    // Remaining / total amp-hours (not a percent — SoC is the SOC tile).
+    std::snprintf(ah, sizeof(ah), "%.1f / %.1f Ah",
+                  static_cast<double>(battery.remainingCapacityAh),
                   static_cast<double>(battery.totalCapacityAh));
     ampsFill = signedTileFill(battery.currentAmps, kColorTileA);
     wattsFill = signedTileFill(battery.powerWatts, kColorTileB);
@@ -232,7 +234,7 @@ void M5StatusDisplay::drawPack(const telemetry::ITelemetryStore& store) {
   drawTile(canvas_, 164, 8, 148, 58, kColorTileD, "VOLTAGE", volts);
   drawTile(canvas_, 8, 74, 148, 58, ampsFill, "CURRENT", amps);
   drawTile(canvas_, 164, 74, 148, 58, wattsFill, "POWER", watts);
-  drawTile(canvas_, 8, 140, 304, 52, kColorTileA, "CAPACITY Ah", ah);
+  drawTile(canvas_, 8, 140, 304, 52, kColorTileA, "CAPACITY", ah, 1);
 
   drawButtonFooter("Pack");
   pushFrame();
