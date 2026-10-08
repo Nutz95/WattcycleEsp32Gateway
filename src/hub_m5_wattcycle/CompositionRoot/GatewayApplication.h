@@ -7,8 +7,10 @@
 #include "Esp/EspHealthSampler.h"
 #include "EspNow/IEspNowTelemetryReceiver.h"
 #include "Ota/IOtaUpdater.h"
+#include "Storage/IDailyHistoryStore.h"
 #include "Telemetry/ITelemetryStore.h"
-#include "Web/IWebGateway.h"
+#include "Time/NtpClock.h"
+#include "HttpApi/IWebGateway.h"
 #include "Wifi/IWifiConnector.h"
 
 #ifndef UNIT_TEST
@@ -24,7 +26,8 @@ class GatewayApplication {
                      ota::IOtaUpdater& otaUpdater, telemetry::ITelemetryStore& telemetryStore,
                      web::IWebGateway& webGateway, display::IStatusDisplay& statusDisplay,
                      auth::IAuthPhysicalConfirm& authConfirm,
-                     espnow_rx::IEspNowTelemetryReceiver& espNowReceiver);
+                     espnow_rx::IEspNowTelemetryReceiver& espNowReceiver,
+                     time_sync::NtpClock& ntpClock, storage::IDailyHistoryStore& historyStore);
 
   bool begin();
   void loop();
@@ -33,6 +36,8 @@ class GatewayApplication {
  private:
   void startDisplayTask();
   void maybeStartEspNow(uint32_t nowMs);
+  void maybeStartWebServices();
+  void maybeAppendHistory();
   void refreshWifiStatus(uint32_t nowMs);
   void sampleEspHealth();
   void handleButtons(uint32_t nowMs);
@@ -58,13 +63,16 @@ class GatewayApplication {
   display::IStatusDisplay& statusDisplay_;
   auth::IAuthPhysicalConfirm& authConfirm_;
   espnow_rx::IEspNowTelemetryReceiver& espNowReceiver_;
+  time_sync::NtpClock& ntpClock_;
+  storage::IDailyHistoryStore& historyStore_;
   display::ButtonNavigator buttonNavigator_;
   esp_sys::EspHealthSampler espHealthSampler_;
   uint32_t lastWifiStatusMs_ = 0;
   uint32_t lastInputMs_ = 0;
   uint32_t lastDisplayFingerprint_ = 0;
   uint32_t bootMs_ = 0;
-  bool espNowAttempted_ = false;
+  uint32_t lastEspNowAttemptMs_ = 0;
+  bool webServicesStarted_ = false;
   volatile bool displayAsleep_ = false;
 #ifndef UNIT_TEST
   TaskHandle_t displayTaskHandle_ = nullptr;

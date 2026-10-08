@@ -14,8 +14,11 @@ struct AppConfig {
   /// Optional 16+ char shared ESP-NOW PMK/LMK (empty = plaintext).
   const char* espNowPmk = "";
   const char* otaHostname = "wattcycle-gateway";
+  /// POSIX TZ for M5 clock tiles (default Europe/Paris with DST).
+  const char* posixTimeZone = "CET-1CEST,M3.5.0,M10.5.0/3";
   uint16_t webServerPort = 6789;
-  uint32_t wifiConnectTimeoutMs = 30000;
+  /// Keep short: ESP-NOW starts after this even without IP (channel from scan).
+  uint32_t wifiConnectTimeoutMs = 12000;
 };
 
 class AppConfigFactory {

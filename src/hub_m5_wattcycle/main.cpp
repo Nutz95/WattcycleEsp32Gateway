@@ -5,11 +5,15 @@
 #include "Display/M5StatusDisplay.h"
 #include "EspNow/EspNowTelemetryReceiver.h"
 #include "Ota/ArduinoOtaUpdater.h"
+#include "Storage/SdDailyHistory.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
-#include "Web/EspWebGateway.h"
+#include "Time/NtpClock.h"
+#include "HttpApi/EspWebGateway.h"
 #include "Wifi/EspWifiConnector.h"
 
 #include <Arduino.h>
+#include <WebServer.h>  // force PlatformIO LDF (chain+) to link framework WebServer
+#include <WiFi.h>
 
 namespace {
 
@@ -40,17 +44,26 @@ void setup() {
   static wattcycle::auth::NvsCredentialStore credentialStore;
   static wattcycle::auth::AuthService authService(credentialStore);
   authService.begin();
-  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService, espNowReceiver);
+  static wattcycle::time_sync::NtpClock ntpClock;
+  static wattcycle::storage::SdDailyHistory sdHistory;
+  static wattcycle::web::EspWebGateway webGateway(telemetryStore, authService, espNowReceiver,
+                                                  sdHistory);
   static wattcycle::display::M5StatusDisplay statusDisplay;
+
+  // STA MAC is known after Wi-Fi mode init inside connect(); seed peers from build flags now.
+  webGateway.setDeviceIdentity("m5_hub", "", config.espNowBmsBridgeMac, config.espNowXtBridgeMac);
 
   static wattcycle::composition::GatewayApplication application(
       config, wifiConnector, otaUpdater, telemetryStore, webGateway, statusDisplay, authService,
-      espNowReceiver);
+      espNowReceiver, ntpClock, sdHistory);
   gApplication = &application;
 
   if (!application.begin()) {
     Serial.println(F("Hub boot incomplete — check Serial / display errors"));
   }
+
+  webGateway.setDeviceIdentity("m5_hub", WiFi.macAddress().c_str(), config.espNowBmsBridgeMac,
+                               config.espNowXtBridgeMac);
 }
 
 void loop() {

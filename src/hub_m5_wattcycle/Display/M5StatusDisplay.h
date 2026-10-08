@@ -24,7 +24,12 @@ class M5StatusDisplay : public IStatusDisplay {
 
  private:
   void drawOverview(const telemetry::ITelemetryStore& store);
+  void drawPack(const telemetry::ITelemetryStore& store);
+  void drawSolar(const telemetry::ITelemetryStore& store);
   void drawGateway(const telemetry::ITelemetryStore& store);
+  void drawEsp(const telemetry::ITelemetryStore& store);
+  void drawTemps(const telemetry::ITelemetryStore& store);
+  void drawButtonFooter(const char* centerLabel);
   void pushFrame();
 
   bool ready_ = false;

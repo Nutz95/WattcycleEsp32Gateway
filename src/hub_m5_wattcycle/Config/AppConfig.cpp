@@ -23,6 +23,9 @@
 #ifndef WEB_SERVER_PORT
 #define WEB_SERVER_PORT 6789
 #endif
+#ifndef POSIX_TIMEZONE
+#define POSIX_TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"
+#endif
 
 namespace wattcycle::config {
 
@@ -35,6 +38,7 @@ AppConfig AppConfigFactory::fromBuildFlags() {
   config.espNowXtBridgeMac = ESPNOW_BRIDGE_MAC;
   config.espNowPmk = ESPNOW_PMK;
   config.otaHostname = OTA_HOSTNAME;
+  config.posixTimeZone = POSIX_TIMEZONE;
   config.webServerPort = static_cast<uint16_t>(WEB_SERVER_PORT);
   return config;
 }

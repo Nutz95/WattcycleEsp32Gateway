@@ -2,6 +2,8 @@
 
 #include "Config/TimingConstants.h"
 
+#include <cstring>
+
 #ifndef UNIT_TEST
 #include <Arduino.h>
 #endif
@@ -15,7 +17,9 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        web::IWebGateway& webGateway,
                                        display::IStatusDisplay& statusDisplay,
                                        auth::IAuthPhysicalConfirm& authConfirm,
-                                       espnow_rx::IEspNowTelemetryReceiver& espNowReceiver)
+                                       espnow_rx::IEspNowTelemetryReceiver& espNowReceiver,
+                                       time_sync::NtpClock& ntpClock,
+                                       storage::IDailyHistoryStore& historyStore)
     : appConfig_(appConfig),
       wifiConnector_(wifiConnector),
       otaUpdater_(otaUpdater),
@@ -23,15 +27,22 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
       webGateway_(webGateway),
       statusDisplay_(statusDisplay),
       authConfirm_(authConfirm),
-      espNowReceiver_(espNowReceiver) {}
+      espNowReceiver_(espNowReceiver),
+      ntpClock_(ntpClock),
+      historyStore_(historyStore) {}
 
 bool GatewayApplication::begin() {
-  statusDisplay_.begin();
+  // Wi-Fi BEFORE the 320x240 canvas (~77 KB): allocating the sprite first
+  // fragments heap and classic-ESP32 STA often fails to associate.
   buttonNavigator_.begin();
   espHealthSampler_.begin();
 #ifndef UNIT_TEST
   bootMs_ = millis();
   lastInputMs_ = bootMs_;
+  Serial.printf("SSID len=%u pass len=%u\n",
+                appConfig_.wifiSsid ? static_cast<unsigned>(std::strlen(appConfig_.wifiSsid)) : 0u,
+                appConfig_.wifiPassword ? static_cast<unsigned>(std::strlen(appConfig_.wifiPassword))
+                                        : 0u);
 #else
   bootMs_ = 0;
   lastInputMs_ = 0;
@@ -40,6 +51,7 @@ bool GatewayApplication::begin() {
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
     telemetryStore_.setWifiState(false, "");
     telemetryStore_.setBleState(false, "", "WIFI_SSID/WIFI_PASS missing");
+    statusDisplay_.begin();
     renderCurrentDisplay();
     startDisplayTask();
     return false;
@@ -50,39 +62,70 @@ bool GatewayApplication::begin() {
   refreshWifiStatus(millis());
 
   if (wifiOk) {
-    otaUpdater_.begin(appConfig_.otaHostname);
-    webGateway_.begin(appConfig_.webServerPort);
-    telemetryStore_.setWebPort(appConfig_.webServerPort);
+    maybeStartWebServices();
+  } else {
 #ifndef UNIT_TEST
-    Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
-                  appConfig_.webServerPort);
+    Serial.println(F("Wi-Fi IP pending - ESP-NOW will use scanned AP channel"));
 #endif
   }
 
+  statusDisplay_.begin();
+  historyStore_.begin();
+  ntpClock_.begin(appConfig_.posixTimeZone);
   sampleEspHealth();
   renderCurrentDisplay();
   startDisplayTask();
-  return wifiOk;
+  // Display + radio path is enough for a usable hub; IP may arrive later.
+  return true;
+}
+
+void GatewayApplication::maybeStartWebServices() {
+  if (webServicesStarted_ || !wifiConnector_.isConnected()) {
+    return;
+  }
+  otaUpdater_.begin(appConfig_.otaHostname);
+  webGateway_.begin(appConfig_.webServerPort);
+  telemetryStore_.setWebPort(appConfig_.webServerPort);
+  webServicesStarted_ = true;
+#ifndef UNIT_TEST
+  Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
+                appConfig_.webServerPort);
+#endif
 }
 
 void GatewayApplication::maybeStartEspNow(uint32_t nowMs) {
-  if (espNowAttempted_ || espNowReceiver_.isReady()) {
+  if (espNowReceiver_.isReady()) {
     return;
   }
-  if ((nowMs - bootMs_) < 3000u) {
+  if ((nowMs - bootMs_) < config::TimingConstants::kEspNowStartDelayMs) {
     return;
   }
+  if (lastEspNowAttemptMs_ != 0 &&
+      (nowMs - lastEspNowAttemptMs_) < config::TimingConstants::kEspNowRetryIntervalMs) {
+    return;
+  }
+  lastEspNowAttemptMs_ = nowMs;
+
+  // Bridges lock ESP-NOW to the AP channel without joining. Mirror that when
+  // STA has no IP yet so BMS/XT still work while Wi-Fi auth is broken.
+  uint8_t channel = 0;
   if (!wifiConnector_.isConnected()) {
-    return;
-  }
-  espNowAttempted_ = true;
+    channel = wifiConnector_.resolveSsidChannel(appConfig_.wifiSsid);
+    if (channel == 0) {
 #ifndef UNIT_TEST
-  Serial.printf("Starting multi-peer ESP-NOW heap=%u\n", ESP.getFreeHeap());
+      Serial.println(F("ESP-NOW defer - SSID not in scan (no channel)"));
+#endif
+      return;
+    }
+  }
+
+#ifndef UNIT_TEST
+  Serial.printf("Starting multi-peer ESP-NOW ch=%u heap=%u\n", channel, ESP.getFreeHeap());
 #endif
   if (!espNowReceiver_.begin(appConfig_.espNowBmsBridgeMac, appConfig_.espNowXtBridgeMac,
-                             appConfig_.espNowPmk)) {
+                             appConfig_.espNowPmk, channel)) {
 #ifndef UNIT_TEST
-    Serial.println(F("ESP-NOW off - Wi-Fi/web kept"));
+    Serial.println(F("ESP-NOW off - will retry"));
 #endif
   }
 }
@@ -101,8 +144,19 @@ void GatewayApplication::loop() {
   const uint32_t nowMs = 0;
 #endif
   serviceNetwork();
+  maybeStartWebServices();
   maybeStartEspNow(nowMs);
   refreshWifiStatus(nowMs);
+  ntpClock_.loop(wifiConnector_.isConnected());
+  telemetryStore_.setNtpSynced(ntpClock_.isSynced());
+  if (ntpClock_.isSynced()) {
+    char localDate[11] = {};
+    char localTime[6] = {};
+    if (ntpClock_.formatLocalDateTime(localDate, sizeof(localDate), localTime, sizeof(localTime))) {
+      telemetryStore_.setLocalClock(localDate, localTime);
+    }
+  }
+  maybeAppendHistory();
   sampleEspHealth();
   handleButtons(nowMs);
   maybeSleepDisplay(nowMs);
@@ -116,6 +170,26 @@ void GatewayApplication::sampleEspHealth() {
     return;
   }
   telemetryStore_.updateEspHealth(espHealthSampler_.snapshot());
+}
+
+void GatewayApplication::maybeAppendHistory() {
+  if (!ntpClock_.isSynced() || !historyStore_.isReady()) {
+    return;
+  }
+  storage::HistorySample sample = {};
+  sample.epochUtc = ntpClock_.nowEpoch();
+  const auto battery = telemetryStore_.battery();
+  const auto solar = telemetryStore_.solar();
+  sample.socPercent = static_cast<uint8_t>(battery.stateOfChargePercent);
+  sample.packVoltageV = battery.moduleVoltage;
+  sample.packCurrentA = battery.currentAmps;
+  sample.packPowerW = battery.powerWatts;
+  sample.packValid = battery.valid;
+  sample.solarVoltageV = solar.voltageV;
+  sample.solarCurrentA = solar.currentA;
+  sample.solarPowerW = solar.powerW;
+  sample.solarValid = solar.meterValid;
+  historyStore_.append(sample);
 }
 
 void GatewayApplication::refreshWifiStatus(uint32_t nowMs) {
@@ -254,7 +328,9 @@ uint32_t GatewayApplication::displayFingerprint() const {
          (batteryDeciV << 8) ^ solarMilliV ^
          (static_cast<uint32_t>(esp.cpuCore0Percent) << 4) ^
          (gateway.wifiConnected ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u) ^
-         (solar.linkFresh ? 4u : 0u) ^ (solar.meterValid ? 8u : 0u);
+         (solar.linkFresh ? 4u : 0u) ^ (solar.meterValid ? 8u : 0u) ^
+         (gateway.ntpSynced ? 16u : 0u) ^
+         (static_cast<uint32_t>(ntpClock_.nowEpoch() / 60u) & 0xFFu);
 }
 
 #ifndef UNIT_TEST
