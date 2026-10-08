@@ -1,9 +1,9 @@
 #include "EspNow/EspNowTelemetryReceiver.h"
 
 #include "Telemetry/SolarBridgeTelemetry.h"
+#include "Util/MacAddress.h"
 #include "Util/SafeCopy.h"
 
-#include <cstdio>
 #include <cstring>
 
 #ifndef UNIT_TEST
@@ -18,61 +18,51 @@ EspNowTelemetryReceiver* EspNowTelemetryReceiver::instance_ = nullptr;
 EspNowTelemetryReceiver::EspNowTelemetryReceiver(telemetry::ITelemetryStore& store)
     : store_(store) {}
 
-bool EspNowTelemetryReceiver::parseMac(const char* text, uint8_t out[6]) const {
-  if (text == nullptr || text[0] == '\0' || out == nullptr) {
-    return false;
-  }
-  unsigned int b[6] = {};
-  if (std::sscanf(text, "%02x:%02x:%02x:%02x:%02x:%02x", &b[0], &b[1], &b[2], &b[3], &b[4],
-                  &b[5]) != 6 &&
-      std::sscanf(text, "%02X:%02X:%02X:%02X:%02X:%02X", &b[0], &b[1], &b[2], &b[3], &b[4],
-                  &b[5]) != 6) {
-    return false;
-  }
-  for (int i = 0; i < 6; ++i) {
-    out[i] = static_cast<uint8_t>(b[i]);
-  }
-  return true;
-}
-
 bool EspNowTelemetryReceiver::begin(const char* bridgeMac, const char* pmk) {
 #ifndef UNIT_TEST
   instance_ = this;
+  ready_ = false;
+
+  // Opt-in: classic ESP32 + NimBLE + ESP-NOW coex is fragile. Require a valid
+  // XT369P STA MAC before touching esp_now_* at all (avoids boot loops).
+  uint8_t bridge[6] = {};
+  if (!util::parseMacAddress(bridgeMac, bridge)) {
+    Serial.println(F("ESP-NOW skipped (set ESPNOW_BRIDGE_MAC to enable solar RX)"));
+    return false;
+  }
+
   encrypt_ = pmk != nullptr && std::strlen(pmk) >= xt369p_bridge::kPmkBytes;
   if (encrypt_) {
     std::memcpy(lmk_, pmk, xt369p_bridge::kPmkBytes);
+  } else if (pmk != nullptr && pmk[0] != '\0') {
+    Serial.println(F("ESP-NOW: ESPNOW_PMK too short - using plaintext"));
   }
 
   if (esp_now_init() != ESP_OK) {
     Serial.println(F("ESP-NOW RX init failed"));
-    ready_ = false;
     return false;
   }
 
   if (encrypt_) {
     if (esp_now_set_pmk(lmk_) != ESP_OK) {
-      Serial.println(F("ESP-NOW set_pmk failed"));
-      ready_ = false;
+      Serial.println(F("ESP-NOW set_pmk failed - deinit, solar off"));
+      esp_now_deinit();
       return false;
     }
-    uint8_t mac[6] = {};
-    if (!parseMac(bridgeMac, mac)) {
-      Serial.println(F("ESP-NOW encrypt needs ESPNOW_BRIDGE_MAC (XT369P STA MAC)"));
-      ready_ = false;
-      return false;
-    }
-    if (!ensurePeer(mac)) {
-      Serial.println(F("ESP-NOW add encrypted bridge peer failed"));
-      ready_ = false;
-      return false;
-    }
-    std::memcpy(peerMac_, mac, 6);
-    hasPeer_ = true;
   }
+
+  if (!ensurePeer(bridge)) {
+    Serial.println(F("ESP-NOW add bridge peer failed - deinit, solar off"));
+    esp_now_deinit();
+    return false;
+  }
+  std::memcpy(peerMac_, bridge, 6);
+  hasPeer_ = true;
 
   esp_now_register_recv_cb(&EspNowTelemetryReceiver::onReceiveTrampoline);
   ready_ = true;
-  Serial.printf("ESP-NOW RX listening for XT369P bridge (enc=%u)\n", encrypt_ ? 1u : 0u);
+  Serial.printf("ESP-NOW RX listening (enc=%u) heap=%u\n", encrypt_ ? 1u : 0u,
+                ESP.getFreeHeap());
   return true;
 #else
   (void)bridgeMac;

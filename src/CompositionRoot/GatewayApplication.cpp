@@ -32,45 +32,77 @@ bool GatewayApplication::begin() {
   statusDisplay_.begin();
   buttonNavigator_.begin();
   espHealthSampler_.begin();
-  lastInputMs_ = millis();
+#ifndef UNIT_TEST
+  bootMs_ = millis();
+  lastInputMs_ = bootMs_;
+#else
+  bootMs_ = 0;
+  lastInputMs_ = 0;
+#endif
 
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
     telemetryStore_.setWifiState(false, "");
     telemetryStore_.setBleState(false, appConfig_.bmsBleAddress,
                                 "WIFI_SSID/WIFI_PASS missing");
+    telemetryPoller_.begin();
+    startBleTask();
     renderCurrentDisplay();
     startDisplayTask();
     return false;
   }
 
+  // Proven order (pre-ESP-NOW): Wi-Fi -> OTA/web -> NimBLE. ESP-NOW is deferred.
   const bool wifiOk = wifiConnector_.connect(
       appConfig_.wifiSsid, appConfig_.wifiPassword, appConfig_.wifiConnectTimeoutMs);
   refreshWifiStatus(millis());
-  if (!wifiOk) {
-    renderCurrentDisplay();
-    startDisplayTask();
-    return false;
-  }
 
-  otaUpdater_.begin(appConfig_.otaHostname);
-  webGateway_.begin(appConfig_.webServerPort);
-  telemetryStore_.setWebPort(appConfig_.webServerPort);
-  if (!espNowReceiver_.begin(appConfig_.espNowBridgeMac, appConfig_.espNowPmk)) {
+  if (wifiOk) {
+    otaUpdater_.begin(appConfig_.otaHostname);
+    webGateway_.begin(appConfig_.webServerPort);
+    telemetryStore_.setWebPort(appConfig_.webServerPort);
 #ifndef UNIT_TEST
-    Serial.println(F("ESP-NOW RX failed — solar bridge disabled"));
+    Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
+                  appConfig_.webServerPort);
+#endif
+  } else {
+#ifndef UNIT_TEST
+    Serial.println(F("Wi-Fi failed - starting BLE anyway"));
 #endif
   }
+
+#ifndef UNIT_TEST
+  // Give Wi-Fi stack a beat before NimBLE enables the BT controller.
+  delay(500);
+#endif
   telemetryPoller_.begin();
   startBleTask();
   refreshWifiStatus(millis());
   sampleEspHealth();
   renderCurrentDisplay();
   startDisplayTask();
+  return wifiOk;
+}
+
+void GatewayApplication::maybeStartEspNow(uint32_t nowMs) {
+  if (espNowAttempted_ || espNowReceiver_.isReady()) {
+    return;
+  }
+  // Wait until Wi-Fi + NimBLE have been up for a few seconds (coex abort otherwise).
+  if ((nowMs - bootMs_) < 8000u) {
+    return;
+  }
+  if (!wifiConnector_.isConnected()) {
+    return;
+  }
+  espNowAttempted_ = true;
 #ifndef UNIT_TEST
-  Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
-                appConfig_.webServerPort);
+  Serial.printf("Starting ESP-NOW (deferred) heap=%u\n", ESP.getFreeHeap());
 #endif
-  return true;
+  if (!espNowReceiver_.begin(appConfig_.espNowBridgeMac, appConfig_.espNowPmk)) {
+#ifndef UNIT_TEST
+    Serial.println(F("ESP-NOW off - Wi-Fi/BMS kept"));
+#endif
+  }
 }
 
 void GatewayApplication::serviceNetwork() {
@@ -83,6 +115,7 @@ void GatewayApplication::serviceNetwork() {
 void GatewayApplication::loop() {
   const uint32_t nowMs = millis();
   serviceNetwork();
+  maybeStartEspNow(nowMs);
   refreshWifiStatus(nowMs);
   sampleEspHealth();
   handleButtons(nowMs);

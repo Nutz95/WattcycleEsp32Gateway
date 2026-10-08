@@ -22,7 +22,6 @@ class EspNowTelemetryReceiver : public IEspNowTelemetryReceiver {
   void onReceive(const uint8_t* mac, const uint8_t* data, int len);
   void applyPending();
   bool ensurePeer(const uint8_t mac[6]);
-  bool parseMac(const char* text, uint8_t out[6]) const;
 
   telemetry::ITelemetryStore& store_;
   bool ready_ = false;

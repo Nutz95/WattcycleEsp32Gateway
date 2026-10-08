@@ -36,6 +36,7 @@ class GatewayApplication {
  private:
   void startBleTask();
   void startDisplayTask();
+  void maybeStartEspNow(uint32_t nowMs);
   void refreshWifiStatus(uint32_t nowMs);
   void sampleEspHealth();
   void handleButtons(uint32_t nowMs);
@@ -70,6 +71,8 @@ class GatewayApplication {
   uint32_t lastWifiStatusMs_ = 0;
   uint32_t lastInputMs_ = 0;
   uint32_t lastDisplayFingerprint_ = 0;
+  uint32_t bootMs_ = 0;
+  bool espNowAttempted_ = false;
   volatile bool displayAsleep_ = false;
 #ifndef UNIT_TEST
   TaskHandle_t bleTaskHandle_ = nullptr;
