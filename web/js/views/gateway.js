@@ -11,7 +11,12 @@
     setLink("wifi", gateway.wifi, gateway.ip || (gateway.wifi ? "ok" : "down"));
     setLink("ble", gateway.ble, gateway.ble ? "connected" : "down");
     document.getElementById("bleAddress").textContent = gateway.bleAddress || "--";
-    document.getElementById("error").textContent = gateway.error || "none";
+    setLink("solarLink", gateway.solarLink, gateway.solarLink ? "fresh" : "stale/down");
+    setLink("solarSppGw", gateway.spp, gateway.spp ? "connected" : "down");
+    const solar = data.solar || {};
+    document.getElementById("solarTarget").textContent = solar.target || "--";
+    document.getElementById("error").textContent =
+      solar.error || gateway.error || "none";
     document.getElementById("fw").textContent = product.fw || "--";
     document.getElementById("mfr").textContent = product.mfr || "--";
     document.getElementById("sn").textContent = product.sn || "--";

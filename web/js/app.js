@@ -35,7 +35,7 @@
       }
       const buffer = await response.arrayBuffer();
       const data = window.WattcycleBinary.decodeTelemetry(buffer);
-      const history = data.valid
+      const packHistory = data.valid
         ? window.WattcycleHistory.pushSample({
             t: Date.now(),
             v: data.voltage,
@@ -46,9 +46,25 @@
             pcb: data.pcbTemp
           })
         : window.WattcycleHistory.all();
-      window.WattcycleViews.overview(data, history);
+
+      const solar = data.solar || {};
+      const solarHistory =
+        data.gateway && data.gateway.solarLink && solar.valid
+          ? window.WattcycleSolarHistory.pushSample({
+              t: Date.now(),
+              v: solar.voltage,
+              i: solar.current,
+              p: solar.power,
+              wh: solar.energyWh,
+              ah: solar.capacityAh
+            })
+          : window.WattcycleSolarHistory.all();
+
+      window.WattcycleViews.overview(data);
+      window.WattcycleViews.solar(data, solarHistory);
+      window.WattcycleViews.history(data, packHistory, solarHistory);
       window.WattcycleViews.cells(data);
-      window.WattcycleViews.temperatures(data, history);
+      window.WattcycleViews.temperatures(data);
       window.WattcycleViews.warnings(data);
       window.WattcycleViews.gateway(data);
       window.WattcycleViews.esp(data);

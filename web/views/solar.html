@@ -1,0 +1,42 @@
+<section class="view" data-view="solar" hidden>
+  <header class="page-head">
+    <p class="brand">XT369P</p>
+    <hr class="brand-rule" />
+    <p class="page-title">Solar wattmeter</p>
+  </header>
+  <header class="hero">
+    <h1 id="solarPagePower">-- W</h1>
+    <p class="tagline" id="solarPageSummary">Waiting for ESP-NOW bridge…</p>
+  </header>
+  <div class="metrics">
+    <article><span>Link</span><strong id="solarPageLink">--</strong></article>
+    <article><span>SPP</span><strong id="solarPageSpp">--</strong></article>
+    <article><span>Voltage</span><strong id="solarPageVoltage">-- V</strong></article>
+    <article><span>Current</span><strong id="solarPageCurrent">-- A</strong></article>
+    <article><span>Power</span><strong id="solarPagePowerMetric">-- W</strong></article>
+    <article><span>Energy</span><strong id="solarPageEnergy">-- Wh</strong></article>
+    <article><span>Capacity</span><strong id="solarPageCapacity">-- Ah</strong></article>
+    <article><span>Temp</span><strong id="solarPageTemp">-- °C</strong></article>
+  </div>
+  <div class="command-row">
+    <button type="button" class="ghost-btn" data-solar-cmd="reset_wh">Reset Wh</button>
+    <button type="button" class="ghost-btn" data-solar-cmd="reset_ah">Reset Ah</button>
+    <button type="button" class="ghost-btn" data-solar-cmd="reset_duration">Reset time</button>
+    <button type="button" class="ghost-btn danger-btn" data-solar-cmd="reset_all">Reset all</button>
+    <span id="solarCmdStatus" class="hint"></span>
+  </div>
+  <div class="charts">
+    <figure>
+      <figcaption>Solar voltage</figcaption>
+      <canvas id="chartSolarVoltage" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Solar current</figcaption>
+      <canvas id="chartSolarCurrent" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Solar power</figcaption>
+      <canvas id="chartSolarPower" width="860" height="120"></canvas>
+    </figure>
+  </div>
+</section>

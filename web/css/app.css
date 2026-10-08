@@ -29,6 +29,28 @@ body {
   cursor: pointer;
 }
 .tab.active { color: var(--ink); background: rgba(62,207,142,0.18); border-color: var(--accent); }
+.page-head { margin: 0 0 1rem; }
+.brand {
+  margin: 0;
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+.brand-rule {
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,0.22);
+  margin: 0.55rem 0 0.65rem;
+  max-width: 12rem;
+}
+.page-title {
+  margin: 0;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
 .hero { margin-bottom: 1rem; }
 .eyebrow { letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-size: 0.8rem; }
 .hero h1 { margin: 0.2rem 0; font-size: clamp(2.8rem, 9vw, 4.6rem); line-height: 1; }
@@ -150,6 +172,25 @@ code { font-family: Consolas, monospace; }
   cursor: pointer;
 }
 .ghost-btn:hover { color: var(--ink); border-color: var(--accent); }
+.danger-btn { border-color: rgba(255,107,107,0.45); color: var(--danger); }
+.command-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 1rem 0 0.25rem;
+}
+.subtabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0 1rem; }
+.subtab {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.2);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+.subtab.active { color: var(--ink); border-color: var(--accent); background: rgba(62,207,142,0.14); }
+.solar-hero { margin-top: 1.5rem; }
 figure {
   margin: 0;
   background: var(--card);

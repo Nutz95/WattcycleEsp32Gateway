@@ -1,12 +1,13 @@
 /* Wattcycle gateway binary telemetry decoder (little-endian). */
 (function (global) {
   const MAGIC = 0x4d475457;
-  const VERSION = 1;
+  const VERSION = 3;
 
   function u8(view, offset) { return view.getUint8(offset); }
   function u16(view, offset) { return view.getUint16(offset, true); }
   function i16(view, offset) { return view.getInt16(offset, true); }
   function u32(view, offset) { return view.getUint32(offset, true); }
+  function i32(view, offset) { return view.getInt32(offset, true); }
 
   function readFixedString(bytes, offset, length) {
     let end = offset;
@@ -34,13 +35,16 @@
       gateway: {
         wifi: (flags & 0x02) !== 0,
         ble: (flags & 0x04) !== 0,
-        telemetryFresh: (flags & 0x20) !== 0
+        telemetryFresh: (flags & 0x20) !== 0,
+        solarLink: (flags & 0x40) !== 0,
+        spp: (flags & 0x80) !== 0
       },
       warnings: {
         protection: (flags & 0x08) !== 0,
         fault: (flags & 0x10) !== 0
       },
       esp: {},
+      solar: {},
       balancing: []
     };
 
@@ -106,7 +110,26 @@
     data.esp.cpu1 = u8(view, o); o += 1;
     data.esp.chipTemp = i16(view, o) / 10; o += 2;
     data.esp.heapKb = u16(view, o); o += 2;
-    data.esp.uptimeSec = u32(view, o);
+    data.esp.uptimeSec = u32(view, o); o += 4;
+
+    if (o + 1 <= bytes.length) {
+      const solarFlags = u8(view, o); o += 1;
+      data.solar.valid = (solarFlags & 0x01) !== 0;
+      data.solar.checksumOk = (solarFlags & 0x02) !== 0;
+      data.solar.voltage = u16(view, o) / 100; o += 2;
+      data.solar.current = i32(view, o) / 1000; o += 4;
+      data.solar.power = i32(view, o) / 100; o += 4;
+      data.solar.capacityAh = u32(view, o) / 1000; o += 4;
+      data.solar.energyWh = u32(view, o) / 1000; o += 4;
+      data.solar.tempC = i16(view, o) / 10; o += 2;
+      data.solar.runtimeS = u32(view, o); o += 4;
+      data.solar.frameCount = u32(view, o); o += 4;
+      data.solar.seq = u32(view, o); o += 4;
+      data.solar.target = readFixedString(bytes, o, 16); o += 16;
+      data.solar.error = readFixedString(bytes, o, 24); o += 24;
+      data.solar.linkFresh = data.gateway.solarLink;
+      data.solar.sppConnected = data.gateway.spp;
+    }
 
     return data;
   }

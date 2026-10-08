@@ -1,4 +1,9 @@
 <section class="view" data-view="overview">
+  <header class="page-head">
+    <p class="brand">WattCycle</p>
+    <hr class="brand-rule" />
+    <p class="page-title">Overview</p>
+  </header>
   <header class="hero">
     <p class="eyebrow">Live pack</p>
     <h1 id="soc">--%</h1>
@@ -12,26 +17,18 @@
     <article><span>Cycles</span><strong id="cycles">--</strong></article>
     <article><span>SOH</span><strong id="soh">--%</strong></article>
   </div>
-  <div class="charts-toolbar">
-    <p class="hint">Hover a chart for the value at that instant. Current/power: <span class="ok">+ charge</span> / <span class="bad">− discharge</span>.</p>
-    <button type="button" id="clearHistoryBtn" class="ghost-btn">Clear chart history</button>
-  </div>
-  <div class="charts">
-    <figure>
-      <figcaption>Voltage</figcaption>
-      <canvas id="chartVoltage" width="860" height="120"></canvas>
-    </figure>
-    <figure>
-      <figcaption>Current (+ charge / − discharge)</figcaption>
-      <canvas id="chartCurrent" width="860" height="120"></canvas>
-    </figure>
-    <figure>
-      <figcaption>Power (+ charge / − discharge)</figcaption>
-      <canvas id="chartPower" width="860" height="120"></canvas>
-    </figure>
-    <figure>
-      <figcaption>Capacity (guides at 10% / 90% of pack)</figcaption>
-      <canvas id="chartCapacity" width="860" height="120"></canvas>
-    </figure>
+  <header class="page-head solar-hero">
+    <p class="brand">XT369P</p>
+    <hr class="brand-rule" />
+    <p class="page-title">Solar bridge</p>
+    <p class="tagline" id="solarSummary">Waiting for XT369P…</p>
+  </header>
+  <div class="metrics">
+    <article><span>SPP</span><strong id="solarSpp">--</strong></article>
+    <article><span>Solar V</span><strong id="solarVoltage">-- V</strong></article>
+    <article><span>Solar I</span><strong id="solarCurrent">-- A</strong></article>
+    <article><span>Solar P</span><strong id="solarPower">-- W</strong></article>
+    <article><span>Energy</span><strong id="solarEnergy">-- Wh</strong></article>
+    <article><span>Capacity</span><strong id="solarCapacity">-- Ah</strong></article>
   </div>
 </section>

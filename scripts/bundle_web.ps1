@@ -33,7 +33,7 @@ function Minify-Js([string]$text) {
 
 # HTML: inject view fragments
 $html = Get-Content (Join-Path $webRoot "index.html") -Raw
-$views = @("overview", "cells", "temperatures", "warnings", "gateway", "esp", "account")
+$views = @("overview", "solar", "history", "cells", "temperatures", "warnings", "gateway", "esp", "account")
 foreach ($view in $views) {
   $fragment = Get-Content (Join-Path $webRoot "views\$view.html") -Raw
   $html = $html.Replace("<!--VIEW:$view-->", $fragment.Trim())
@@ -53,6 +53,8 @@ $jsParts = @(
   "js\charts.js",
   "js\auth.js",
   "js\views\overview.js",
+  "js\views\solar.js",
+  "js\views\history.js",
   "js\views\cells.js",
   "js\views\temperatures.js",
   "js\views\warnings.js",

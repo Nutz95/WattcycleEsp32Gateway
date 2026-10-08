@@ -1,13 +1,14 @@
 <section class="view" data-view="temperatures" hidden>
-  <h2>Temperatures</h2>
+  <header class="page-head">
+    <p class="brand">WattCycle</p>
+    <hr class="brand-rule" />
+    <p class="page-title">Temperatures</p>
+  </header>
   <div class="metrics">
     <article><span>MOS</span><strong id="mosTemp">-- °C</strong></article>
     <article><span>PCB</span><strong id="pcbTemp">-- °C</strong></article>
   </div>
-  <figure class="chart-block">
-    <figcaption>MOS / PCB history (up to 24h)</figcaption>
-    <canvas id="chartTemps" width="860" height="160"></canvas>
-  </figure>
+  <p class="hint">MOS/PCB curves live under History → Wattcycle pack.</p>
   <h3>Cell sensors</h3>
   <div id="cellTemps" class="cells"></div>
 </section>
