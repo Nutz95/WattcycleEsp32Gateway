@@ -16,8 +16,8 @@ routable web server. Phones work locally; remote / LAN dashboards do not.
 
 This project makes the ESP32 a **small always-on gateway**. It can also receive
 **solar wattmeter** telemetry over ESP-NOW from the companion bridge
-[XT369P_SPP_Gateway](https://github.com/Nutz95/XT369P_SPP_Gateway) (optional
-`ESPNOW_PMK` + `ESPNOW_BRIDGE_MAC` for encrypted link):
+[XT369P_SPP_Gateway](https://github.com/Nutz95/XT369P_SPP_Gateway). Prefer
+`.\scripts\pair_espnow_link.ps1` for first-time MAC + PMK setup:
 
 ```mermaid
 flowchart LR
@@ -126,7 +126,7 @@ src/
   Auth/              # NVS credentials, RAM sessions, physical confirm (ISP-split)
   Wifi/  Ota/  Web/  Display/  Esp/  Util/
 web/                 # SPA sources (bundled → data/ LittleFS)
-scripts/             # run_tests / flash_usb / flash_ota / guardrails / bundle_web
+scripts/             # run_tests / flash_usb / flash_ota / pair_espnow_link / guardrails / bundle_web
 test/                # PlatformIO native Unity tests
 ```
 
@@ -166,6 +166,22 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # BLE MAC only — no serial / pass
 ```
 
 This uploads firmware **and** the LittleFS web assets.
+
+### 2b. Optional — pair XT369P solar bridge (ESP-NOW)
+
+Plug **both** ESPs (hub COM19 + bridge COM22):
+
+```powershell
+.\scripts\pair_espnow_link.ps1 -HubPort COM19 -BridgePort COM22 -Flash
+```
+
+```text
+BRIDGE (XT369P)  --ESP-NOW-->  HUB (this Wattcycle board)
+
+ESPNOW_PEER_MAC   on BRIDGE = HUB MAC
+ESPNOW_BRIDGE_MAC on HUB    = BRIDGE MAC   <- not this board's own MAC
+ESPNOW_PMK        on BOTH   = same secret
+```
 
 ### 3. Open the dashboard
 
