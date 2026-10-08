@@ -139,9 +139,12 @@ Classic SPP name `XT369P_SPP` → TTGO `bridge_xt369p` → ESP-NOW → hub. Fram
 
 ```text
 src/
-  common/                 # Shared Util + ESP-NOW wire protocol
-  hub_ttgo_wattcycle/     # BMS BLE hub: Auth, Web, Wifi, Ota, EspNow RX, Display
-  bridge_xt369p/          # XT369P Classic SPP → EspNow TX + Display
+  common/                 # Util + ESP-NOW protocols (+ shared Bms models)
+  hub_common/             # Auth, HttpApi, Ota, Telemetry store, NTP helpers
+  hub_m5_wattcycle/       # Phase 2 web hub (COM23): multi-peer ESP-NOW RX + SD
+  bridge_ttgo_wattcycle/  # BMS BLE → ESP-NOW TX (COM19)
+  bridge_xt369p/          # XT369P SPP → ESP-NOW TX (COM22)
+  hub_ttgo_wattcycle/     # Legacy Phase 1 hub
 web/                      # SPA (hub LittleFS only)
 docs/                     # WATTCYCLE_PROTOCOL.md + XT369P_PROTOCOL.md
 scripts/                  # flash.ps1 / pair_espnow_link / run_tests / …
@@ -150,8 +153,10 @@ test/                     # native Unity tests (hub parsers)
 
 | PlatformIO env | Port | Role |
 |----------------|------|------|
-| `hub_ttgo_wattcycle` | COM19 | Web hub + BMS BLE + ESP-NOW RX |
+| `hub_m5_wattcycle` | COM23 | Web hub + multi-peer ESP-NOW RX + SD/NTP |
+| `bridge_ttgo_wattcycle` | COM19 | BMS BLE → ESP-NOW TX |
 | `bridge_xt369p` | COM22 | SPP → ESP-NOW TX (no web) |
+| `hub_ttgo_wattcycle` | — | Legacy Phase 1 hub |
 | `native` | — | Host unit tests |
 
 Design goals: **SOLID**, constructor injection, files **&lt; 400 lines**, classes **&lt; 30 methods**, **no nested classes**.
@@ -357,7 +362,8 @@ classDiagram
 
 `src/main.cpp` constructs concrete adapters and injects them into `GatewayApplication` (interfaces only); auth `begin()` runs in `main` before the composition root.
 Auth is ISP-split: `EspWebGateway` depends on `IAuthSessionService` (login/setup start only — physical confirm/reset stay private on `AuthService`); display/buttons use `IAuthPhysicalConfirm` + shared `auth::AuthPrompt`.
-Browser chart history is **localStorage only** (up to 24 h, ephemeral per device) — not stored on the ESP.
+Browser chart history is **localStorage** (up to 24 h): live samples append continuously, and the History tab can **merge today’s SD CSV** (UTC day files under `/history/`) into that store so charts are complete after login. Picking another day in the list loads that CSV into the charts.
+M5 overview clock uses local time via `POSIX_TIMEZONE` (default Europe/Paris `CET-1CEST,M3.5.0,M10.5.0/3`); SD filenames stay UTC.
 `scripts/check_guardrails.ps1` fails if files grow past limits or concrete adapter headers leak outside `main.cpp` / their domain.
 
 ---

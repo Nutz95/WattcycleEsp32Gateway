@@ -33,11 +33,12 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 - Prefer **interfaces** (`I*`) at domain boundaries.
 - Construct concrete adapters only in each target’s `main.cpp`; composition roots depend on interfaces.
 - Layout:
-  - `src/common/` — `Util/`, `EspNow/{Xt369p,Wattcycle}EspNowProtocol.h`
-  - `src/hub_m5_wattcycle/` — Auth, Web, Wifi, Ota, multi-peer EspNow RX, M5 display, Telemetry
-  - `src/bridge_ttgo_wattcycle/` — Bms BLE, EspNow TX, TTGO display — **no** Auth/Web/Ota
-  - `src/bridge_xt369p/` — Meter/SPP, EspNow TX, Display — **no** Auth/Web/Ota
-  - `src/hub_ttgo_wattcycle/` — legacy Phase 1 hub
+  - `src/common/` — `Util/`, `EspNow/` protocols + `IEspNowCommandSender`, shared `Bms/` models
+  - `src/hub_common/` — shared hub Auth, HttpApi (web), Ota, Telemetry store/codec, Esp health
+  - `src/hub_m5_wattcycle/` — M5 display, Wifi, multi-peer EspNow RX, composition root
+  - `src/bridge_ttgo_wattcycle/` — Bms BLE, EspNow TX, TTGO display — **no** Auth/HttpApi/Ota
+  - `src/bridge_xt369p/` — Meter/SPP, EspNow TX, Display — **no** Auth/HttpApi/Ota
+  - `src/hub_ttgo_wattcycle/` — legacy Phase 1 hub (target-specific BLE poller / display)
   - `web/` SPA → `scripts/bundle_web.ps1` → LittleFS `data/` (hub only)
 - Browser chart history is localStorage-only (Phase 1).
 - No nested classes; **≤ 400 lines per file**, **≤ 30 methods per class**.
