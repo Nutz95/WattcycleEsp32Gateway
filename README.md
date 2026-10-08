@@ -14,7 +14,10 @@
 Wattcycle packs expose rich BMS data over **Bluetooth**, but they do **not** ship a
 routable web server. Phones work locally; remote / LAN dashboards do not.
 
-This project makes the ESP32 a **small always-on gateway**:
+This project makes the ESP32 a **small always-on gateway**. It can also receive
+**solar wattmeter** telemetry over ESP-NOW from the companion bridge
+[XT369P_SPP_Gateway](https://github.com/Nutz95/XT369P_SPP_Gateway) (optional
+`ESPNOW_PMK` + `ESPNOW_BRIDGE_MAC` for encrypted link):
 
 ```mermaid
 flowchart LR
