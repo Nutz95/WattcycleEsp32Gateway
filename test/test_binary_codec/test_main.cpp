@@ -32,7 +32,7 @@ void test_encode_magic_and_soc() {
   TEST_ASSERT_EQUAL_HEX8(0x54, buffer[1]);  // T
   TEST_ASSERT_EQUAL_HEX8(0x47, buffer[2]);  // G
   TEST_ASSERT_EQUAL_HEX8(0x4D, buffer[3]);  // M
-  TEST_ASSERT_EQUAL_UINT8(1, buffer[4]);
+  TEST_ASSERT_EQUAL_UINT8(BinaryTelemetryCodec::kVersion, buffer[4]);
   TEST_ASSERT_EQUAL_UINT8(88, buffer[6]);
 }
 
