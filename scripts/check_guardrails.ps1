@@ -20,6 +20,7 @@ $concreteAdapterHeaders = @(
   "WattcycleBleClient.h",
   "EspWebGateway.h",
   "TtgoStatusDisplay.h",
+  "M5StatusDisplay.h",
   "InMemoryTelemetryStore.h",
   "NvsCredentialStore.h",
   "AuthService.h",
@@ -30,6 +31,8 @@ $concreteAdapterHeaders = @(
 
 $targetPrefixes = @(
   "hub_ttgo_wattcycle/",
+  "hub_m5_wattcycle/",
+  "bridge_ttgo_wattcycle/",
   "bridge_xt369p/",
   "common/"
 )

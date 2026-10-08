@@ -1,28 +1,37 @@
 <#
 .SYNOPSIS
-  Flash one or both monorepo firmwares (distinct COM ports).
+  Flash monorepo firmwares (distinct COM ports).
 
 .EXAMPLE
-  .\scripts\flash.ps1 -Target HubTtgoWattcycle -Port COM19
+  .\scripts\flash.ps1 -Target HubM5 -Port COM23
+.EXAMPLE
+  .\scripts\flash.ps1 -Target BridgeTtgoWattcycle -Port COM19
 .EXAMPLE
   .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
 .EXAMPLE
-  .\scripts\flash.ps1 -Target Both -HubPort COM19 -BridgePort COM22
+  .\scripts\flash.ps1 -Target All -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22
 #>
 [CmdletBinding()]
 param(
   [Parameter(Mandatory)]
-  [ValidateSet("HubTtgoWattcycle", "BridgeXt369p", "Both")]
+  [ValidateSet("HubM5", "HubTtgoWattcycle", "BridgeTtgoWattcycle", "BridgeXt369p", "All", "Both")]
   [string]$Target,
 
   [string]$Port = "",
-  [string]$HubPort = "COM19",
-  [string]$BridgePort = "COM22"
+  [string]$HubPort = "COM23",
+  [string]$BmsBridgePort = "COM19",
+  [string]$XtBridgePort = "COM22",
+  # Legacy alias used by Phase 1 Both target
+  [string]$BridgePort = ""
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
+
+if ($BridgePort) {
+  $XtBridgePort = $BridgePort
+}
 
 function Import-UserEnv {
   param([string[]]$Names)
@@ -34,34 +43,59 @@ function Import-UserEnv {
   }
 }
 
+function Flash-HubM5 {
+  param([string]$UploadPort)
+  Import-UserEnv @("WIFI_SSID", "WIFI_PASS", "ESPNOW_PMK", "ESPNOW_BRIDGE_MAC", "ESPNOW_BMS_BRIDGE_MAC")
+  if (-not $env:WIFI_SSID -or -not $env:WIFI_PASS) {
+    Write-Error "WIFI_SSID and WIFI_PASS must be set before building the M5 hub."
+  }
+  Write-Host "M5 hub: WIFI_SSID='$env:WIFI_SSID' BMS='$env:ESPNOW_BMS_BRIDGE_MAC' XT='$env:ESPNOW_BRIDGE_MAC'" -ForegroundColor DarkGray
+
+  Write-Host "==> Bundle web assets" -ForegroundColor Cyan
+  & "$PSScriptRoot\bundle_web.ps1"
+  if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  Write-Host "==> Build + upload hub_m5 on $UploadPort" -ForegroundColor Cyan
+  pio run -e hub_m5_wattcycle -t upload --upload-port $UploadPort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  Write-Host "==> Upload LittleFS web assets" -ForegroundColor Cyan
+  pio run -e hub_m5_wattcycle -t uploadfs --upload-port $UploadPort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
 function Flash-HubTtgoWattcycle {
   param([string]$UploadPort)
   Import-UserEnv @("WIFI_SSID", "WIFI_PASS", "BMS_BLE_ADDRESS", "ESPNOW_PMK", "ESPNOW_BRIDGE_MAC")
   if (-not $env:WIFI_SSID -or -not $env:WIFI_PASS) {
     Write-Error "WIFI_SSID and WIFI_PASS must be set before building the hub."
   }
-  if ($env:WIFI_SSID.Length -lt 2 -or $env:WIFI_SSID -in @("x", "placeholder", "YourWifiName")) {
-    Write-Error "WIFI_SSID='$env:WIFI_SSID' looks invalid."
-  }
   if (-not $env:BMS_BLE_ADDRESS) {
     Write-Error "BMS_BLE_ADDRESS must be set (BLE MAC of the Wattcycle pack)."
   }
-  if (-not [string]::IsNullOrWhiteSpace($env:ESPNOW_PMK) -and
-      [string]::IsNullOrWhiteSpace($env:ESPNOW_BRIDGE_MAC)) {
-    Write-Warning "ESPNOW_PMK set but ESPNOW_BRIDGE_MAC empty -- ESP-NOW stays disabled."
-  }
-  Write-Host "Hub build: WIFI_SSID='$env:WIFI_SSID' BMS='$env:BMS_BLE_ADDRESS' BRIDGE='$env:ESPNOW_BRIDGE_MAC'" -ForegroundColor DarkGray
-
   Write-Host "==> Bundle web assets" -ForegroundColor Cyan
   & "$PSScriptRoot\bundle_web.ps1"
   if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-  Write-Host "==> Build + upload hub firmware on $UploadPort" -ForegroundColor Cyan
   pio run -e hub_ttgo_wattcycle -t upload --upload-port $UploadPort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-  Write-Host "==> Upload LittleFS web assets" -ForegroundColor Cyan
   pio run -e hub_ttgo_wattcycle -t uploadfs --upload-port $UploadPort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
+function Flash-BridgeTtgoWattcycle {
+  param([string]$UploadPort)
+  Import-UserEnv @("WIFI_SSID", "BMS_BLE_ADDRESS", "ESPNOW_PEER_MAC", "ESPNOW_PMK", "ESPNOW_CHANNEL")
+  if (-not $env:WIFI_SSID) {
+    Write-Error "WIFI_SSID must be set (channel discovery only on the bridge)."
+  }
+  if (-not $env:BMS_BLE_ADDRESS) {
+    Write-Error "BMS_BLE_ADDRESS must be set."
+  }
+  if (-not $env:ESPNOW_PEER_MAC) {
+    Write-Error "ESPNOW_PEER_MAC must be set to the M5 hub STA MAC."
+  }
+  Write-Host "==> Build + upload BMS bridge on $UploadPort" -ForegroundColor Cyan
+  pio run -e bridge_ttgo_wattcycle -t upload --upload-port $UploadPort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -82,28 +116,37 @@ function Flash-BridgeXt369p {
     Write-Warning "ESPNOW_PMK unset -- ESP-NOW payloads stay plaintext."
     $env:ESPNOW_PMK = ""
   }
-  Write-Host "Bridge build: WIFI_SSID='$env:WIFI_SSID' ESPNOW_PEER_MAC='$env:ESPNOW_PEER_MAC'" -ForegroundColor DarkGray
-
-  Write-Host "==> Build + upload bridge firmware on $UploadPort" -ForegroundColor Cyan
+  Write-Host "==> Build + upload XT369P bridge on $UploadPort" -ForegroundColor Cyan
   pio run -e bridge_xt369p -t upload --upload-port $UploadPort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 switch ($Target) {
-  "HubTtgoWattcycle" {
+  "HubM5" {
     $p = if ($Port) { $Port } else { $HubPort }
+    Flash-HubM5 -UploadPort $p
+  }
+  "HubTtgoWattcycle" {
+    $p = if ($Port) { $Port } else { "COM19" }
     Flash-HubTtgoWattcycle -UploadPort $p
   }
+  "BridgeTtgoWattcycle" {
+    $p = if ($Port) { $Port } else { $BmsBridgePort }
+    Flash-BridgeTtgoWattcycle -UploadPort $p
+  }
   "BridgeXt369p" {
-    $p = if ($Port) { $Port } else { $BridgePort }
+    $p = if ($Port) { $Port } else { $XtBridgePort }
     Flash-BridgeXt369p -UploadPort $p
   }
   "Both" {
-    if ($HubPort -eq $BridgePort) {
-      Write-Error "HubPort and BridgePort must differ (got $HubPort)."
-    }
-    Flash-HubTtgoWattcycle -UploadPort $HubPort
-    Flash-BridgeXt369p -UploadPort $BridgePort
+    Write-Warning "Target Both is legacy (hub_ttgo + XT). Prefer -Target All for Phase 2."
+    Flash-HubTtgoWattcycle -UploadPort $(if ($Port) { $Port } else { "COM19" })
+    Flash-BridgeXt369p -UploadPort $XtBridgePort
+  }
+  "All" {
+    Flash-HubM5 -UploadPort $HubPort
+    Flash-BridgeTtgoWattcycle -UploadPort $BmsBridgePort
+    Flash-BridgeXt369p -UploadPort $XtBridgePort
   }
 }
 

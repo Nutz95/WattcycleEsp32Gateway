@@ -4,12 +4,14 @@ This file is the contract for humans and coding agents working in this repositor
 
 ## Mission
 
-Maintain a **monorepo** with two classic-ESP32 TTGO firmwares:
+Maintain a **monorepo** (Phase 2 cutover in progress):
 
-1. **`hub_ttgo_wattcycle`** (COM19) — Wattcycle / XDZN BMS over BLE → Wi‑Fi web dashboard (:6789) + ESP-NOW RX (solar).
-2. **`bridge_xt369p`** (COM22) — ATorch XT369P over Classic SPP → ESP-NOW TX (no web / auth / OTA).
+1. **`hub_m5_wattcycle`** (COM23) — M5Stack Basic web hub (:6789) + multi-peer ESP-NOW RX (BMS + solar) + auth/OTA.
+2. **`bridge_ttgo_wattcycle`** (COM19) — Wattcycle / XDZN BMS over BLE → ESP-NOW TX (no web / auth / OTA).
+3. **`bridge_xt369p`** (COM22) — ATorch XT369P over Classic SPP → ESP-NOW TX (no web / auth / OTA).
+4. **`hub_ttgo_wattcycle`** (legacy) — Phase 1 combined hub; keep until M5 cutover is verified (tag V1.0.0 rollback).
 
-Shared wire protocol and utils live in `src/common/`.
+Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `WattcycleEspNowProtocol`).
 
 ## Non-negotiable rules
 
@@ -17,8 +19,10 @@ Shared wire protocol and utils live in `src/common/`.
 
 - **Never** hardcode Wi-Fi credentials, OTA passwords, web passwords, BMS secrets, or ESP-NOW PMK in source.
 - Inject secrets only via environment variables consumed by PlatformIO:
-  - Hub: `WIFI_SSID`, `WIFI_PASS`, `BMS_BLE_ADDRESS`, `ESPNOW_BRIDGE_MAC`, `ESPNOW_PMK`
-  - Bridge: `WIFI_SSID` (channel only), `XT369P_BT_ADDRESS`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
+  - M5 hub: `WIFI_SSID`, `WIFI_PASS`, `ESPNOW_BMS_BRIDGE_MAC`, `ESPNOW_BRIDGE_MAC` (XT), `ESPNOW_PMK`
+  - BMS bridge: `WIFI_SSID` (channel), `BMS_BLE_ADDRESS`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
+  - XT bridge: `WIFI_SSID` (channel), `XT369P_BT_ADDRESS`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
+  - Legacy TTGO hub: also `BMS_BLE_ADDRESS` + single `ESPNOW_BRIDGE_MAC`
 - Web UI auth (hub only): salted SHA-256 in NVS (`wg_auth`); RAM sessions (max 4; oldest-expiring eviction); telemetry APIs gated server-side.
 - Auth ISP: `IAuthSessionService` (web) + `IAuthPhysicalConfirm` (buttons/display); physical confirm/reset private on `AuthService`.
 - HTTP on LAN is intentional on the hub (classic ESP32 + NimBLE). Do not expose port 6789 publicly.
@@ -29,9 +33,11 @@ Shared wire protocol and utils live in `src/common/`.
 - Prefer **interfaces** (`I*`) at domain boundaries.
 - Construct concrete adapters only in each target’s `main.cpp`; composition roots depend on interfaces.
 - Layout:
-  - `src/common/` — `Util/`, `EspNow/Xt369pEspNowProtocol.h` (single copy)
-  - `src/hub_ttgo_wattcycle/` — Bms, Auth, Web, Wifi, Ota, EspNow RX, Display, Telemetry, …
-  - `src/bridge_xt369p/` — Meter/SPP, EspNow TX, Display, Telemetry (bridge) — **no** Auth/Web/Ota/Wifi/Bms
+  - `src/common/` — `Util/`, `EspNow/{Xt369p,Wattcycle}EspNowProtocol.h`
+  - `src/hub_m5_wattcycle/` — Auth, Web, Wifi, Ota, multi-peer EspNow RX, M5 display, Telemetry
+  - `src/bridge_ttgo_wattcycle/` — Bms BLE, EspNow TX, TTGO display — **no** Auth/Web/Ota
+  - `src/bridge_xt369p/` — Meter/SPP, EspNow TX, Display — **no** Auth/Web/Ota
+  - `src/hub_ttgo_wattcycle/` — legacy Phase 1 hub
   - `web/` SPA → `scripts/bundle_web.ps1` → LittleFS `data/` (hub only)
 - Browser chart history is localStorage-only (Phase 1).
 - No nested classes; **≤ 400 lines per file**, **≤ 30 methods per class**.
@@ -46,7 +52,7 @@ Shared wire protocol and utils live in `src/common/`.
 ### Platform / hardware assumptions
 
 - Classic **ESP32** (`ESP32-D0WDQ6`), **not** ESP32-S3 (Phase 1 targets).
-- Default ports: hub **COM19**, bridge **COM22**, future M5 hub **COM23**.
+- Default ports: M5 hub **COM23**, BMS bridge **COM19**, XT bridge **COM22**.
 - TTGO display: ST7789V pins MOSI=19, SCLK=18, CS=5, DC=16, RST=23, BL=4.
 - Protocol refs: [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble); `docs/XT369P_PROTOCOL.md`.
 
