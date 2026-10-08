@@ -5,7 +5,7 @@
     <p class="page-title">ESP</p>
   </header>
 
-  <h3 class="section-title">Hub TTGO (Wattcycle)</h3>
+  <h3 class="section-title">Hub M5Stack (this device)</h3>
   <div class="metrics">
     <article><span>CPU core 0</span><strong id="cpu0">--%</strong></article>
     <article><span>CPU core 1</span><strong id="cpu1">--%</strong></article>
@@ -14,8 +14,18 @@
     <article><span>Uptime</span><strong id="uptime">--</strong></article>
   </div>
 
-  <h3 class="section-title">Bridge TTGO (XT369P)</h3>
-  <p class="hint" id="bridgeEspHint">Waiting for ESP-NOW bridge health…</p>
+  <h3 class="section-title">BMS bridge TTGO (Wattcycle BLE)</h3>
+  <p class="hint" id="bmsBridgeEspHint">Waiting for ESP-NOW BMS bridge health…</p>
+  <div class="metrics">
+    <article><span>CPU core 0</span><strong id="bmsBridgeCpu0">--%</strong></article>
+    <article><span>CPU core 1</span><strong id="bmsBridgeCpu1">--%</strong></article>
+    <article><span>Chip temp</span><strong id="bmsBridgeChipTemp">-- °C</strong></article>
+    <article><span>Free heap</span><strong id="bmsBridgeHeap">-- KB</strong></article>
+    <article><span>Uptime</span><strong id="bmsBridgeUptime">--</strong></article>
+  </div>
+
+  <h3 class="section-title">XT bridge TTGO (XT369P)</h3>
+  <p class="hint" id="bridgeEspHint">Waiting for ESP-NOW XT bridge health…</p>
   <div class="metrics">
     <article><span>CPU core 0</span><strong id="bridgeCpu0">--%</strong></article>
     <article><span>CPU core 1</span><strong id="bridgeCpu1">--%</strong></article>

@@ -4,6 +4,15 @@
     <hr class="brand-rule" />
     <p class="page-title">History</p>
   </header>
+  <div class="charts-toolbar" id="sdHistoryBar">
+    <label for="historyDaySelect">SD day (UTC)
+      <select id="historyDaySelect" aria-label="SD history day">
+        <option value="">Browser localStorage (live)</option>
+      </select>
+    </label>
+    <p class="hint" id="historySdStatus">SD / NTP status loading…</p>
+    <progress id="historyDayProgress" max="100" value="0" hidden></progress>
+  </div>
   <div class="subtabs" role="tablist" aria-label="History source">
     <button type="button" class="subtab active" data-history-tab="pack">Wattcycle pack</button>
     <button type="button" class="subtab" data-history-tab="solar">XT369P wattmeter</button>

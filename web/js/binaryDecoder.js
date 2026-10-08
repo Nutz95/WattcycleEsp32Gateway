@@ -1,7 +1,7 @@
 /* Wattcycle gateway binary telemetry decoder (little-endian). */
 (function (global) {
   const MAGIC = 0x4d475457;
-  const VERSION = 4;
+  const VERSION = 5;
 
   function u8(view, offset) { return view.getUint8(offset); }
   function u16(view, offset) { return view.getUint16(offset, true); }
@@ -115,7 +115,8 @@
     // v4 fixed solar block + bridge ESP health trailer (fail closed).
     const SOLAR_BLOCK_BYTES = 73;
     const BRIDGE_ESP_BYTES = 10;
-    if (offset + SOLAR_BLOCK_BYTES + BRIDGE_ESP_BYTES > bytes.length) {
+    const BMS_BRIDGE_TRAILER = 11;
+    if (offset + SOLAR_BLOCK_BYTES + BRIDGE_ESP_BYTES + BMS_BRIDGE_TRAILER > bytes.length) {
       throw new Error("Truncated telemetry solar/bridge trailer");
     }
     const solarFlags = u8(view, offset); offset += 1;
@@ -147,6 +148,23 @@
       valid: data.solar.bridgeEspValid
     };
     offset += BRIDGE_ESP_BYTES;
+
+    // v5: BMS BLE bridge ESP health trailer
+    const BMS_BRIDGE_ESP_BYTES = 11;
+    if (offset + BMS_BRIDGE_ESP_BYTES > bytes.length) {
+      throw new Error("Truncated telemetry BMS-bridge trailer");
+    }
+    const bmsBridgeFlags = u8(view, offset); offset += 1;
+    data.gateway.ntp = (bmsBridgeFlags & 0x02) !== 0;
+    data.bmsBridgeEsp = {
+      cpu0: u8(view, offset),
+      cpu1: u8(view, offset + 1),
+      chipTemp: i16(view, offset + 2) / 10,
+      heapKb: u16(view, offset + 4),
+      uptimeSec: u32(view, offset + 6),
+      valid: (bmsBridgeFlags & 0x01) !== 0
+    };
+    offset += 10;
 
     return data;
   }

@@ -101,7 +101,7 @@
     setAuthHtml(
       '<section class="auth-shell">' +
         "<h1>Confirm on device</h1>" +
-        '<p class="hint">On the TTGO screen: press <strong>TOP</strong> to validate, <strong>BOTTOM</strong> to cancel.</p>' +
+        '<p class="hint">On the M5 hub: press <strong>B</strong> (center) to validate, <strong>A/C</strong> to cancel.</p>' +
         '<p class="hint" id="waitStatus">Waiting for physical confirmation…</p>' +
       "</section>"
     );

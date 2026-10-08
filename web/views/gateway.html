@@ -5,24 +5,28 @@
     <p class="page-title">Gateway</p>
   </header>
 
-  <h3 class="section-title">Hub TTGO (COM19)</h3>
+  <h3 class="section-title">Hub M5Stack (COM23)</h3>
   <ul class="status-list">
     <li>Wi-Fi: <span id="wifi">--</span></li>
+    <li>Hub STA MAC: <span id="hubStaMac">--</span></li>
     <li>Web port: <span id="webPort">6789</span></li>
+    <li>NTP: <span id="gatewayNtp">--</span></li>
     <li>Last hub error: <span id="hubError">none</span></li>
   </ul>
 
-  <h3 class="section-title">Wattcycle BMS (BLE)</h3>
+  <h3 class="section-title">Wattcycle BMS bridge (TTGO COM19)</h3>
   <ul class="status-list">
-    <li>Link: <span id="ble">--</span></li>
-    <li>BMS MAC: <span id="bleAddress">--</span></li>
+    <li>ESP-NOW peer MAC: <span id="bmsBridgeMac">--</span></li>
+    <li>BMS BLE link: <span id="ble">--</span></li>
+    <li>BMS BLE MAC: <span id="bleAddress">--</span></li>
     <li>Firmware: <span id="fw">--</span></li>
     <li>Manufacturer: <span id="mfr">--</span></li>
     <li>Serial: <span id="sn">--</span></li>
   </ul>
 
-  <h3 class="section-title">XT369P bridge (ESP-NOW)</h3>
+  <h3 class="section-title">XT369P bridge (TTGO COM22)</h3>
   <ul class="status-list">
+    <li>ESP-NOW peer MAC: <span id="xtBridgeMac">--</span></li>
     <li>ESP-NOW link: <span id="solarLink">--</span></li>
     <li>Encryption: <span id="espNowEnc">--</span></li>
     <li>XT369P SPP: <span id="solarSppGw">--</span></li>

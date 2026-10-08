@@ -34,6 +34,18 @@
     document.getElementById("solarPower").textContent = fmt(solar.power, "W", 2);
     document.getElementById("solarEnergy").textContent = fmt(solar.energyWh, "Wh", 3);
     document.getElementById("solarCapacity").textContent = fmt(solar.capacityAh, "Ah", 3);
+
+    const ntpEl = document.getElementById("overviewNtp");
+    const wifiEl = document.getElementById("overviewWifi");
+    if (ntpEl) {
+      const ntpOk = !!(data.gateway && data.gateway.ntp);
+      ntpEl.textContent = data.gateway ? (ntpOk ? "synced" : "pending") : "--";
+      ntpEl.className = ntpOk ? "ok" : "bad";
+    }
+    if (wifiEl) {
+      wifiEl.textContent = data.gateway && data.gateway.wifi ? (data.gateway.ip || "ok") : "down";
+      wifiEl.className = data.gateway && data.gateway.wifi ? "ok" : "bad";
+    }
   }
 
   global.WattcycleViews = global.WattcycleViews || {};

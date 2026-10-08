@@ -78,6 +78,46 @@
       return points;
     }
 
+    function mergeSamples(incoming) {
+      if (!Array.isArray(incoming) || incoming.length === 0) {
+        return all();
+      }
+      const now = Date.now();
+      const byTime = new Map();
+      prune(ensureLoaded(), now).forEach(function (sample) {
+        if (sample && typeof sample.t === "number") {
+          byTime.set(sample.t, Object.assign({}, sample));
+        }
+      });
+      incoming.forEach(function (sample) {
+        if (!sample || typeof sample.t !== "number") return;
+        const prev = byTime.get(sample.t) || { t: sample.t };
+        byTime.set(sample.t, Object.assign(prev, sample));
+      });
+      let points = Array.from(byTime.values()).sort(function (a, b) {
+        return a.t - b.t;
+      });
+      points = prune(points, now);
+      memoryPoints = points;
+      savePersisted(points);
+      lastPersistMs = now;
+      return points;
+    }
+
+    function replaceAll(samples) {
+      const now = Date.now();
+      const points = prune(
+        (samples || []).filter(function (sample) {
+          return sample && typeof sample.t === "number";
+        }),
+        now
+      );
+      memoryPoints = points;
+      savePersisted(points);
+      lastPersistMs = now;
+      return points;
+    }
+
     function all() {
       return prune(ensureLoaded(), Date.now());
     }
@@ -103,6 +143,8 @@
 
     return {
       pushSample: pushSample,
+      mergeSamples: mergeSamples,
+      replaceAll: replaceAll,
       all: all,
       clear: clear,
       toPoints: toPoints
