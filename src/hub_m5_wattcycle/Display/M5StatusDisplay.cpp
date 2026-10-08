@@ -49,11 +49,33 @@ void drawTile(M5Canvas& canvas, int x, int y, int w, int h, uint16_t fill,
   canvas.setTextSize(1);
   canvas.setCursor(x + 8, y + 8);
   canvas.print(title != nullptr ? title : "");
-  canvas.setTextColor(valueColor, fill);
-  const uint8_t size = valueSize;
-  canvas.setTextSize(size);
-  canvas.setCursor(x + 8, y + (size >= 2 ? 28 : 30));
+  // Dark value plate so red/green stay readable on orange/magenta Metro tiles.
+  const bool tinted = valueColor != kColorValue;
+  const int valueTop = 24;
+  const int valueY = valueSize >= 2 ? 28 : 30;
+  if (tinted) {
+    canvas.fillRoundRect(x + 6, y + valueTop, w - 12, h - valueTop - 4, 2, 0x0000);
+  }
+  canvas.setTextColor(valueColor, tinted ? static_cast<uint16_t>(0x0000) : fill);
+  canvas.setTextSize(valueSize);
+  canvas.setCursor(x + 8, y + valueY);
   canvas.print(value != nullptr ? value : "--");
+}
+
+void drawSplashFrame(M5Canvas& canvas) {
+  canvas.fillSprite(kColorBg);
+  canvas.fillRoundRect(16, 40, 288, 100, 4, kColorTileA);
+  canvas.fillRoundRect(16, 156, 288, 40, 4, kColorTileB);
+  canvas.setTextColor(TFT_WHITE, kColorTileA);
+  canvas.setTextSize(2);
+  canvas.setCursor(36, 68);
+  canvas.print("WattCycle");
+  canvas.setTextSize(1);
+  canvas.setCursor(36, 100);
+  canvas.print("M5 hub");
+  canvas.setTextColor(TFT_WHITE, kColorTileB);
+  canvas.setCursor(36, 170);
+  canvas.print("Starting...");
 }
 
 void drawFooterTile(M5Canvas& canvas, int x, int y, int w, int h, const char* top,
@@ -89,6 +111,8 @@ void M5StatusDisplay::begin() {
   canvas_.setTextSize(2);
   ready_ = true;
   setBacklight(true);
+  drawSplashFrame(canvas_);
+  pushFrame();
   Serial.printf("M5 display ready heap=%u\n", ESP.getFreeHeap());
 #else
   ready_ = true;
@@ -213,10 +237,11 @@ void M5StatusDisplay::drawPack(const telemetry::ITelemetryStore& store) {
     wattsColor = signedValueColor(battery.powerWatts);
   }
 
-  drawTile(canvas_, 8, 8, 148, 58, kColorTileA, "SOC", soc);
-  drawTile(canvas_, 164, 8, 148, 58, kColorTileB, "VOLTAGE", volts);
-  drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "CURRENT", amps, ampsColor);
-  drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "POWER", watts, wattsColor);
+  // Keep signed I/P on cool tiles — red reads better than on orange/magenta.
+  drawTile(canvas_, 8, 8, 148, 58, kColorTileC, "SOC", soc);
+  drawTile(canvas_, 164, 8, 148, 58, kColorTileD, "VOLTAGE", volts);
+  drawTile(canvas_, 8, 74, 148, 58, kColorTileA, "CURRENT", amps, ampsColor);
+  drawTile(canvas_, 164, 74, 148, 58, kColorTileB, "POWER", watts, wattsColor);
   drawTile(canvas_, 8, 140, 304, 52, kColorTileA, "CAPACITY Ah", ah);
 
   drawButtonFooter("Pack");
@@ -250,11 +275,11 @@ void M5StatusDisplay::drawSolar(const telemetry::ITelemetryStore& store) {
     sppColor = statusValueColor(solar.sppConnected);
   }
 
-  drawTile(canvas_, 8, 8, 148, 58, kColorTileB, "SOLAR V", volts);
+  drawTile(canvas_, 8, 8, 148, 58, kColorTileC, "SOLAR V", volts);
   drawTile(canvas_, 164, 8, 148, 58, kColorTileA, "SOLAR I", amps, ampsColor);
-  drawTile(canvas_, 8, 74, 148, 58, kColorTileC, "POWER", watts, wattsColor);
+  drawTile(canvas_, 8, 74, 148, 58, kColorTileB, "POWER", watts, wattsColor);
   drawTile(canvas_, 164, 74, 148, 58, kColorTileD, "ENERGY", energy);
-  drawTile(canvas_, 8, 140, 304, 52, kColorTileB, "XT LINK", spp, sppColor);
+  drawTile(canvas_, 8, 140, 304, 52, kColorTileA, "XT LINK", spp, sppColor);
 
   drawButtonFooter("Solar");
   pushFrame();

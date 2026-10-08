@@ -48,10 +48,12 @@ bool GatewayApplication::begin() {
   lastInputMs_ = 0;
 #endif
 
+  // Splash first so the panel shows life during Wi-Fi / SD bring-up.
+  statusDisplay_.begin();
+
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
     telemetryStore_.setWifiState(false, "");
     telemetryStore_.setBleState(false, "", "WIFI_SSID/WIFI_PASS missing");
-    statusDisplay_.begin();
     renderCurrentDisplay();
     startDisplayTask();
     return false;
@@ -69,7 +71,6 @@ bool GatewayApplication::begin() {
 #endif
   }
 
-  statusDisplay_.begin();
   historyStore_.begin();
   ntpClock_.begin(appConfig_.posixTimeZone);
   sampleEspHealth();
