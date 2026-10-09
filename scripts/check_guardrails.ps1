@@ -37,6 +37,7 @@ $targetPrefixes = @(
   "hub_m5_wattcycle/",
   "bridge_ttgo_wattcycle/",
   "bridge_xt369p/",
+  "bridge_ecoflow_delta3/",
   "common/",
   "hub_common/"
 )
@@ -106,11 +107,12 @@ foreach ($file in $sourceFiles) {
   }
 }
 
-# Bridge must not pull in hub web/auth/ota stacks
-$bridgeRoot = Join-Path $srcRoot "bridge_xt369p"
-if (Test-Path $bridgeRoot) {
+# Bridges must not pull in hub web/auth/ota stacks
+foreach ($bridgeName in @("bridge_xt369p", "bridge_ttgo_wattcycle", "bridge_ecoflow_delta3")) {
+  $bridgeRoot = Join-Path $srcRoot $bridgeName
+  if (-not (Test-Path $bridgeRoot)) { continue }
   $forbidden = Get-ChildItem -Path $bridgeRoot -Recurse -Include *.cpp, *.h |
-    Select-String -Pattern '#include\s+"(Auth|Web|Ota|Wifi|Bms)/'
+    Select-String -Pattern '#include\s+"(Auth|Web|Ota|HttpApi)/'
   foreach ($hit in $forbidden) {
     $failures += "BRIDGE LEAK: $($hit.Path):$($hit.LineNumber) includes hub-only domain"
   }

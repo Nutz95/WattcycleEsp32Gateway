@@ -19,8 +19,12 @@ Write-Host "==> Unit tests (native - hub parsers/auth/codec)" -ForegroundColor C
 pio test -e native
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "==> Firmware compile smoke (hub_m5 + both bridges; hub_ttgo legacy)" -ForegroundColor Cyan
-foreach ($name in @("WIFI_SSID", "WIFI_PASS", "BMS_BLE_ADDRESS", "ESPNOW_PEER_MAC", "ESPNOW_BRIDGE_MAC", "ESPNOW_BMS_BRIDGE_MAC", "ESPNOW_PMK", "XT369P_BT_ADDRESS", "ESPNOW_CHANNEL")) {
+Write-Host "==> Firmware compile smoke (hub_m5 + bridges; hub_ttgo legacy; ecoflow S3)" -ForegroundColor Cyan
+foreach ($name in @(
+    "WIFI_SSID", "WIFI_PASS", "BMS_BLE_ADDRESS", "ESPNOW_PEER_MAC", "ESPNOW_BRIDGE_MAC",
+    "ESPNOW_BMS_BRIDGE_MAC", "ESPNOW_PMK", "XT369P_BT_ADDRESS", "ESPNOW_CHANNEL",
+    "ECOFLOW_BLE_ADDRESS", "ECOFLOW_SERIAL", "ECOFLOW_USER_ID"
+  )) {
   $userVal = [Environment]::GetEnvironmentVariable($name, "User")
   if (-not [string]::IsNullOrWhiteSpace($userVal)) {
     Set-Item -Path "Env:$name" -Value $userVal
@@ -35,7 +39,10 @@ if ($null -eq $env:ESPNOW_BRIDGE_MAC) { $env:ESPNOW_BRIDGE_MAC = "AA:BB:CC:DD:EE
 if ($null -eq $env:ESPNOW_PMK) { $env:ESPNOW_PMK = "" }
 if ($null -eq $env:XT369P_BT_ADDRESS) { $env:XT369P_BT_ADDRESS = "" }
 if ($null -eq $env:ESPNOW_CHANNEL) { $env:ESPNOW_CHANNEL = "" }
+if ($null -eq $env:ECOFLOW_BLE_ADDRESS) { $env:ECOFLOW_BLE_ADDRESS = "" }
+if ($null -eq $env:ECOFLOW_SERIAL) { $env:ECOFLOW_SERIAL = "" }
+if ($null -eq $env:ECOFLOW_USER_ID) { $env:ECOFLOW_USER_ID = "" }
 
-pio run -e hub_m5_wattcycle -e bridge_ttgo_wattcycle -e bridge_xt369p -e hub_ttgo_wattcycle
+pio run -e hub_m5_wattcycle -e bridge_ttgo_wattcycle -e bridge_xt369p -e bridge_ecoflow_delta3 -e hub_ttgo_wattcycle
 exit $LASTEXITCODE
 

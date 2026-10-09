@@ -9,18 +9,21 @@
 .EXAMPLE
   .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
 .EXAMPLE
+  .\scripts\flash.ps1 -Target BridgeEcoflowDelta3 -Port COM8
+.EXAMPLE
   .\scripts\flash.ps1 -Target All -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22
 #>
 [CmdletBinding()]
 param(
   [Parameter(Mandatory)]
-  [ValidateSet("HubM5", "HubTtgoWattcycle", "BridgeTtgoWattcycle", "BridgeXt369p", "All", "Both")]
+  [ValidateSet("HubM5", "HubTtgoWattcycle", "BridgeTtgoWattcycle", "BridgeXt369p", "BridgeEcoflowDelta3", "All", "Both")]
   [string]$Target,
 
   [string]$Port = "",
   [string]$HubPort = "COM23",
   [string]$BmsBridgePort = "COM19",
   [string]$XtBridgePort = "COM22",
+  [string]$EcoflowBridgePort = "COM8",
   # Legacy alias used by Phase 1 Both target
   [string]$BridgePort = ""
 )
@@ -142,6 +145,32 @@ function Flash-BridgeXt369p {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+function Flash-BridgeEcoflowDelta3 {
+  param([string]$UploadPort)
+  # Scaffold (milestone A): secrets optional; imported for later BLE/ESP-NOW milestones.
+  Import-UserEnv @(
+    "WIFI_SSID",
+    "ECOFLOW_BLE_ADDRESS",
+    "ECOFLOW_SERIAL",
+    "ECOFLOW_USER_ID",
+    "ESPNOW_PEER_MAC",
+    "ESPNOW_PMK",
+    "ESPNOW_CHANNEL"
+  )
+  if (-not $env:WIFI_SSID) { $env:WIFI_SSID = "" }
+  if (-not $env:ECOFLOW_BLE_ADDRESS) { $env:ECOFLOW_BLE_ADDRESS = "" }
+  if (-not $env:ECOFLOW_SERIAL) { $env:ECOFLOW_SERIAL = "" }
+  if (-not $env:ECOFLOW_USER_ID) { $env:ECOFLOW_USER_ID = "" }
+  if (-not $env:ESPNOW_PEER_MAC) { $env:ESPNOW_PEER_MAC = "" }
+  if (-not $env:ESPNOW_PMK) { $env:ESPNOW_PMK = "" }
+  if (-not $env:ESPNOW_CHANNEL) { $env:ESPNOW_CHANNEL = "0" }
+
+  Write-Host "==> Build + upload EcoFlow DELTA 3 bridge (S3 scaffold) on $UploadPort" -ForegroundColor Cyan
+  Write-Host "    EcoFlow secrets required from milestone B. Serial=UART0 (USB-UART connector); flash=native USB." -ForegroundColor DarkGray
+  pio run -e bridge_ecoflow_delta3 -t upload --upload-port $UploadPort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
 switch ($Target) {
   "HubM5" {
     $p = if ($Port) { $Port } else { $HubPort }
@@ -158,6 +187,10 @@ switch ($Target) {
   "BridgeXt369p" {
     $p = if ($Port) { $Port } else { $XtBridgePort }
     Flash-BridgeXt369p -UploadPort $p
+  }
+  "BridgeEcoflowDelta3" {
+    $p = if ($Port) { $Port } else { $EcoflowBridgePort }
+    Flash-BridgeEcoflowDelta3 -UploadPort $p
   }
   "Both" {
     Write-Warning "Target Both is legacy (hub_ttgo + XT). Prefer -Target All for Phase 2."
