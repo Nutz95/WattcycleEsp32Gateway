@@ -20,7 +20,7 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 
 - **Never** hardcode Wi-Fi credentials, OTA passwords, web passwords, BMS secrets, or ESP-NOW PMK in source.
 - Inject secrets only via environment variables consumed by PlatformIO:
-  - M5 hub: `WIFI_SSID`, `WIFI_PASS`, `ESPNOW_BMS_BRIDGE_MAC`, `ESPNOW_BRIDGE_MAC` (XT), `ESPNOW_PMK`
+  - M5 hub: `WIFI_SSID`, `WIFI_PASS`, `ESPNOW_BMS_BRIDGE_MAC`, `ESPNOW_BRIDGE_MAC` (XT), `ESPNOW_ECOFLOW_BRIDGE_MAC`, `ESPNOW_PMK`
   - BMS bridge: `WIFI_SSID` (channel), `BMS_BLE_ADDRESS`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
   - XT bridge: `WIFI_SSID` (channel), `XT369P_BT_ADDRESS`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
   - EcoFlow bridge: `WIFI_SSID` (channel), `ECOFLOW_BLE_ADDRESS`, `ECOFLOW_SERIAL`, `ECOFLOW_USER_ID`, `ESPNOW_PEER_MAC`, `ESPNOW_PMK`
@@ -64,6 +64,7 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 
 - README is **English**.
 - Prefer Mermaid diagrams and short Quick Start command blocks.
+- Public methods on `I*.h` interfaces and `bridge_ecoflow_delta3` headers need a one-line `///` intent comment (enforced by `scripts/check_guardrails.ps1`).
 
 ### Coding style
 

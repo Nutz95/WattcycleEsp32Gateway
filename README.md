@@ -54,7 +54,7 @@ The EcoFlow bridge uses an **ESP32-S3** DevKitC (native USB flash + separate USB
 | Web hub | **M5Stack Basic** | **COM23** | Wi-Fi SPA :6789, multi-peer ESP-NOW RX, optional SD, NTP |
 | BMS bridge | LILYGO TTGO T-Display | **COM19** | Wattcycle BLE → ESP-NOW TX (no web) |
 | Solar bridge | LILYGO TTGO T-Display | **COM22** | XT369P Classic SPP → ESP-NOW TX (no web) |
-| EcoFlow bridge | ESP32-S3 DevKitC | **COM8** | DELTA 3 BLE → ESP-NOW TX (scaffold; no web / OTA) |
+| EcoFlow bridge | ESP32-S3 DevKitC | **COM8** | DELTA 3 BLE → ESP-NOW TX (read-only; no web / OTA) |
 
 ### TTGO bridge display (ST7789V 1.14″)
 
@@ -83,7 +83,7 @@ The EcoFlow bridge uses an **ESP32-S3** DevKitC (native USB flash + separate USB
 |--------|-----|
 | Wattcycle / XDZN BMS (BLE) | [docs/WATTCYCLE_PROTOCOL.md](docs/WATTCYCLE_PROTOCOL.md) · upstream [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble) |
 | ATorch XT369P (Classic SPP) | [docs/XT369P_PROTOCOL.md](docs/XT369P_PROTOCOL.md) |
-| EcoFlow DELTA 3 (BLE, read-only) | [docs/ECOFLOW_DELTA3_BRIDGE_PLAN.md](docs/ECOFLOW_DELTA3_BRIDGE_PLAN.md) |
+| EcoFlow DELTA 3 (BLE, read-only) | [docs/ECOFLOW_DELTA3_BRIDGE_PLAN.md](docs/ECOFLOW_DELTA3_BRIDGE_PLAN.md) · [GATT/auth protocol](docs/ECOFLOW_BLE_PROTOCOL.md) |
 
 ### Wattcycle BLE (short)
 
@@ -192,10 +192,11 @@ Plug the hub and bridges, then run the pairing script (writes `ESPNOW_*` env var
 ```text
 BRIDGE (COM19 / COM22)  --ESP-NOW-->  HUB M5 (COM23)
 
-ESPNOW_PEER_MAC        on each BRIDGE = HUB STA MAC
-ESPNOW_BMS_BRIDGE_MAC  on HUB         = BMS bridge STA MAC
-ESPNOW_BRIDGE_MAC      on HUB         = XT bridge STA MAC
-ESPNOW_PMK             on ALL         = same secret
+ESPNOW_PEER_MAC               on each BRIDGE = HUB STA MAC
+ESPNOW_BMS_BRIDGE_MAC         on HUB         = BMS bridge STA MAC
+ESPNOW_BRIDGE_MAC             on HUB         = XT bridge STA MAC
+ESPNOW_ECOFLOW_BRIDGE_MAC     on HUB         = EcoFlow S3 bridge STA MAC
+ESPNOW_PMK                    on ALL         = same secret
 ```
 
 ### 3. Open the dashboard
@@ -308,6 +309,7 @@ pio device monitor -p COM23 -b 115200
 | `ECOFLOW_USER_ID` | EcoFlow account id (`ef_uid` / userinfo) | EcoFlow bridge |
 | `ESPNOW_BMS_BRIDGE_MAC` | BMS bridge STA MAC (RX peer) | M5 hub |
 | `ESPNOW_BRIDGE_MAC` | XT bridge STA MAC (RX peer) | M5 hub |
+| `ESPNOW_ECOFLOW_BRIDGE_MAC` | EcoFlow S3 bridge STA MAC (RX peer) | M5 hub |
 | `ESPNOW_PEER_MAC` | Hub STA MAC (TX peer) | bridges |
 | `ESPNOW_PMK` | Shared 32-char hex secret | hub + bridges |
 | `WEB_SERVER_PORT` | Default **6789** | M5 hub |
