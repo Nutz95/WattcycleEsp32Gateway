@@ -6,7 +6,7 @@
     <p class="tagline" id="flowSummary">Power-flow diagram — waiting for telemetry…</p>
   </header>
   <div class="system-flow-wrap">
-    <svg class="system-flow" viewBox="0 0 360 620" role="img" aria-labelledby="flowTitle flowDesc"
+    <svg class="system-flow" viewBox="0 0 360 358" role="img" aria-labelledby="flowTitle flowDesc"
          preserveAspectRatio="xMidYMin meet">
       <title id="flowTitle">System power flow</title>
       <desc id="flowDesc">Grid, EcoFlow station, Wattcycle pack, and solar chain</desc>
@@ -17,84 +17,87 @@
       </defs>
 
       <!-- Grid → EcoFlow -->
-      <path id="edgeGridEco" class="flow-edge" d="M 180 52 V 78" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="198" y="68" id="lblGridAcIn">-- W</text>
-      <g class="flow-node" transform="translate(132,8)">
+      <path id="edgeGridEco" class="flow-edge" d="M 180 48 V 68" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="198" y="60" id="lblGridAcIn">-- W</text>
+      <g class="flow-node" transform="translate(132,4)">
         <rect width="96" height="44" rx="8" />
         <text x="48" y="20" text-anchor="middle" class="flow-node-title">Grid</text>
         <text x="48" y="36" text-anchor="middle" class="flow-node-sub">AC</text>
       </g>
 
       <!-- EcoFlow hub -->
-      <g class="flow-node flow-node-hub" transform="translate(108,78)">
+      <g class="flow-node flow-node-hub" transform="translate(108,68)">
         <rect width="144" height="72" rx="10" />
-        <text x="72" y="24" text-anchor="middle" class="flow-node-title">EcoFlow</text>
-        <text x="72" y="44" text-anchor="middle" class="flow-node-sub" id="lblEcoSoc">--%</text>
-        <text x="72" y="60" text-anchor="middle" class="flow-node-sub" id="lblEcoState">--</text>
+        <text x="72" y="22" text-anchor="middle" class="flow-node-title">EcoFlow</text>
+        <text x="72" y="40" text-anchor="middle" class="flow-node-sub" id="lblEcoSoc">--%</text>
+        <text x="72" y="56" text-anchor="middle" class="flow-node-sub" id="lblEcoState">--</text>
       </g>
+      <text class="flow-label flow-label-balance" x="100" y="108" text-anchor="end" id="lblEcoBalance"></text>
 
       <!-- EcoFlow outputs (right column) -->
-      <path id="edgeEcoAcOut" class="flow-edge" d="M 252 96 H 300" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="276" y="88" text-anchor="middle" id="lblEcoAcOut">-- W</text>
-      <g id="nodeAcOut" class="flow-node flow-port" transform="translate(300,74)">
+      <path id="edgeEcoAcOut" class="flow-edge" d="M 252 86 H 300" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="276" y="78" text-anchor="middle" id="lblEcoAcOut">-- W</text>
+      <g id="nodeAcOut" class="flow-node flow-port" transform="translate(300,64)">
         <rect width="52" height="40" rx="8" />
         <text x="26" y="18" text-anchor="middle" class="flow-node-title">AC</text>
         <text x="26" y="32" text-anchor="middle" class="flow-node-sub" id="lblAcPort">off</text>
       </g>
 
-      <path id="edgeEcoDcOut" class="flow-edge" d="M 252 114 H 280 V 132 H 300" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="268" y="128" text-anchor="end" id="lblEcoDcOut">-- W</text>
-      <g id="nodeDcOut" class="flow-node flow-port" transform="translate(300,118)">
+      <path id="edgeEcoDcOut" class="flow-edge" d="M 252 104 H 280 V 122 H 300" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="268" y="118" text-anchor="end" id="lblEcoDcOut">-- W</text>
+      <g id="nodeDcOut" class="flow-node flow-port" transform="translate(300,108)">
         <rect width="52" height="40" rx="8" />
         <text x="26" y="18" text-anchor="middle" class="flow-node-title">DC</text>
         <text x="26" y="32" text-anchor="middle" class="flow-node-sub" id="lblDcPort">off</text>
       </g>
 
-      <path id="edgeEcoUsbOut" class="flow-edge" d="M 252 132 H 270 V 176 H 300" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="262" y="170" text-anchor="end" id="lblEcoUsbOut">-- W</text>
-      <g id="nodeUsbOut" class="flow-node flow-port" transform="translate(300,162)">
+      <path id="edgeEcoUsbOut" class="flow-edge" d="M 252 122 H 270 V 162 H 300" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="262" y="156" text-anchor="end" id="lblEcoUsbOut">-- W</text>
+      <g id="nodeUsbOut" class="flow-node flow-port" transform="translate(300,148)">
         <rect width="52" height="40" rx="8" />
         <text x="26" y="18" text-anchor="middle" class="flow-node-title">USB</text>
         <text x="26" y="32" text-anchor="middle" class="flow-node-sub" id="lblUsbPort">off</text>
       </g>
 
       <!-- EcoFlow ↔ Wattcycle (vertical spine) -->
-      <path id="edgeEcoPack" class="flow-edge flow-edge-bidir" d="M 180 150 V 250"
-            data-path-fwd="M 180 150 V 250" data-path-rev="M 180 250 V 150"
+      <path id="edgeEcoPack" class="flow-edge flow-edge-bidir" d="M 180 140 V 210"
+            data-path-fwd="M 180 140 V 210" data-path-rev="M 180 210 V 140"
             marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="198" y="204" id="lblPackLink">-- W</text>
+      <text class="flow-label" x="198" y="178" id="lblPackLink">-- W</text>
 
-      <g class="flow-node" transform="translate(108,250)">
+      <g class="flow-node" transform="translate(108,210)">
         <rect width="144" height="64" rx="10" />
         <text x="72" y="22" text-anchor="middle" class="flow-node-title">Wattcycle</text>
         <text x="72" y="40" text-anchor="middle" class="flow-node-sub" id="lblPackSoc">--%</text>
         <text x="72" y="56" text-anchor="middle" class="flow-node-sub" id="lblPackPower">-- W</text>
       </g>
 
-      <!-- Solar chain (below pack, vertical-ish) -->
-      <g class="flow-node" transform="translate(24,360)">
+      <!-- Solar chain (tight under pack) -->
+      <g class="flow-node" transform="translate(24,310)">
         <rect width="72" height="40" rx="8" />
         <text x="36" y="26" text-anchor="middle" class="flow-node-title">Solar</text>
       </g>
-      <path id="edgeSolarPanel" class="flow-edge" d="M 96 380 H 120" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="108" y="368" text-anchor="middle" id="lblSolarP">-- W</text>
+      <path id="edgeSolarPanel" class="flow-edge" d="M 96 330 H 120" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="108" y="318" text-anchor="middle" id="lblSolarP">-- W</text>
 
-      <g class="flow-node" transform="translate(120,360)">
+      <g class="flow-node" transform="translate(120,310)">
         <rect width="72" height="40" rx="8" />
         <text x="36" y="26" text-anchor="middle" class="flow-node-title">XT369P</text>
       </g>
-      <path id="edgeXt369p" class="flow-edge" d="M 192 380 H 216" marker-end="url(#flowArrow)" />
+      <path id="edgeXt369p" class="flow-edge" d="M 192 330 H 216" marker-end="url(#flowArrow)" />
 
-      <g class="flow-node" transform="translate(216,360)">
+      <g class="flow-node" transform="translate(216,310)">
         <rect width="80" height="40" rx="8" />
         <text x="40" y="18" text-anchor="middle" class="flow-node-title">Genasun</text>
         <text x="40" y="32" text-anchor="middle" class="flow-node-sub">GVB-8</text>
       </g>
       <!-- Genasun → Wattcycle along the right edge (avoid crossing XT369P). -->
-      <path id="edgeGenasun" class="flow-edge" d="M 296 380 H 330" marker-end="url(#flowArrow)" />
-      <path id="edgeSolarPack" class="flow-edge" d="M 330 380 V 282 H 252" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="340" y="330" id="lblSolarToPack">idle</text>
+      <path id="edgeGenasun" class="flow-edge" d="M 296 330 H 330" marker-end="url(#flowArrow)" />
+      <path id="edgeSolarPack" class="flow-edge" d="M 330 330 V 242 H 252" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="340" y="286" id="lblSolarToPack">idle</text>
     </svg>
   </div>
-  <p class="hint">+ pack power: EcoFlow → Wattcycle · − pack power: Wattcycle → EcoFlow</p>
+  <p class="hint" id="flowHint">
+    + pack: EcoFlow → Wattcycle · − pack: Wattcycle → EcoFlow · EcoFlow Δ = inputs − outputs (charge / self)
+  </p>
 </section>

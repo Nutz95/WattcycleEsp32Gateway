@@ -8,6 +8,11 @@
     return Math.round(Number(value)) + " W";
   }
 
+  function num(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
@@ -40,6 +45,21 @@
       node.classList.toggle("active", !!on);
     }
     setText(portLabelId, on ? "on" : "off");
+  }
+
+  /** EcoFlow retained power: inputs − outputs (+ = charge/self, − = from batt). */
+  function ecoBalanceW(eco, packP) {
+    if (!eco.valid) return null;
+    const acIn = num(eco.acInputW);
+    const solarIn = num(eco.solarInputW);
+    const outs = num(eco.acOutputW) + num(eco.dcOutputW) + num(eco.usbOutputW);
+    let packIn = 0;
+    let packOut = 0;
+    if (packP != null && Math.abs(packP) > FLOW_EPS_W) {
+      if (packP < 0) packIn = Math.abs(packP);
+      else packOut = packP;
+    }
+    return acIn + solarIn + packIn - outs - packOut;
   }
 
   function renderOverview(data) {
@@ -89,6 +109,22 @@
     } else {
       setText("lblPackLink", "-- W");
       setEdge("edgeEcoPack", false, false);
+    }
+
+    const balance = ecoBalanceW(eco, packP);
+    const balEl = document.getElementById("lblEcoBalance");
+    if (balEl) {
+      if (balance != null && Math.abs(balance) > FLOW_EPS_W) {
+        const watts = Math.round(Math.abs(balance));
+        balEl.textContent = balance > 0
+          ? "~" + watts + " W charge/self"
+          : "~" + watts + " W from batt";
+        balEl.classList.toggle("flow-balance-pos", balance > 0);
+        balEl.classList.toggle("flow-balance-neg", balance < 0);
+      } else {
+        balEl.textContent = "";
+        balEl.classList.remove("flow-balance-pos", "flow-balance-neg");
+      }
     }
 
     const solarP = solar.valid ? solar.power : null;
