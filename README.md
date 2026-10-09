@@ -46,13 +46,15 @@ daily CSV history (`/history/YYYY-MM-DD.csv`, UTC dates).
 
 ## Hardware
 
-All targets use classic **ESP32-D0WDQ6** (not S3), 4 MB flash, Silicon Labs CP210x USB-UART.
+Classic hubs/bridges use **ESP32-D0WDQ6**, 4 MB flash, Silicon Labs CP210x USB-UART.  
+The EcoFlow bridge uses an **ESP32-S3** DevKitC (native USB flash + separate USB-UART console).
 
 | Role | Board | Port | Notes |
 |------|-------|------|-------|
 | Web hub | **M5Stack Basic** | **COM23** | Wi-Fi SPA :6789, multi-peer ESP-NOW RX, optional SD, NTP |
 | BMS bridge | LILYGO TTGO T-Display | **COM19** | Wattcycle BLE → ESP-NOW TX (no web) |
 | Solar bridge | LILYGO TTGO T-Display | **COM22** | XT369P Classic SPP → ESP-NOW TX (no web) |
+| EcoFlow bridge | ESP32-S3 DevKitC | **COM8** | DELTA 3 BLE → ESP-NOW TX (scaffold; no web / OTA) |
 
 ### TTGO bridge display (ST7789V 1.14″)
 
@@ -81,6 +83,7 @@ All targets use classic **ESP32-D0WDQ6** (not S3), 4 MB flash, Silicon Labs CP
 |--------|-----|
 | Wattcycle / XDZN BMS (BLE) | [docs/WATTCYCLE_PROTOCOL.md](docs/WATTCYCLE_PROTOCOL.md) · upstream [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble) |
 | ATorch XT369P (Classic SPP) | [docs/XT369P_PROTOCOL.md](docs/XT369P_PROTOCOL.md) |
+| EcoFlow DELTA 3 (BLE, read-only) | [docs/ECOFLOW_DELTA3_BRIDGE_PLAN.md](docs/ECOFLOW_DELTA3_BRIDGE_PLAN.md) |
 
 ### Wattcycle BLE (short)
 
@@ -116,9 +119,10 @@ src/
   hub_m5_wattcycle/       # Web hub (COM23): multi-peer ESP-NOW RX + SD
   bridge_ttgo_wattcycle/  # BMS BLE → ESP-NOW TX (COM19)
   bridge_xt369p/          # XT369P SPP → ESP-NOW TX (COM22)
+  bridge_ecoflow_delta3/  # EcoFlow DELTA 3 BLE → ESP-NOW TX (COM8, S3)
   hub_ttgo_wattcycle/     # Optional combined TTGO hub (rollback / single-board)
 web/                      # SPA (hub LittleFS only)
-docs/                     # WATTCYCLE_PROTOCOL.md + XT369P_PROTOCOL.md
+docs/                     # protocol notes + EcoFlow bridge plan
 scripts/                  # flash.ps1 / pair_espnow_link / run_tests / …
 test/                     # native Unity tests (hub parsers)
 ```
@@ -128,6 +132,7 @@ test/                     # native Unity tests (hub parsers)
 | `hub_m5_wattcycle` | COM23 | Web hub + multi-peer ESP-NOW RX + SD/NTP |
 | `bridge_ttgo_wattcycle` | COM19 | BMS BLE → ESP-NOW TX |
 | `bridge_xt369p` | COM22 | SPP → ESP-NOW TX (no web) |
+| `bridge_ecoflow_delta3` | COM8 | EcoFlow DELTA 3 BLE → ESP-NOW TX (S3; USB flash only for now) |
 | `hub_ttgo_wattcycle` | COM19 | Optional combined TTGO hub (BLE + web on one board) |
 | `native` | — | Host unit tests |
 
@@ -141,7 +146,7 @@ Design goals: **SOLID**, constructor injection, files **&lt; 400 lines**, classe
 
 - [PlatformIO Core](https://platformio.org/install/cli) (`pio` on PATH)
 - PowerShell 5+ / 7+
-- M5 hub on USB (**COM23**); BMS bridge **COM19**; XT bridge **COM22**
+- M5 hub on USB (**COM23**); BMS bridge **COM19**; XT bridge **COM22**; EcoFlow S3 bridge **COM8**
 - Environment variables (**required**, never commit secrets):
 
 ```powershell
@@ -170,8 +175,9 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # on BMS bridge — BLE MAC only
 # Individual bridges
 .\scripts\flash.ps1 -Target BridgeTtgoWattcycle -Port COM19
 .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
+.\scripts\flash.ps1 -Target BridgeEcoflowDelta3 -Port COM8
 
-# All three (distinct COM ports)
+# Hub + BMS + XT (distinct COM ports; EcoFlow flash separately for now)
 .\scripts\flash.ps1 -Target All -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22
 ```
 
@@ -278,10 +284,12 @@ pio test -e native
 pio run -e hub_m5_wattcycle
 pio run -e bridge_ttgo_wattcycle
 pio run -e bridge_xt369p
+pio run -e bridge_ecoflow_delta3
 pio run -e hub_m5_wattcycle -t upload --upload-port COM23
 pio run -e hub_m5_wattcycle -t uploadfs --upload-port COM23
 pio run -e bridge_ttgo_wattcycle -t upload --upload-port COM19
 pio run -e bridge_xt369p -t upload --upload-port COM22
+pio run -e bridge_ecoflow_delta3 -t upload --upload-port COM8
 pio device monitor -p COM23 -b 115200
 ```
 
@@ -295,6 +303,9 @@ pio device monitor -p COM23 -b 115200
 | `WIFI_SSID` | Bridge channel discovery (no join) | bridges |
 | `BMS_BLE_ADDRESS` | Wattcycle BLE MAC | BMS bridge |
 | `XT369P_BT_ADDRESS` | Optional Classic BT MAC (else name `XT369P_SPP`) | XT bridge |
+| `ECOFLOW_BLE_ADDRESS` | EcoFlow station BLE MAC | EcoFlow bridge |
+| `ECOFLOW_SERIAL` | Device serial (label) for V3 auth | EcoFlow bridge |
+| `ECOFLOW_USER_ID` | EcoFlow account id (`ef_uid` / userinfo) | EcoFlow bridge |
 | `ESPNOW_BMS_BRIDGE_MAC` | BMS bridge STA MAC (RX peer) | M5 hub |
 | `ESPNOW_BRIDGE_MAC` | XT bridge STA MAC (RX peer) | M5 hub |
 | `ESPNOW_PEER_MAC` | Hub STA MAC (TX peer) | bridges |
