@@ -4,7 +4,7 @@
 
 namespace ecoflow::config {
 
-/// Scaffold config — EcoFlow BLE / ESP-NOW fields are reserved for later milestones.
+/// Build-flag config for BLE auth + ESP-NOW TX (secrets via env only).
 struct AppConfig {
   const char* wifiSsid = "";
   const char* ecoflowBleAddress = "";
@@ -13,11 +13,6 @@ struct AppConfig {
   const char* espNowPeerMac = "";
   const char* espNowPmk = "";
   uint8_t espNowChannel = 0;
-};
-
-class AppConfigFactory {
- public:
-  static AppConfig fromBuildFlags();
 };
 
 }  // namespace ecoflow::config

@@ -43,8 +43,13 @@ inline bool parseMacAddress(const char* text, uint8_t out[6]) {
 
 }  // namespace wattcycle::util
 
-// XT369P bridge TUs resolve `util::` under namespace xt369p::*.
+// Bridge TUs resolve `util::` under their root namespace.
 namespace xt369p::util {
+using wattcycle::util::hexNibble;
+using wattcycle::util::parseMacAddress;
+}
+
+namespace ecoflow::util {
 using wattcycle::util::hexNibble;
 using wattcycle::util::parseMacAddress;
 }
