@@ -16,7 +16,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "==> Unit tests (native - hub parsers/auth/codec)" -ForegroundColor Cyan
-pio test -e native
+# -j N parallelizes object compiles inside each test binary (default = CPU count).
+$jobs = [Environment]::ProcessorCount
+if ($jobs -lt 1) { $jobs = 1 }
+pio test -e native -j $jobs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "==> Firmware compile smoke (hub_m5 + bridges; hub_ttgo legacy; ecoflow S3)" -ForegroundColor Cyan
@@ -43,6 +46,7 @@ if ($null -eq $env:ECOFLOW_BLE_ADDRESS) { $env:ECOFLOW_BLE_ADDRESS = "" }
 if ($null -eq $env:ECOFLOW_SERIAL) { $env:ECOFLOW_SERIAL = "" }
 if ($null -eq $env:ECOFLOW_USER_ID) { $env:ECOFLOW_USER_ID = "" }
 
-pio run -e hub_m5_wattcycle -e bridge_ttgo_wattcycle -e bridge_xt369p -e bridge_ecoflow_delta3 -e hub_ttgo_wattcycle
+# Environments still build one after another; -j parallelizes within each env.
+pio run -j $jobs -e hub_m5_wattcycle -e bridge_ttgo_wattcycle -e bridge_xt369p -e bridge_ecoflow_delta3 -e hub_ttgo_wattcycle
 exit $LASTEXITCODE
 

@@ -67,13 +67,20 @@ function Ensure-EspNowMacEnv {
   Import-UserEnv @("ESPNOW_PEER_MAC", "ESPNOW_BMS_BRIDGE_MAC", "ESPNOW_BRIDGE_MAC", "ESPNOW_PMK")
 }
 
-function Flash-HubM5 {
+function Invoke-FlashHubM5 {
   param([string]$UploadPort)
-  Import-UserEnv @("WIFI_SSID", "WIFI_PASS", "ESPNOW_PMK", "ESPNOW_BRIDGE_MAC", "ESPNOW_BMS_BRIDGE_MAC")
+  Import-UserEnv @(
+    "WIFI_SSID", "WIFI_PASS", "ESPNOW_PMK", "ESPNOW_BRIDGE_MAC", "ESPNOW_BMS_BRIDGE_MAC",
+    "ESPNOW_ECOFLOW_BRIDGE_MAC"
+  )
   if (-not $env:WIFI_SSID -or -not $env:WIFI_PASS) {
     Write-Error "WIFI_SSID and WIFI_PASS must be set before building the M5 hub."
   }
-  Write-Host "M5 hub: WIFI_SSID='$env:WIFI_SSID' BMS='$env:ESPNOW_BMS_BRIDGE_MAC' XT='$env:ESPNOW_BRIDGE_MAC'" -ForegroundColor DarkGray
+  Write-Host ("M5 hub: WIFI_SSID='$env:WIFI_SSID' BMS='$env:ESPNOW_BMS_BRIDGE_MAC' " +
+    "XT='$env:ESPNOW_BRIDGE_MAC' ECO='$env:ESPNOW_ECOFLOW_BRIDGE_MAC'") -ForegroundColor DarkGray
+  if (-not $env:ESPNOW_ECOFLOW_BRIDGE_MAC) {
+    Write-Warning "ESPNOW_ECOFLOW_BRIDGE_MAC unset - EcoFlow ESP-NOW peer not registered (flash S3 first, copy STA MAC)."
+  }
 
   Write-Host "==> Bundle web assets" -ForegroundColor Cyan
   & "$PSScriptRoot\bundle_web.ps1"
@@ -88,7 +95,7 @@ function Flash-HubM5 {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-function Flash-HubTtgoWattcycle {
+function Invoke-FlashHubTtgoWattcycle {
   param([string]$UploadPort)
   Import-UserEnv @("WIFI_SSID", "WIFI_PASS", "BMS_BLE_ADDRESS", "ESPNOW_PMK", "ESPNOW_BRIDGE_MAC")
   if (-not $env:WIFI_SSID -or -not $env:WIFI_PASS) {
@@ -106,7 +113,7 @@ function Flash-HubTtgoWattcycle {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-function Flash-BridgeTtgoWattcycle {
+function Invoke-FlashBridgeTtgoWattcycle {
   param([string]$UploadPort)
   Import-UserEnv @("WIFI_SSID", "BMS_BLE_ADDRESS", "ESPNOW_PEER_MAC", "ESPNOW_PMK", "ESPNOW_CHANNEL")
   if (-not $env:WIFI_SSID) {
@@ -123,7 +130,7 @@ function Flash-BridgeTtgoWattcycle {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-function Flash-BridgeXt369p {
+function Invoke-FlashBridgeXt369p {
   param([string]$UploadPort)
   Import-UserEnv @("WIFI_SSID", "ESPNOW_PEER_MAC", "ESPNOW_PMK", "ESPNOW_CHANNEL", "XT369P_BT_ADDRESS")
   if (-not $env:WIFI_SSID) {
@@ -145,9 +152,8 @@ function Flash-BridgeXt369p {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-function Flash-BridgeEcoflowDelta3 {
+function Invoke-FlashBridgeEcoflowDelta3 {
   param([string]$UploadPort)
-  # Scaffold (milestone A): secrets optional; imported for later BLE/ESP-NOW milestones.
   Import-UserEnv @(
     "WIFI_SSID",
     "ECOFLOW_BLE_ADDRESS",
@@ -165,8 +171,11 @@ function Flash-BridgeEcoflowDelta3 {
   if (-not $env:ESPNOW_PMK) { $env:ESPNOW_PMK = "" }
   if (-not $env:ESPNOW_CHANNEL) { $env:ESPNOW_CHANNEL = "0" }
 
-  Write-Host "==> Build + upload EcoFlow DELTA 3 bridge (S3 scaffold) on $UploadPort" -ForegroundColor Cyan
-  Write-Host "    EcoFlow secrets required from milestone B. Serial=UART0 (USB-UART connector); flash=native USB." -ForegroundColor DarkGray
+  if (-not $env:ESPNOW_PEER_MAC) {
+    Write-Warning "ESPNOW_PEER_MAC unset - ESP-NOW TX skipped until hub STA MAC is set."
+  }
+  Write-Host "==> Build + upload EcoFlow DELTA 3 bridge (ESP32-S3) on $UploadPort" -ForegroundColor Cyan
+  Write-Host "    Copy printed STA MAC into User env ESPNOW_ECOFLOW_BRIDGE_MAC, then reflash HubM5." -ForegroundColor DarkGray
   pio run -e bridge_ecoflow_delta3 -t upload --upload-port $UploadPort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
@@ -174,34 +183,35 @@ function Flash-BridgeEcoflowDelta3 {
 switch ($Target) {
   "HubM5" {
     $p = if ($Port) { $Port } else { $HubPort }
-    Flash-HubM5 -UploadPort $p
+    Invoke-FlashHubM5 -UploadPort $p
   }
   "HubTtgoWattcycle" {
     $p = if ($Port) { $Port } else { "COM19" }
-    Flash-HubTtgoWattcycle -UploadPort $p
+    Invoke-FlashHubTtgoWattcycle -UploadPort $p
   }
   "BridgeTtgoWattcycle" {
     $p = if ($Port) { $Port } else { $BmsBridgePort }
-    Flash-BridgeTtgoWattcycle -UploadPort $p
+    Invoke-FlashBridgeTtgoWattcycle -UploadPort $p
   }
   "BridgeXt369p" {
     $p = if ($Port) { $Port } else { $XtBridgePort }
-    Flash-BridgeXt369p -UploadPort $p
+    Invoke-FlashBridgeXt369p -UploadPort $p
   }
   "BridgeEcoflowDelta3" {
     $p = if ($Port) { $Port } else { $EcoflowBridgePort }
-    Flash-BridgeEcoflowDelta3 -UploadPort $p
+    Invoke-FlashBridgeEcoflowDelta3 -UploadPort $p
   }
   "Both" {
     Write-Warning "Target Both is legacy (hub_ttgo + XT). Prefer -Target All for Phase 2."
-    Flash-HubTtgoWattcycle -UploadPort $(if ($Port) { $Port } else { "COM19" })
-    Flash-BridgeXt369p -UploadPort $XtBridgePort
+    Invoke-FlashHubTtgoWattcycle -UploadPort $(if ($Port) { $Port } else { "COM19" })
+    Invoke-FlashBridgeXt369p -UploadPort $XtBridgePort
   }
   "All" {
     Ensure-EspNowMacEnv -HubPort $HubPort -BmsBridgePort $BmsBridgePort -XtBridgePort $XtBridgePort
-    Flash-HubM5 -UploadPort $HubPort
-    Flash-BridgeTtgoWattcycle -UploadPort $BmsBridgePort
-    Flash-BridgeXt369p -UploadPort $XtBridgePort
+    Invoke-FlashHubM5 -UploadPort $HubPort
+    Invoke-FlashBridgeTtgoWattcycle -UploadPort $BmsBridgePort
+    Invoke-FlashBridgeXt369p -UploadPort $XtBridgePort
+    Invoke-FlashBridgeEcoflowDelta3 -UploadPort $EcoflowBridgePort
   }
 }
 

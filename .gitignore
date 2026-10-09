@@ -66,6 +66,9 @@ compile_commands.json
 .env
 .env.*
 !.env.example
+secrets/
+**/EcoFlow/Crypto/login_key.bin
+**/EcoFlow/Crypto/EcoFlowLoginKeyData.gen.cpp
 
 # vcpkg
 vcpkg_installed/
