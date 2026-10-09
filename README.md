@@ -229,13 +229,33 @@ M5 face buttons: **A** = previous page, **B** = confirm / center, **C** = next p
 
 ### Web UI screenshots
 
-Each image matches one dashboard tab (same order as the SPA nav).
+Each image matches one dashboard tab (**same order as the SPA nav**).
 
 <table>
   <tr>
     <td align="center" width="50%">
       <p><strong>Overview</strong></p>
-      <img src="Resources/overview.png" alt="Overview tab — SoC, live metrics and charts" width="100%" />
+      <img src="Resources/Overview.jpg" alt="Overview tab — system power-flow diagram" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <p><strong>Dashboard</strong></p>
+      <img src="Resources/Dashboard.jpg" alt="Dashboard tab — EcoFlow, Wattcycle pack, and solar summary" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <p><strong>Solar</strong></p>
+      <img src="Resources/Solar.jpg" alt="Solar tab — XT369P wattmeter live metrics and charts" width="100%" />
+    </td>
+    <td align="center" width="50%">
+      <p><strong>EcoFlow</strong></p>
+      <img src="Resources/Ecoflow.jpg" alt="EcoFlow tab — DELTA 3 station telemetry" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <p><strong>History</strong></p>
+      <img src="Resources/History.jpg" alt="History tab — pack / solar / EcoFlow charts" width="100%" />
     </td>
     <td align="center" width="50%">
       <p><strong>Cells</strong></p>
@@ -255,11 +275,11 @@ Each image matches one dashboard tab (same order as the SPA nav).
   <tr>
     <td align="center" width="50%">
       <p><strong>Gateway</strong></p>
-      <img src="Resources/Gateway.jpg" alt="Gateway tab — Wi-Fi / BLE / poll status" width="100%" />
+      <img src="Resources/Gateway.jpg" alt="Gateway tab — Wi-Fi / ESP-NOW / bridge status" width="100%" />
     </td>
     <td align="center" width="50%">
       <p><strong>ESP</strong></p>
-      <img src="Resources/ESP.png" alt="ESP tab — CPU, heap, chip temperature" width="100%" />
+      <img src="Resources/Esp.jpg" alt="ESP tab — hub and bridge CPU, heap, chip temperature" width="100%" />
     </td>
   </tr>
   <tr>
