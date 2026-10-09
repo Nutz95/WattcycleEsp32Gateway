@@ -1,7 +1,7 @@
 # Wattcycle ESP32 Gateway
 
-> Monorepo: **M5Stack web hub** (Wi‑Fi + ESP-NOW RX) + **TTGO bridges**
-> (Wattcycle BLE / XT369P SPP → ESP-NOW) — one dashboard on the LAN.
+> Monorepo: **M5Stack web hub** (Wi‑Fi + ESP-NOW RX) + **bridges**
+> (Wattcycle BLE / XT369P SPP / EcoFlow DELTA 3 BLE → ESP-NOW) — one dashboard on the LAN.
 
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32-orange)](https://platformio.org/)
 [![Protocol](https://img.shields.io/badge/BLE-Wattcycle%20%2F%20XDZN-blue)](https://github.com/qume/wattcycle_ble)
@@ -12,15 +12,18 @@
 ## Why this exists
 
 Wattcycle packs expose rich BMS data over **Bluetooth**, but they do **not** ship a
-routable web server. Phones work locally; remote / LAN dashboards do not.
+routable web server. Phones work locally; remote / LAN dashboards do not. The same
+gap applies to the XT369P wattmeter and EcoFlow station apps — this hub aggregates
+them on the LAN.
 
-Three firmwares, one repo:
+One hub + three bridges, one repo:
 
 ```mermaid
 flowchart TB
-  subgraph bridges [TTGO bridges]
+  subgraph bridges [Bridges]
     BMS["Wattcycle BMS BLE"] --> BridgeBms["bridge_ttgo_wattcycle COM19"]
     XT["XT369P SPP"] --> BridgeXt["bridge_xt369p COM22"]
+    EF["EcoFlow DELTA 3 BLE"] --> BridgeEf["bridge_ecoflow_delta3 COM8"]
   end
   subgraph hub [Hub M5Stack Basic COM23]
     EspNowRx["ESP-NOW RX multi-peer"]
@@ -30,6 +33,7 @@ flowchart TB
   end
   BridgeBms -->|"ESP-NOW"| EspNowRx
   BridgeXt -->|"ESP-NOW"| EspNowRx
+  BridgeEf -->|"ESP-NOW"| EspNowRx
   EspNowRx --> Store --> Web
   Store --> SD[(SD card)]
   Ntp --> Store
@@ -37,7 +41,7 @@ flowchart TB
 ```
 
 Prefer `.\scripts\pair_espnow_link.ps1` for first-time MAC + PMK setup, then
-`.\scripts\flash.ps1 -Target All`.
+`.\scripts\flash.ps1 -Target All` (includes EcoFlow S3 when `EcoflowBridgePort` is set).
 
 The SPA (`data/`) is flashed into hub **LittleFS**. Optional **SD** on the M5 holds
 daily CSV history (`/history/YYYY-MM-DD.csv`, UTC dates).
@@ -177,20 +181,26 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # on BMS bridge — BLE MAC only
 .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
 .\scripts\flash.ps1 -Target BridgeEcoflowDelta3 -Port COM8
 
-# Hub + BMS + XT (distinct COM ports; EcoFlow flash separately for now)
-.\scripts\flash.ps1 -Target All -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22
+# Hub + BMS + XT + EcoFlow (distinct COM ports)
+.\scripts\flash.ps1 -Target All -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22 -EcoflowBridgePort COM8
 ```
 
 ### 2b. Pair ESP-NOW peers
 
-Plug the hub and bridges, then run the pairing script (writes `ESPNOW_*` env vars and can flash):
+Plug the hub and bridges (including EcoFlow S3), then run the pairing script
+(writes `ESPNOW_*` User env vars and can flash):
 
 ```powershell
-.\scripts\pair_espnow_link.ps1 -HubPort COM23 -BridgePort COM22 -Flash
+.\scripts\pair_espnow_link.ps1 `
+  -HubPort COM23 `
+  -BmsBridgePort COM19 `
+  -XtBridgePort COM22 `
+  -EcoflowBridgePort COM8 `
+  -Flash
 ```
 
 ```text
-BRIDGE (COM19 / COM22)  --ESP-NOW-->  HUB M5 (COM23)
+BRIDGES (COM19 / COM22 / COM8)  --ESP-NOW-->  HUB M5 (COM23)
 
 ESPNOW_PEER_MAC               on each BRIDGE = HUB STA MAC
 ESPNOW_BMS_BRIDGE_MAC         on HUB         = BMS bridge STA MAC
