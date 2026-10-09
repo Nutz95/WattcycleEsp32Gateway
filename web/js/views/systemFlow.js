@@ -17,21 +17,20 @@
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.toggle("active", !!active);
-    el.classList.toggle("reverse", !!reverse);
 
     const fwd = el.getAttribute("data-path-fwd");
     const rev = el.getAttribute("data-path-rev");
     if (fwd && rev) {
+      // Bidirectional spine: encode direction in `d` and keep marker-end on the
+      // downstream tip (reverse path + reverse marker was canceling out).
       el.setAttribute("d", reverse ? rev : fwd);
+      el.classList.remove("reverse");
+    } else {
+      el.classList.toggle("reverse", !!reverse);
     }
 
-    if (reverse) {
-      el.setAttribute("marker-start", "url(#flowArrowRev)");
-      el.removeAttribute("marker-end");
-    } else {
-      el.setAttribute("marker-end", "url(#flowArrow)");
-      el.removeAttribute("marker-start");
-    }
+    el.setAttribute("marker-end", "url(#flowArrow)");
+    el.removeAttribute("marker-start");
   }
 
   function setPortNode(nodeId, portLabelId, on) {

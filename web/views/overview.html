@@ -14,9 +14,6 @@
         <marker id="flowArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
           <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
         </marker>
-        <marker id="flowArrowRev" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto">
-          <path d="M8,0 L0,4 L8,8 Z" fill="currentColor" />
-        </marker>
       </defs>
 
       <!-- Grid → EcoFlow -->
@@ -93,10 +90,10 @@
         <text x="40" y="18" text-anchor="middle" class="flow-node-title">Genasun</text>
         <text x="40" y="32" text-anchor="middle" class="flow-node-sub">GVB-8</text>
       </g>
-      <path id="edgeGenasun" class="flow-edge" d="M 256 400 V 430" marker-end="url(#flowArrow)" />
-      <path id="edgeSolarPack" class="flow-edge" d="M 180 430 V 314" marker-end="url(#flowArrow)" />
-      <text class="flow-label" x="198" y="372" id="lblSolarToPack">idle</text>
-      <path class="flow-edge-guide" d="M 256 430 H 180" />
+      <!-- Genasun → Wattcycle along the right edge (avoid crossing XT369P). -->
+      <path id="edgeGenasun" class="flow-edge" d="M 296 380 H 330" marker-end="url(#flowArrow)" />
+      <path id="edgeSolarPack" class="flow-edge" d="M 330 380 V 282 H 252" marker-end="url(#flowArrow)" />
+      <text class="flow-label" x="340" y="330" id="lblSolarToPack">idle</text>
     </svg>
   </div>
   <p class="hint">+ pack power: EcoFlow → Wattcycle · − pack power: Wattcycle → EcoFlow</p>
