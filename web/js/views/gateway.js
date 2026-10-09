@@ -42,10 +42,16 @@
         : "--";
       ntpEl.className = ntpOk ? "ok" : "bad";
     }
+    const ecoflowMacEl = document.getElementById("ecoflowBridgeMac");
     if (deviceInfo) {
       document.getElementById("hubStaMac").textContent = deviceInfo.hubStaMac || "--";
       document.getElementById("bmsBridgeMac").textContent = deviceInfo.bmsBridgeMac || "--";
       document.getElementById("xtBridgeMac").textContent = deviceInfo.xtBridgeMac || "--";
+      if (ecoflowMacEl) {
+        ecoflowMacEl.textContent = deviceInfo.ecoflowBridgeMac || "--";
+      }
+    } else if (ecoflowMacEl) {
+      ecoflowMacEl.textContent = "--";
     }
 
     setLink("ble", gateway.ble, gateway.ble ? "connected" : "down");
@@ -70,6 +76,22 @@
     setLink("solarSppGw", gateway.spp, gateway.spp ? "connected" : "down");
     document.getElementById("solarTarget").textContent = solar.target || "--";
     document.getElementById("solarError").textContent = solar.error || "none";
+
+    const eco = data.ecoflow || {};
+    const ecoLink = !!(gateway.ecoflowLink || eco.linkFresh);
+    setLink("ecoflowLinkGw", ecoLink, ecoLink ? "fresh" : "stale/down");
+    const ecoEncrypted = !!eco.espNowEncrypted;
+    const ecoEncLabel = ecoLink || ecoEncrypted
+      ? (ecoEncrypted ? "secured (PMK)" : "plaintext")
+      : "--";
+    setLink("ecoflowEncGw", ecoEncrypted, ecoEncLabel);
+    if (!ecoEncrypted && ecoLink) {
+      const encEl = document.getElementById("ecoflowEncGw");
+      if (encEl) encEl.className = "warn";
+    }
+    setLink("ecoflowBleGw", eco.bleConnected, eco.bleConnected ? "connected" : "down");
+    const ecoErr = document.getElementById("ecoflowError");
+    if (ecoErr) ecoErr.textContent = eco.error || "none";
   }
 
   global.WattcycleViews = global.WattcycleViews || {};

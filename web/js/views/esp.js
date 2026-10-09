@@ -78,6 +78,26 @@
       bridge,
       bridgeOk
     );
+
+    const ecoBridge = data.ecoflowBridgeEsp || {};
+    const ecoOk = !!ecoBridge.valid;
+    const ecoHint = document.getElementById("ecoflowBridgeEspHint");
+    if (ecoHint) {
+      ecoHint.textContent = ecoOk
+        ? "Live from EcoFlow ESP-NOW packet"
+        : "Waiting for ESP-NOW EcoFlow bridge health…";
+    }
+    fillEsp(
+      {
+        cpu0: document.getElementById("ecoflowBridgeCpu0"),
+        cpu1: document.getElementById("ecoflowBridgeCpu1"),
+        chipTemp: document.getElementById("ecoflowBridgeChipTemp"),
+        heap: document.getElementById("ecoflowBridgeHeap"),
+        uptime: document.getElementById("ecoflowBridgeUptime"),
+      },
+      ecoBridge,
+      ecoOk
+    );
   }
 
   global.WattcycleViews = global.WattcycleViews || {};

@@ -216,6 +216,12 @@
         activeDay = "";
       });
     }
+    const clearEcoflow = document.getElementById("clearEcoflowHistoryBtn");
+    if (clearEcoflow) {
+      clearEcoflow.addEventListener("click", function () {
+        global.WattcycleEcoflowHistory.clear();
+      });
+    }
     const select = document.getElementById("historyDaySelect");
     if (select) {
       select.addEventListener("change", function () {
@@ -233,7 +239,7 @@
     refreshSdDays();
   }
 
-  function renderHistory(data, packHistory, solarHistory) {
+  function renderHistory(data, packHistory, solarHistory, ecoflowHistory) {
     bind();
     if (data.valid && typeof data.totalAh === "number" && data.totalAh > 0) {
       lastTotalAh = data.totalAh;
@@ -312,6 +318,33 @@
       document.getElementById("chartHistSolarCapacity"),
       [{ name: "Ah", color: "#38bdf8", points: global.WattcycleSolarHistory.toPoints(solar, "ah") }],
       { unit: "Ah", yDigits: 3 }
+    );
+
+    const ecoHist = ecoflowHistory || global.WattcycleEcoflowHistory.all();
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartHistEcoSoc"),
+      [{ name: "SoC", color: "#3ecf8e", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "soc") }],
+      { unit: "%", yDigits: 0 }
+    );
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartHistEcoAcOut"),
+      [{ name: "AC out", color: "#f0b429", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "acOut") }],
+      { unit: "W", yDigits: 0 }
+    );
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartHistEcoAcIn"),
+      [{ name: "AC in", color: "#60a5fa", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "acIn") }],
+      { unit: "W", yDigits: 0 }
+    );
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartHistEcoDcOut"),
+      [{ name: "DC", color: "#c084fc", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "dcOut") }],
+      { unit: "W", yDigits: 0 }
+    );
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartHistEcoUsbOut"),
+      [{ name: "USB", color: "#38bdf8", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "usbOut") }],
+      { unit: "W", yDigits: 0 }
     );
   }
 

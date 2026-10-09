@@ -153,4 +153,5 @@
 
   global.WattcycleHistory = createStore("wattcycle.history.v3");
   global.WattcycleSolarHistory = createStore("wattcycle.solar.history.v1");
+  global.WattcycleEcoflowHistory = createStore("wattcycle.ecoflow.history.v1");
 })(window);

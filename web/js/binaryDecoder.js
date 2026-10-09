@@ -1,7 +1,7 @@
 /* Wattcycle gateway binary telemetry decoder (little-endian). */
 (function (global) {
   const MAGIC = 0x4d475457;
-  const VERSION = 5;
+  const VERSION = 6;
 
   function u8(view, offset) { return view.getUint8(offset); }
   function u16(view, offset) { return view.getUint16(offset, true); }
@@ -45,6 +45,7 @@
       },
       esp: {},
       solar: {},
+      ecoflow: {},
       balancing: []
     };
 
@@ -163,6 +164,44 @@
       heapKb: u16(view, offset + 4),
       uptimeSec: u32(view, offset + 6),
       valid: (bmsBridgeFlags & 0x01) !== 0
+    };
+    offset += 10;
+
+    // v6: EcoFlow power-station bridge block + S3 ESP health
+    const ECOFLOW_BLOCK_BYTES = 59;
+    if (offset + ECOFLOW_BLOCK_BYTES > bytes.length) {
+      throw new Error("Truncated telemetry EcoFlow trailer");
+    }
+    const ecoFlags = u8(view, offset); offset += 1;
+    data.ecoflow.linkFresh = (ecoFlags & 0x01) !== 0;
+    data.ecoflow.bleConnected = (ecoFlags & 0x02) !== 0;
+    data.ecoflow.valid = (ecoFlags & 0x04) !== 0;
+    data.ecoflow.acOutputOn = (ecoFlags & 0x08) !== 0;
+    data.ecoflow.dcOutputOn = (ecoFlags & 0x10) !== 0;
+    data.ecoflow.espNowEncrypted = (ecoFlags & 0x20) !== 0;
+    data.ecoflow.bridgeEspValid = (ecoFlags & 0x40) !== 0;
+    data.ecoflow.usbOutputOn = (ecoFlags & 0x80) !== 0;
+    data.gateway.ecoflowLink = data.ecoflow.linkFresh;
+    data.ecoflow.soc = u8(view, offset); offset += 1;
+    data.ecoflow.haveTemperature = u8(view, offset) !== 0; offset += 1;
+    data.ecoflow.acOutputW = i16(view, offset); offset += 2;
+    data.ecoflow.acInputW = i16(view, offset); offset += 2;
+    data.ecoflow.dcOutputW = i16(view, offset); offset += 2;
+    data.ecoflow.solarInputW = i16(view, offset); offset += 2;
+    data.ecoflow.usbOutputW = i16(view, offset); offset += 2;
+    const tempRaw = i16(view, offset); offset += 2;
+    data.ecoflow.tempC = data.ecoflow.haveTemperature ? tempRaw / 10 : null;
+    data.ecoflow.remainMinutes = u16(view, offset); offset += 2;
+    data.ecoflow.seq = u32(view, offset); offset += 4;
+    data.ecoflow.telemetryCount = u32(view, offset); offset += 4;
+    data.ecoflow.error = readFixedString(bytes, offset, 24); offset += 24;
+    data.ecoflowBridgeEsp = {
+      cpu0: u8(view, offset),
+      cpu1: u8(view, offset + 1),
+      chipTemp: i16(view, offset + 2) / 10,
+      heapKb: u16(view, offset + 4),
+      uptimeSec: u32(view, offset + 6),
+      valid: data.ecoflow.bridgeEspValid
     };
     offset += 10;
 

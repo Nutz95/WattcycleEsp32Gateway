@@ -16,6 +16,7 @@
   <div class="subtabs" role="tablist" aria-label="History source">
     <button type="button" class="subtab active" data-history-tab="pack">Wattcycle pack</button>
     <button type="button" class="subtab" data-history-tab="solar">XT369P wattmeter</button>
+    <button type="button" class="subtab" data-history-tab="ecoflow">EcoFlow</button>
   </div>
 
   <div class="history-panel" data-history-panel="pack">
@@ -72,6 +73,35 @@
       <figure>
         <figcaption>Solar capacity</figcaption>
         <canvas id="chartHistSolarCapacity" width="860" height="120"></canvas>
+      </figure>
+    </div>
+  </div>
+
+  <div class="history-panel" data-history-panel="ecoflow" hidden>
+    <div class="charts-toolbar">
+      <p class="hint">EcoFlow SoC and port power (AC in/out, DC, USB).</p>
+      <button type="button" id="clearEcoflowHistoryBtn" class="ghost-btn">Clear EcoFlow history</button>
+    </div>
+    <div class="charts">
+      <figure>
+        <figcaption>State of charge</figcaption>
+        <canvas id="chartHistEcoSoc" width="860" height="120"></canvas>
+      </figure>
+      <figure>
+        <figcaption>AC output</figcaption>
+        <canvas id="chartHistEcoAcOut" width="860" height="120"></canvas>
+      </figure>
+      <figure>
+        <figcaption>AC input (grid)</figcaption>
+        <canvas id="chartHistEcoAcIn" width="860" height="120"></canvas>
+      </figure>
+      <figure>
+        <figcaption>DC output</figcaption>
+        <canvas id="chartHistEcoDcOut" width="860" height="120"></canvas>
+      </figure>
+      <figure>
+        <figcaption>USB output</figcaption>
+        <canvas id="chartHistEcoUsbOut" width="860" height="120"></canvas>
       </figure>
     </div>
   </div>

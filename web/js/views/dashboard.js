@@ -6,7 +6,7 @@
     return Number(value).toFixed(digits) + (suffix ? " " + suffix : "");
   }
 
-  function renderOverview(data) {
+  function renderDashboard(data) {
     document.getElementById("soc").textContent = data.valid ? data.soc + "%" : "--%";
     document.getElementById("summary").textContent = data.valid
       ? "Live telemetry from Wattcycle BMS"
@@ -17,7 +17,10 @@
     document.getElementById("capacity").textContent =
       fmt(data.remainingAh, "", 1) + " / " + fmt(data.totalAh, "Ah", 1);
     document.getElementById("cycles").textContent = data.cycles ?? "--";
-    document.getElementById("soh").textContent = data.soh != null ? data.soh + "%" : "--%";
+    // SOH = State of Health. Many Wattcycle frames omit it (stays 0) — show "--" then.
+    const soh = data.soh;
+    document.getElementById("soh").textContent =
+      soh != null && soh > 0 ? soh + "%" : "--%";
 
     const solar = data.solar || {};
     const solarLink = !!(data.gateway && data.gateway.solarLink);
@@ -35,6 +38,29 @@
     document.getElementById("solarEnergy").textContent = fmt(solar.energyWh, "Wh", 3);
     document.getElementById("solarCapacity").textContent = fmt(solar.capacityAh, "Ah", 3);
 
+    const eco = data.ecoflow || {};
+    const ecoLink = !!eco.linkFresh || !!(data.gateway && data.gateway.ecoflowLink);
+    const ecoSummary = document.getElementById("ecoflowSummary");
+    if (ecoSummary) {
+      ecoSummary.textContent = ecoLink
+        ? (eco.valid ? "Live station — open EcoFlow tab for detail"
+                     : "Bridge up — waiting for station frames")
+        : "No ESP-NOW packets from EcoFlow bridge";
+    }
+    const ecoSoc = document.getElementById("ecoflowSoc");
+    if (ecoSoc) {
+      ecoSoc.textContent = eco.valid && eco.soc != null ? eco.soc + "%" : "--%";
+    }
+    const ecoAc = document.getElementById("ecoflowAcOut");
+    if (ecoAc) ecoAc.textContent = fmt(eco.acOutputW, "W", 0);
+    const ecoSolar = document.getElementById("ecoflowSolar");
+    if (ecoSolar) ecoSolar.textContent = fmt(eco.solarInputW, "W", 0);
+    const ecoBle = document.getElementById("ecoflowBle");
+    if (ecoBle) {
+      ecoBle.textContent = ecoLink ? (eco.bleConnected ? "up" : "down") : "no link";
+      ecoBle.className = ecoLink && eco.bleConnected ? "ok" : "bad";
+    }
+
     const ntpEl = document.getElementById("overviewNtp");
     const wifiEl = document.getElementById("overviewWifi");
     if (ntpEl) {
@@ -49,5 +75,5 @@
   }
 
   global.WattcycleViews = global.WattcycleViews || {};
-  global.WattcycleViews.overview = renderOverview;
+  global.WattcycleViews.dashboard = renderDashboard;
 })(window);

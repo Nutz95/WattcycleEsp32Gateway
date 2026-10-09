@@ -60,9 +60,24 @@
             })
           : window.WattcycleSolarHistory.all();
 
+      const eco = data.ecoflow || {};
+      const ecoflowHistory =
+        eco.valid && eco.linkFresh
+          ? window.WattcycleEcoflowHistory.pushSample({
+              t: Date.now(),
+              soc: eco.soc,
+              acOut: eco.acOutputW,
+              acIn: eco.acInputW,
+              dcOut: eco.dcOutputW,
+              usbOut: eco.usbOutputW
+            })
+          : window.WattcycleEcoflowHistory.all();
+
       window.WattcycleViews.overview(data);
+      window.WattcycleViews.dashboard(data);
       window.WattcycleViews.solar(data, solarHistory);
-      window.WattcycleViews.history(data, packHistory, solarHistory);
+      window.WattcycleViews.ecoflow(data);
+      window.WattcycleViews.history(data, packHistory, solarHistory, ecoflowHistory);
       window.WattcycleViews.cells(data);
       window.WattcycleViews.temperatures(data);
       window.WattcycleViews.warnings(data);
