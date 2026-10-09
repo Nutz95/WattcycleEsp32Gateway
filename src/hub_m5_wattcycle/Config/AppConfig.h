@@ -11,6 +11,8 @@ struct AppConfig {
   const char* espNowBmsBridgeMac = "";
   /// TTGO XT369P bridge STA MAC (ESP-NOW peer).
   const char* espNowXtBridgeMac = "";
+  /// EcoFlow S3 bridge STA MAC (ESP-NOW peer).
+  const char* espNowEcoflowBridgeMac = "";
   /// Optional 16+ char shared ESP-NOW PMK/LMK (empty = plaintext).
   const char* espNowPmk = "";
   const char* otaHostname = "wattcycle-gateway";

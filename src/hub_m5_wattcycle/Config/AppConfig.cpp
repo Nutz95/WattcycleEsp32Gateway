@@ -14,6 +14,9 @@
 #ifndef ESPNOW_BRIDGE_MAC
 #define ESPNOW_BRIDGE_MAC ""
 #endif
+#ifndef ESPNOW_ECOFLOW_BRIDGE_MAC
+#define ESPNOW_ECOFLOW_BRIDGE_MAC ""
+#endif
 #ifndef ESPNOW_PMK
 #define ESPNOW_PMK ""
 #endif
@@ -36,6 +39,7 @@ AppConfig AppConfigFactory::fromBuildFlags() {
   config.espNowBmsBridgeMac = ESPNOW_BMS_BRIDGE_MAC;
   // Keep ESPNOW_BRIDGE_MAC as the XT369P peer name for continuity with Phase 1.
   config.espNowXtBridgeMac = ESPNOW_BRIDGE_MAC;
+  config.espNowEcoflowBridgeMac = ESPNOW_ECOFLOW_BRIDGE_MAC;
   config.espNowPmk = ESPNOW_PMK;
   config.otaHostname = OTA_HOSTNAME;
   config.posixTimeZone = POSIX_TIMEZONE;

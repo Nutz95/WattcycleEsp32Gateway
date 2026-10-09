@@ -24,7 +24,7 @@ class EspWebGateway : public IWebGateway {
   void loop() override;
   /// role e.g. "m5_hub" / "ttgo_hub"; MACs may be empty until Wi-Fi is up.
   void setDeviceIdentity(const char* role, const char* hubStaMac, const char* bmsBridgeMac,
-                         const char* xtBridgeMac);
+                         const char* xtBridgeMac, const char* ecoflowBridgeMac = "");
 
  private:
   void handleRoot();
@@ -57,6 +57,7 @@ class EspWebGateway : public IWebGateway {
   char hubStaMac_[18] = {};
   char bmsBridgeMac_[18] = {};
   char xtBridgeMac_[18] = {};
+  char ecoflowBridgeMac_[18] = {};
 #ifndef UNIT_TEST
   std::unique_ptr<WebServer> server_;
 #endif

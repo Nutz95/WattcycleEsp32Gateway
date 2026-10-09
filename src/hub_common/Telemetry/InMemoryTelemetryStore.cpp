@@ -61,6 +61,12 @@ void InMemoryTelemetryStore::updateSolar(const SolarBridgeTelemetry& solar) {
   unlock();
 }
 
+void InMemoryTelemetryStore::updateEcoFlow(const EcoFlowBridgeTelemetry& ecoflow) {
+  lock();
+  ecoflow_ = ecoflow;
+  unlock();
+}
+
 void InMemoryTelemetryStore::setWifiState(bool connected, const char* ipAddress) {
   lock();
   status_.wifiConnected = connected;
@@ -148,6 +154,13 @@ bms::WarningFlags InMemoryTelemetryStore::warnings() const {
 SolarBridgeTelemetry InMemoryTelemetryStore::solar() const {
   lock();
   const SolarBridgeTelemetry copy = solar_;
+  unlock();
+  return copy;
+}
+
+EcoFlowBridgeTelemetry InMemoryTelemetryStore::ecoflow() const {
+  lock();
+  const EcoFlowBridgeTelemetry copy = ecoflow_;
   unlock();
   return copy;
 }

@@ -124,7 +124,7 @@ void GatewayApplication::maybeStartEspNow(uint32_t nowMs) {
   Serial.printf("Starting multi-peer ESP-NOW ch=%u heap=%u\n", channel, ESP.getFreeHeap());
 #endif
   if (!espNowReceiver_.begin(appConfig_.espNowBmsBridgeMac, appConfig_.espNowXtBridgeMac,
-                             appConfig_.espNowPmk, channel)) {
+                             appConfig_.espNowEcoflowBridgeMac, appConfig_.espNowPmk, channel)) {
 #ifndef UNIT_TEST
     Serial.println(F("ESP-NOW off - will retry"));
 #endif

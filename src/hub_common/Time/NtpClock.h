@@ -6,7 +6,8 @@
 namespace wattcycle::time_sync {
 
 /// SNTP wall clock. Safe to construct before Wi-Fi; syncs once STA has an IP.
-/// Epoch / UTC day files stay UTC; local formatting uses a POSIX TZ string.
+/// Polls are non-blocking (never stalls the hub loop). Once synced, stays synced
+/// (no aggressive re-NTP that could disrupt web/history). Epoch files stay UTC.
 class NtpClock {
  public:
   void begin(const char* posixTimeZone = "CET-1CEST,M3.5.0,M10.5.0/3");

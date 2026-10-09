@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bms/Models/BatteryTelemetry.h"
+#include "Telemetry/EcoFlowBridgeTelemetry.h"
 #include "Telemetry/EspHealth.h"
 #include "Telemetry/GatewayStatus.h"
 #include "Telemetry/SolarBridgeTelemetry.h"
@@ -16,6 +17,7 @@ class ITelemetryStore {
   virtual void updateProduct(const bms::ProductInfo& product) = 0;
   virtual void updateWarnings(const bms::WarningFlags& warnings) = 0;
   virtual void updateSolar(const SolarBridgeTelemetry& solar) = 0;
+  virtual void updateEcoFlow(const EcoFlowBridgeTelemetry& ecoflow) = 0;
   virtual void setWifiState(bool connected, const char* ipAddress) = 0;
   virtual void setNtpSynced(bool synced) = 0;
   virtual void setLocalClock(const char* dateDdMmYyyy, const char* timeHhMm) = 0;
@@ -29,6 +31,7 @@ class ITelemetryStore {
   virtual bms::ProductInfo product() const = 0;
   virtual bms::WarningFlags warnings() const = 0;
   virtual SolarBridgeTelemetry solar() const = 0;
+  virtual EcoFlowBridgeTelemetry ecoflow() const = 0;
   virtual GatewayStatus status() const = 0;
   virtual EspHealth espHealth() const = 0;
   virtual EspHealth bmsBridgeHealth() const = 0;

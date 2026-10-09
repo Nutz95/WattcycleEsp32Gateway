@@ -18,6 +18,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   void updateProduct(const bms::ProductInfo& product) override;
   void updateWarnings(const bms::WarningFlags& warnings) override;
   void updateSolar(const SolarBridgeTelemetry& solar) override;
+  void updateEcoFlow(const EcoFlowBridgeTelemetry& ecoflow) override;
   void setWifiState(bool connected, const char* ipAddress) override;
   void setNtpSynced(bool synced) override;
   void setLocalClock(const char* dateDdMmYyyy, const char* timeHhMm) override;
@@ -31,6 +32,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   bms::ProductInfo product() const override;
   bms::WarningFlags warnings() const override;
   SolarBridgeTelemetry solar() const override;
+  EcoFlowBridgeTelemetry ecoflow() const override;
   GatewayStatus status() const override;
   EspHealth espHealth() const override;
   EspHealth bmsBridgeHealth() const override;
@@ -44,6 +46,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   bms::ProductInfo product_{};
   bms::WarningFlags warnings_{};
   SolarBridgeTelemetry solar_{};
+  EcoFlowBridgeTelemetry ecoflow_{};
   GatewayStatus status_{};
   EspHealth espHealth_{};
   EspHealth bmsBridgeHealth_{};

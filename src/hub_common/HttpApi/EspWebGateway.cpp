@@ -55,11 +55,13 @@ EspWebGateway::EspWebGateway(telemetry::ITelemetryStore& store,
       historyStore_(historyStore) {}
 
 void EspWebGateway::setDeviceIdentity(const char* role, const char* hubStaMac,
-                                      const char* bmsBridgeMac, const char* xtBridgeMac) {
+                                      const char* bmsBridgeMac, const char* xtBridgeMac,
+                                      const char* ecoflowBridgeMac) {
   wattcycle::util::copyCString(role_, sizeof(role_), role);
   wattcycle::util::copyCString(hubStaMac_, sizeof(hubStaMac_), hubStaMac);
   wattcycle::util::copyCString(bmsBridgeMac_, sizeof(bmsBridgeMac_), bmsBridgeMac);
   wattcycle::util::copyCString(xtBridgeMac_, sizeof(xtBridgeMac_), xtBridgeMac);
+  wattcycle::util::copyCString(ecoflowBridgeMac_, sizeof(ecoflowBridgeMac_), ecoflowBridgeMac);
 }
 
 bool EspWebGateway::begin(uint16_t port) {

@@ -51,7 +51,8 @@ void setup() {
   static wattcycle::display::M5StatusDisplay statusDisplay;
 
   // STA MAC is known after Wi-Fi mode init inside connect(); seed peers from build flags now.
-  webGateway.setDeviceIdentity("m5_hub", "", config.espNowBmsBridgeMac, config.espNowXtBridgeMac);
+  webGateway.setDeviceIdentity("m5_hub", "", config.espNowBmsBridgeMac, config.espNowXtBridgeMac,
+                               config.espNowEcoflowBridgeMac);
 
   static wattcycle::composition::GatewayApplication application(
       config, wifiConnector, otaUpdater, telemetryStore, webGateway, statusDisplay, authService,
@@ -63,7 +64,7 @@ void setup() {
   }
 
   webGateway.setDeviceIdentity("m5_hub", WiFi.macAddress().c_str(), config.espNowBmsBridgeMac,
-                               config.espNowXtBridgeMac);
+                               config.espNowXtBridgeMac, config.espNowEcoflowBridgeMac);
 }
 
 void loop() {

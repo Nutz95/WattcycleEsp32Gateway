@@ -106,13 +106,14 @@ void EspWebGateway::handleDeviceInfo() {
     return;
   }
   const char* role = role_[0] != '\0' ? role_ : "hub";
-  char json[384] = {};
+  char json[448] = {};
   std::snprintf(json, sizeof(json),
                 "{\"role\":\"%s\",\"ntp\":%s,\"sd\":%s,"
-                "\"hubStaMac\":\"%s\",\"bmsBridgeMac\":\"%s\",\"xtBridgeMac\":\"%s\"}",
+                "\"hubStaMac\":\"%s\",\"bmsBridgeMac\":\"%s\",\"xtBridgeMac\":\"%s\","
+                "\"ecoflowBridgeMac\":\"%s\"}",
                 role, store_.status().ntpSynced ? "true" : "false",
                 historyStore_.isReady() ? "true" : "false", hubStaMac_, bmsBridgeMac_,
-                xtBridgeMac_);
+                xtBridgeMac_, ecoflowBridgeMac_);
   sendJson(200, json);
 }
 

@@ -215,6 +215,53 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeU16(cursor, static_cast<uint16_t>(bmsBridge.freeHeapBytes / 1024u));
   writeU32(cursor, bmsBridge.uptimeSeconds);
 
+  // v6: EcoFlow power-station bridge (ESP-NOW)
+  const auto ecoflow = store.ecoflow();
+  uint8_t ecoFlags = 0;
+  if (ecoflow.linkFresh) {
+    ecoFlags |= 0x01u;
+  }
+  if (ecoflow.bleConnected) {
+    ecoFlags |= 0x02u;
+  }
+  if (ecoflow.meterValid) {
+    ecoFlags |= 0x04u;
+  }
+  if (ecoflow.acOutputOn) {
+    ecoFlags |= 0x08u;
+  }
+  if (ecoflow.dcOutputOn) {
+    ecoFlags |= 0x10u;
+  }
+  if (ecoflow.espNowEncrypted) {
+    ecoFlags |= 0x20u;
+  }
+  if (ecoflow.bridgeEspValid) {
+    ecoFlags |= 0x40u;
+  }
+  if (ecoflow.usbOutputOn) {
+    ecoFlags |= 0x80u;
+  }
+  // haveTemperature piggy-backs on reserved byte below (1 = valid).
+  writeU8(cursor, ecoFlags);
+  writeU8(cursor, ecoflow.socPercent);
+  writeU8(cursor, ecoflow.haveTemperature ? 1u : 0u);
+  writeI16(cursor, ecoflow.acOutputW);
+  writeI16(cursor, ecoflow.acInputW);
+  writeI16(cursor, ecoflow.dcOutputW);
+  writeI16(cursor, ecoflow.solarInputW);
+  writeI16(cursor, ecoflow.usbOutputW);
+  writeI16(cursor, toDeciCelsius(ecoflow.temperatureC));
+  writeU16(cursor, ecoflow.remainMinutes);
+  writeU32(cursor, ecoflow.seq);
+  writeU32(cursor, ecoflow.telemetryCount);
+  writeFixedString(cursor, ecoflow.lastError, 24);
+  writeU8(cursor, ecoflow.bridgeEsp.cpuCore0Percent);
+  writeU8(cursor, ecoflow.bridgeEsp.cpuCore1Percent);
+  writeI16(cursor, toDeciCelsius(ecoflow.bridgeEsp.chipTemperatureC));
+  writeU16(cursor, static_cast<uint16_t>(ecoflow.bridgeEsp.freeHeapBytes / 1024u));
+  writeU32(cursor, ecoflow.bridgeEsp.uptimeSeconds);
+
   const size_t written = static_cast<size_t>(cursor - buffer);
   if (written > capacity) {
     return 0;
