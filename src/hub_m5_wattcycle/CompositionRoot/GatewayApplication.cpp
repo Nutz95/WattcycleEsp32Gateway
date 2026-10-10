@@ -161,6 +161,13 @@ void GatewayApplication::loop() {
   sampleEspHealth();
   handleButtons(nowMs);
   maybeSleepDisplay(nowMs);
+  // Brownout can leave the ILI panel dark while Wi-Fi/ESP-NOW keep running.
+  // Periodically rewrite brightness while the UI thinks it is awake.
+  if (!displayAsleep_ &&
+      (nowMs - lastBacklightRecoverMs_) >= config::TimingConstants::kDisplayBacklightRecoverMs) {
+    lastBacklightRecoverMs_ = nowMs;
+    statusDisplay_.setBacklight(true);
+  }
 #ifndef UNIT_TEST
   delay(config::TimingConstants::kAppLoopDelayMs);
 #endif
@@ -330,6 +337,7 @@ uint32_t GatewayApplication::displayFingerprint() const {
          (static_cast<uint32_t>(esp.cpuCore0Percent) << 4) ^
          (gateway.wifiConnected ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u) ^
          (solar.linkFresh ? 4u : 0u) ^ (solar.meterValid ? 8u : 0u) ^
+         (solar.sppConnected ? 32u : 0u) ^ (gateway.telemetryFresh ? 64u : 0u) ^
          (gateway.ntpSynced ? 16u : 0u) ^
          (static_cast<uint32_t>(ntpClock_.nowEpoch() / 60u) & 0xFFu);
 }

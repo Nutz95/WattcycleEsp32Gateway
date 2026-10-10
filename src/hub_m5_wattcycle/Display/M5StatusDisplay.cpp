@@ -15,7 +15,12 @@ void M5StatusDisplay::begin() {
   boardConfiguration.internal_rtc = false;
   boardConfiguration.internal_spk = false;
   boardConfiguration.internal_mic = false;
+  // Keep rail/boost enabled so brief VIN dips are less likely to latch the PMIC off.
+  boardConfiguration.output_power = true;
   M5.begin(boardConfiguration);
+  // IP5306 on Basic: keep boost alive under light load (Wi-Fi + display sleep).
+  // Cold start after a full rail collapse still needs the side button on some units.
+  M5.Power.setExtOutput(true);
   M5.Display.setRotation(1);
   canvas_.setColorDepth(8);
   if (!canvas_.createSprite(kDisplayWidth, kDisplayHeight)) {
@@ -28,7 +33,8 @@ void M5StatusDisplay::begin() {
   setBacklight(true);
   drawSplashFrame(canvas_);
   pushFrame();
-  Serial.printf("M5 display ready heap=%u\n", ESP.getFreeHeap());
+  Serial.printf("M5 display ready heap=%u pmic=%d\n", ESP.getFreeHeap(),
+                static_cast<int>(M5.Power.getType()));
 #else
   ready_ = true;
 #endif

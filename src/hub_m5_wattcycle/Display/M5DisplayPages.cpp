@@ -95,13 +95,19 @@ void drawM5OverviewPage(M5Canvas& canvas, const telemetry::ITelemetryStore& stor
     std::snprintf(wifi, sizeof(wifi), "OK");
   }
 
-  char clockTitle[16] = "CLOCK";
-  char clockValue[16] = "NTP wait";
-  uint16_t clockFill = kColorWarn;
-  if (gateway.ntpSynced && gateway.localTime[0] != '\0') {
-    std::snprintf(clockTitle, sizeof(clockTitle), "%s", gateway.localDate);
-    std::snprintf(clockValue, sizeof(clockValue), "%s", gateway.localTime);
-    clockFill = kColorOk;
+  // Radio link state — visible before watts move (ESP-NOW may be fresh with BLE down).
+  char bmsBle[16] = "no link";
+  uint16_t bmsBleFill = kColorBad;
+  if (gateway.telemetryFresh) {
+    bmsBleFill = statusTileFill(gateway.bleConnected);
+    std::snprintf(bmsBle, sizeof(bmsBle), "%s", gateway.bleConnected ? "BLE OK" : "BLE down");
+  }
+
+  char xtSpp[16] = "no link";
+  uint16_t xtSppFill = kColorBad;
+  if (solar.linkFresh) {
+    xtSppFill = statusTileFill(solar.sppConnected);
+    std::snprintf(xtSpp, sizeof(xtSpp), "%s", solar.sppConnected ? "SPP OK" : "SPP down");
   }
 
   drawTile(canvas, kColLeft, kRowY0, kColW, kRowH, efSocFill, "EF SOC", efSoc, 1);
@@ -111,7 +117,8 @@ void drawM5OverviewPage(M5Canvas& canvas, const telemetry::ITelemetryStore& stor
   drawTile(canvas, kColLeft, kRowY2, kColW, kRowH, solarFill, "SOLAR", solarPower, 1);
   drawTile(canvas, kColRight, kRowY2, kColW, kRowH, statusTileFill(gateway.wifiConnected),
            "NETWORK", wifi, 1);
-  drawTile(canvas, kColLeft, kRowY3, 304, kRowH, clockFill, clockTitle, clockValue, 1);
+  drawTile(canvas, kColLeft, kRowY3, kColW, kRowH, bmsBleFill, "BMS BLE", bmsBle, 1);
+  drawTile(canvas, kColRight, kRowY3, kColW, kRowH, xtSppFill, "XT SPP", xtSpp, 1);
 }
 
 void drawM5EcoflowPage(M5Canvas& canvas, const telemetry::ITelemetryStore& store) {

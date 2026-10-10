@@ -1,5 +1,6 @@
 #include "EspNow/EspNowTelemetryReceiver.h"
 
+#include "Config/TimingConstants.h"
 #include "EspNow/EspNowPacketApply.h"
 #include "Telemetry/EcoFlowBridgeTelemetry.h"
 #include "Telemetry/SolarBridgeTelemetry.h"
@@ -116,21 +117,25 @@ void EspNowTelemetryReceiver::loop() {
     applyPending();
   }
 #ifndef UNIT_TEST
+  using wattcycle::config::TimingConstants;
   const auto solar = store_.solar();
-  if (solar.receivedAtMs != 0 && (millis() - solar.receivedAtMs) > 5000u && solar.linkFresh) {
+  if (solar.receivedAtMs != 0 &&
+      (millis() - solar.receivedAtMs) > TimingConstants::kSolarLinkStaleMs && solar.linkFresh) {
     telemetry::SolarBridgeTelemetry stale = solar;
     stale.linkFresh = false;
     store_.updateSolar(stale);
   }
   const auto ecoflow = store_.ecoflow();
-  if (ecoflow.receivedAtMs != 0 && (millis() - ecoflow.receivedAtMs) > 5000u &&
+  if (ecoflow.receivedAtMs != 0 &&
+      (millis() - ecoflow.receivedAtMs) > TimingConstants::kEcoFlowLinkStaleMs &&
       ecoflow.linkFresh) {
     telemetry::EcoFlowBridgeTelemetry stale = ecoflow;
     stale.linkFresh = false;
     store_.updateEcoFlow(stale);
   }
   const auto battery = store_.battery();
-  if (battery.updatedAtMs != 0 && (millis() - battery.updatedAtMs) > 8000u &&
+  if (battery.updatedAtMs != 0 &&
+      (millis() - battery.updatedAtMs) > TimingConstants::kBmsTelemetryStaleMs &&
       store_.status().telemetryFresh) {
     store_.setTelemetryFresh(false);
   }
