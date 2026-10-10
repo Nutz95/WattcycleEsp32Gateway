@@ -6,6 +6,9 @@
 
 #include <Arduino.h>
 
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
+
 namespace {
 
 ecoflow::composition::GatewayApplication* gApplication = nullptr;
@@ -13,10 +16,17 @@ ecoflow::composition::GatewayApplication* gApplication = nullptr;
 }  // namespace
 
 void setup() {
+  // Shared USB cut → all bridges reboot at once. Let the rail recover before
+  // any radio init, then disable the brownout detector so a brief dip cannot
+  // reboot-loop (which drops EcoFlow telemetry until a manual power cycle).
+  delay(1500);
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
   Serial.begin(115200);
-  delay(400);
+  delay(200);
   Serial.println();
   Serial.println(F("[ecoflow] console up (COM8 native USB)"));
+  Serial.println(F("[ecoflow] brownout detector off (cold-boot / shared USB)"));
   Serial.printf("[ecoflow] NimBLE MSYS1_BLOCK_COUNT=%d\n",
                 CONFIG_BT_NIMBLE_MSYS1_BLOCK_COUNT);
 

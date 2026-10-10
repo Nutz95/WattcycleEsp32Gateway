@@ -1,11 +1,15 @@
 #include "Bms/Ble/WattcycleBleClient.h"
 #include "CompositionRoot/GatewayApplication.h"
 #include "Config/AppConfig.h"
+#include "Config/TimingConstants.h"
 #include "Display/TtgoStatusDisplay.h"
 #include "EspNow/EspNowTelemetryPublisher.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
 
 #include <Arduino.h>
+
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
 
 namespace {
 
@@ -14,6 +18,10 @@ wattcycle::composition::GatewayApplication* gApplication = nullptr;
 }  // namespace
 
 void setup() {
+  // Shared USB cut → all bridges cold-boot together. Settle first, then drop BOD
+  // so a brief dip cannot hang mid-init (worse than a clean reset).
+  delay(wattcycle::config::TimingConstants::kColdBootSettleMs);
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   Serial.begin(115200);
   delay(200);
   Serial.println();

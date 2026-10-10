@@ -8,6 +8,9 @@
 #include <Arduino.h>
 #include <esp_bt.h>
 
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
+
 namespace {
 
 xt369p::composition::GatewayApplication* gApplication = nullptr;
@@ -15,6 +18,9 @@ xt369p::composition::GatewayApplication* gApplication = nullptr;
 }  // namespace
 
 void setup() {
+  // Shared USB power cut → cold boot with other bridges; don't reboot-loop on dips.
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  delay(400);
   Serial.begin(115200);
   delay(200);
   Serial.println();

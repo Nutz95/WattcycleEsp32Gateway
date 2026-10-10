@@ -15,20 +15,28 @@ namespace ecoflow::espnow_tx {
 uint8_t EspNowTelemetryPublisher::resolveChannel(const char* wifiSsid,
                                                  uint8_t fixedChannel) const {
   if (fixedChannel >= 1 && fixedChannel <= 13) {
+    Serial.printf("ESP-NOW channel from ESPNOW_CHANNEL=%u\n", fixedChannel);
     return fixedChannel;
   }
   if (wifiSsid == nullptr || wifiSsid[0] == '\0') {
+    Serial.println(F("ESPNOW_CHANNEL unset and no WIFI_SSID — using ch=1"));
     return 1;
   }
+  // Match hub STA channel. Prefer setting ESPNOW_CHANNEL to avoid this scan
+  // (scan draws current; thin USB can brownout).
   const int n = WiFi.scanNetworks(/*async=*/false, /*hidden=*/true);
   uint8_t channel = 1;
   for (int i = 0; i < n; ++i) {
     if (WiFi.SSID(i) == wifiSsid) {
       channel = static_cast<uint8_t>(WiFi.channel(i));
+      Serial.printf("ESP-NOW channel from SSID scan='%s' ch=%u\n", wifiSsid, channel);
       break;
     }
   }
   WiFi.scanDelete();
+  if (channel == 1 && n >= 0) {
+    Serial.println(F("SSID not found in scan — ESP-NOW ch=1 (set ESPNOW_CHANNEL)"));
+  }
   return channel;
 }
 
@@ -37,9 +45,12 @@ bool EspNowTelemetryPublisher::initRadio(const char* wifiSsid, uint8_t fixedChan
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(false, false);
   WiFi.setSleep(WIFI_PS_MIN_MODEM);
+  // Cap TX hard — full power + BLE on thin USB rails trips BROWNOUT_RST on this S3.
+  WiFi.setTxPower(WIFI_POWER_5dBm);
   Serial.printf("This board STA MAC: %s\n", WiFi.macAddress().c_str());
   Serial.println(F("  -> set as ESPNOW_ECOFLOW_BRIDGE_MAC on the M5 hub"));
 
+  delay(100);
   channel_ = resolveChannel(wifiSsid, fixedChannel);
   if (esp_wifi_set_channel(channel_, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
     util::copyCString(lastError_, sizeof(lastError_), "set_channel_failed");

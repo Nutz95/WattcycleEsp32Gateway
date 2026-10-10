@@ -20,15 +20,14 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
       statusDisplay_(statusDisplay) {}
 
 bool GatewayApplication::begin() {
-  statusDisplay_.begin();
   buttonNavigator_.begin();
   espHealthSampler_.begin();
 #ifndef UNIT_TEST
   lastInputMs_ = millis();
 #endif
   telemetryStore_.setBleState(false, appConfig_.bmsBleAddress, "waiting_radio");
-  renderCurrentDisplay();
 
+  // Radio before TFT backlight — shared USB cold boot hung with display+Wi-Fi together.
 #ifndef UNIT_TEST
   Serial.printf("Free heap before ESP-NOW: %u\n", ESP.getFreeHeap());
 #endif
@@ -42,6 +41,9 @@ bool GatewayApplication::begin() {
                 espNowPublisher_.channel(), espNowPublisher_.lastError());
   delay(300);
 #endif
+
+  statusDisplay_.begin();
+  renderCurrentDisplay();
 
   telemetryPoller_.begin();
   startDisplayTask();

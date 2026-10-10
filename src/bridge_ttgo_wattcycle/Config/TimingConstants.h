@@ -11,6 +11,8 @@ struct TimingConstants {
   static constexpr uint32_t kEspHealthSampleMs = 1000;
   static constexpr uint32_t kAppLoopDelayMs = 10;
   static constexpr uint32_t kButtonDebounceMs = 220;
+  /// After shared USB power restore, wait before Wi-Fi/TFT (cold-rail hangs).
+  static constexpr uint32_t kColdBootSettleMs = 1500;
   static constexpr uint32_t kBleTaskStackWords = 6144;
   static constexpr uint32_t kBleTaskPriority = 1;
   static constexpr uint32_t kDisplayTaskStackWords = 3072;

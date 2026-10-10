@@ -65,10 +65,18 @@ bool EspNowTelemetryPublisher::begin(const char* wifiSsid, const char* peerMac,
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(false, false);
   WiFi.setSleep(WIFI_PS_MIN_MODEM);
+  // Cap TX — cold USB rails + TFT backlight brownout / hang on TTGO.
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
   Serial.printf("BMS bridge STA MAC: %s\n", WiFi.macAddress().c_str());
   Serial.println(F("  -> set as ESPNOW_BMS_BRIDGE_MAC on the M5 hub"));
 
+  delay(50);
   channel_ = resolveChannel(wifiSsid, fixedChannel);
+  if (fixedChannel < 1 || fixedChannel > 13) {
+    Serial.println(F("ESPNOW_CHANNEL unset — SSID scan (prefer setting channel=hub)"));
+  } else {
+    Serial.printf("ESP-NOW channel from ESPNOW_CHANNEL=%u\n", fixedChannel);
+  }
   if (esp_wifi_set_channel(channel_, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
     wattcycle::util::copyCString(lastError_, sizeof(lastError_), "set_channel_failed");
     return false;
