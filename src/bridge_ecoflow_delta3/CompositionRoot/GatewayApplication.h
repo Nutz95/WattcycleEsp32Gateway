@@ -5,6 +5,9 @@
 #include "Esp/EspHealthSampler.h"
 #include "EspNow/IEspNowTelemetryPublisher.h"
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 namespace ecoflow::composition {
 
 /// Owns the BLE + ESP-NOW loop for the headless DELTA 3 bridge.
@@ -16,12 +19,15 @@ class GatewayApplication {
 
   /// Start ESP-NOW (if peer MAC set) then BLE client.
   bool begin();
-  /// Poll BLE, sample health, publish ESP-NOW, heartbeat.
+  /// Publish ESP-NOW + heartbeat from mutex snapshots; BLE runs on its own task.
   void loop();
 
  private:
   void printHeartbeat(uint32_t nowMs);
   void maybePublishEspNow(uint32_t nowMs);
+  void startBleTask();
+  static void bleTaskTrampoline(void* context);
+  void bleTaskLoop();
 
   config::AppConfig appConfig_;
   ble::IEcoFlowBleClient& bleClient_;
@@ -30,6 +36,7 @@ class GatewayApplication {
   uint32_t lastHeartbeatMs_ = 0;
   uint32_t lastPublishMs_ = 0;
   uint32_t heartbeatCount_ = 0;
+  TaskHandle_t bleTaskHandle_ = nullptr;
 };
 
 }  // namespace ecoflow::composition

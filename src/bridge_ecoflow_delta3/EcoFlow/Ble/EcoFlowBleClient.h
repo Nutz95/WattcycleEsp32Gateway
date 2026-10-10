@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <mutex>
 
 namespace ecoflow::ble {
 
@@ -23,14 +24,16 @@ class EcoFlowBleClient : public IEcoFlowBleClient {
   bool isConnected() const override;
   /// True when V3 session auth completed successfully.
   bool isAuthenticated() const override;
-  /// Last connect/auth/GATT error for diagnostics.
+  /// Last connect/auth/GATT error for diagnostics (points at internal buffer; prefer snapshot()).
   const char* lastError() const override;
   /// Raw notify chunks received on the EcoFlow characteristic.
   uint32_t notifyCount() const override;
   /// Decoded telemetry updates from auth/display decoder.
   uint32_t telemetryCount() const override;
-  /// Latest merged power-station telemetry snapshot.
-  const models::PowerStationTelemetry& telemetry() const override;
+  /// Latest merged power-station telemetry snapshot (by value).
+  models::PowerStationTelemetry telemetry() const override;
+  /// Mutex-protected copy for cross-task ESP-NOW / serial heartbeat.
+  EcoFlowBleSnapshot snapshot() const override;
 
   /// Forward notify bytes into auth (NimBLE callback path).
   void onNotify(const uint8_t* data, size_t length);
@@ -39,11 +42,18 @@ class EcoFlowBleClient : public IEcoFlowBleClient {
   static bool writeTrampoline(void* user, const uint8_t* data, size_t length);
   static void notifyTrampoline(void* owner, const uint8_t* data, size_t length);
 
-  bool connectOnce();
+  bool connectOnce(std::unique_lock<std::mutex>& lock);
+  void configureNimBleHost();
   void noteFailure(const char* message);
+  void handleLinkDropped();
+  void maybeUnpause(uint32_t nowMs);
   void scheduleReconnectBackoff();
+  void resetReconnectLadder();
   void setError(const char* message);
+  void refreshPublishSnapshotLocked();
 
+  mutable std::mutex mutex_;
+  EcoFlowBleSnapshot publishSnapshot_{};
   char bleAddress_[18] = {};
   char serial_[24] = {};
   char userId_[24] = {};
@@ -56,6 +66,7 @@ class EcoFlowBleClient : public IEcoFlowBleClient {
   uint32_t notifyCount_ = 0;
   uint32_t lastReconnectMs_ = 0;
   uint32_t reconnectDelayMs_ = 0;
+  uint32_t pausedAtMs_ = 0;
   uint8_t failureCount_ = 0;
   EcoFlowBleGatt gatt_{};
   EcoFlowBleAuth auth_{};

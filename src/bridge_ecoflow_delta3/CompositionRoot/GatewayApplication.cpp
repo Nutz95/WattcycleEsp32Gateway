@@ -33,6 +33,8 @@ bool GatewayApplication::begin() {
 
   espHealth_.begin();
 
+  // ESP-NOW first (fixed channel preferred) — keep rail calm before NimBLE.
+  delay(config::TimingConstants::kRadioBringupDelayMs);
   if (appConfig_.espNowPeerMac != nullptr && appConfig_.espNowPeerMac[0] != '\0') {
     if (!espNowPublisher_.begin(appConfig_.wifiSsid, appConfig_.espNowPeerMac,
                                 appConfig_.espNowChannel, appConfig_.espNowPmk)) {
@@ -42,12 +44,8 @@ bool GatewayApplication::begin() {
     Serial.println(F("ESP-NOW skipped (set ESPNOW_PEER_MAC)"));
   }
 
-  const bool bleOk =
-      bleClient_.begin(appConfig_.ecoflowBleAddress, appConfig_.ecoflowSerial,
-                       appConfig_.ecoflowUserId);
-  if (!bleOk) {
-    Serial.printf("EcoFlow BLE begin failed: %s\n", bleClient_.lastError());
-  }
+  // BLE bring-up (NimBLE) runs on its own task after another settle delay.
+  startBleTask();
   lastHeartbeatMs_ = millis();
   lastPublishMs_ = millis();
   return true;
@@ -55,17 +53,17 @@ bool GatewayApplication::begin() {
 
 void GatewayApplication::printHeartbeat(uint32_t nowMs) {
   ++heartbeatCount_;
-  const auto& t = bleClient_.telemetry();
+  const auto snap = bleClient_.snapshot();
   const auto health = espHealth_.snapshot();
   Serial.printf(
       "[hb %lu] up=%lus heap=%u cpu0=%u%% chip=%.0fC ble=%s auth=%s soc=%u acOut=%dW "
       "notify=%lu tel=%lu err='%s'\n",
       static_cast<unsigned long>(heartbeatCount_), static_cast<unsigned long>(nowMs / 1000U),
       ESP.getFreeHeap(), static_cast<unsigned>(health.cpuCore0Percent),
-      static_cast<double>(health.chipTemperatureC), bleClient_.isConnected() ? "up" : "down",
-      bleClient_.isAuthenticated() ? "ok" : "--", static_cast<unsigned>(t.socPercent),
-      static_cast<int>(t.acOutputW), static_cast<unsigned long>(bleClient_.notifyCount()),
-      static_cast<unsigned long>(bleClient_.telemetryCount()), bleClient_.lastError());
+      static_cast<double>(health.chipTemperatureC), snap.connected ? "up" : "down",
+      snap.authenticated ? "ok" : "--", static_cast<unsigned>(snap.telemetry.socPercent),
+      static_cast<int>(snap.telemetry.acOutputW), static_cast<unsigned long>(snap.notifyCount),
+      static_cast<unsigned long>(snap.telemetryCount), snap.lastError);
 }
 
 void GatewayApplication::maybePublishEspNow(uint32_t nowMs) {
@@ -78,13 +76,14 @@ void GatewayApplication::maybePublishEspNow(uint32_t nowMs) {
   }
   lastPublishMs_ = nowMs;
   espHealth_.sample();
-  espNowPublisher_.publish(bleClient_.telemetry(), bleClient_.isConnected(),
-                           bleClient_.telemetryCount(), bleClient_.lastError(),
+  const auto snap = bleClient_.snapshot();
+  espNowPublisher_.publish(snap.telemetry, snap.connected, snap.telemetryCount, snap.lastError,
                            espHealth_.snapshot());
 }
 
 void GatewayApplication::loop() {
-  bleClient_.loop();
+  // BLE connect/scan blocks on the BLE task — ESP-NOW TX stays on Arduino loop
+  // and only reads mutex-copied snapshots (no live BLE object races).
   espHealth_.sample();
   const uint32_t nowMs = millis();
   maybePublishEspNow(nowMs);
@@ -94,6 +93,36 @@ void GatewayApplication::loop() {
     printHeartbeat(nowMs);
   }
   delay(config::TimingConstants::kAppLoopDelayMs);
+}
+
+void GatewayApplication::startBleTask() {
+  if (bleTaskHandle_ != nullptr) {
+    return;
+  }
+  xTaskCreatePinnedToCore(&GatewayApplication::bleTaskTrampoline, "ecoBle",
+                          config::TimingConstants::kBleTaskStackWords, this,
+                          config::TimingConstants::kBleTaskPriority, &bleTaskHandle_,
+                          config::TimingConstants::kRadioCoreId);
+}
+
+void GatewayApplication::bleTaskTrampoline(void* context) {
+  static_cast<GatewayApplication*>(context)->bleTaskLoop();
+}
+
+void GatewayApplication::bleTaskLoop() {
+  vTaskDelay(pdMS_TO_TICKS(config::TimingConstants::kBleBringupDelayMs));
+  const bool bleOk =
+      bleClient_.begin(appConfig_.ecoflowBleAddress, appConfig_.ecoflowSerial,
+                       appConfig_.ecoflowUserId);
+  if (!bleOk) {
+    const auto snap = bleClient_.snapshot();
+    Serial.printf("EcoFlow BLE begin failed: %s\n", snap.lastError);
+  }
+  for (;;) {
+    bleClient_.loop();
+    const uint32_t delayMs = bleClient_.isConnected() ? 40 : 80;
+    vTaskDelay(pdMS_TO_TICKS(delayMs));
+  }
 }
 
 }  // namespace ecoflow::composition
