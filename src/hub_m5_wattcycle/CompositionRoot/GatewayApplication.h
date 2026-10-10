@@ -13,10 +13,8 @@
 #include "HttpApi/IWebGateway.h"
 #include "Wifi/IWifiConnector.h"
 
-#ifndef UNIT_TEST
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#endif
 
 namespace wattcycle::composition {
 
@@ -50,10 +48,8 @@ class GatewayApplication {
   void renderCurrentDisplay();
   uint32_t displayFingerprint() const;
 
-#ifndef UNIT_TEST
   static void displayTaskTrampoline(void* context);
   void displayTaskLoop();
-#endif
 
   config::AppConfig appConfig_;
   wifi::IWifiConnector& wifiConnector_;
@@ -70,13 +66,12 @@ class GatewayApplication {
   uint32_t lastWifiStatusMs_ = 0;
   uint32_t lastInputMs_ = 0;
   uint32_t lastDisplayFingerprint_ = 0;
+  uint32_t lastBacklightRecoverMs_ = 0;
   uint32_t bootMs_ = 0;
   uint32_t lastEspNowAttemptMs_ = 0;
   bool webServicesStarted_ = false;
   volatile bool displayAsleep_ = false;
-#ifndef UNIT_TEST
   TaskHandle_t displayTaskHandle_ = nullptr;
-#endif
 };
 
 }  // namespace wattcycle::composition

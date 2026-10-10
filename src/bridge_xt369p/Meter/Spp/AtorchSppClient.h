@@ -3,9 +3,7 @@
 #include "Meter/Protocol/AtorchFrameParser.h"
 #include "Meter/Spp/ISppMeterClient.h"
 
-#ifndef UNIT_TEST
 #include <BluetoothSerial.h>
-#endif
 
 namespace xt369p::meter {
 
@@ -26,9 +24,7 @@ class AtorchSppClient : public ISppMeterClient {
   static bool parseBtAddress(const char* text, uint8_t out[6]);
   static bool looksLikeBogusAddress(const uint8_t addr[6]);
 
-#ifndef UNIT_TEST
   BluetoothSerial serialBt_;
-#endif
   AtorchFrameParser parser_{};
   bool started_ = false;
   bool connected_ = false;

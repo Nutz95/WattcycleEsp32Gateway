@@ -2,9 +2,7 @@
 
 #include "Display/IStatusDisplay.h"
 
-#ifndef UNIT_TEST
 #include <M5Unified.h>
-#endif
 
 namespace wattcycle::display {
 
@@ -28,9 +26,7 @@ class M5StatusDisplay : public IStatusDisplay {
   bool ready_ = false;
   bool backlightOn_ = true;
   uint8_t pageIndex_ = 0;
-#ifndef UNIT_TEST
   M5Canvas canvas_{&M5.Display};
-#endif
 };
 
 }  // namespace wattcycle::display

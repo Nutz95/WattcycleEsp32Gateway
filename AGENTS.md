@@ -46,6 +46,7 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 - Browser chart history is localStorage-only (Phase 1).
 - No nested classes; **≤ 400 lines per file**, **≤ 30 methods per class**.
 - Run `scripts/check_guardrails.ps1` (also via `scripts/run_tests.ps1`).
+- No `UNIT_TEST` gating in headers (`.h`) — keep test stubs in `.cpp` only; use portable types (`std::mutex`) or unconditional device includes in device-only TUs.
 
 ### Quality gates after meaningful changes
 

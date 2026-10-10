@@ -9,10 +9,8 @@
 #include "Telemetry/ITelemetryStore.h"
 #include "Telemetry/TelemetryPoller.h"
 
-#ifndef UNIT_TEST
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#endif
 
 namespace wattcycle::composition {
 
@@ -39,12 +37,10 @@ class GatewayApplication {
   void renderCurrentDisplay();
   uint32_t displayFingerprint() const;
 
-#ifndef UNIT_TEST
   static void bleTaskTrampoline(void* context);
   void bleTaskLoop();
   static void displayTaskTrampoline(void* context);
   void displayTaskLoop();
-#endif
 
   config::AppConfig appConfig_;
   telemetry::ITelemetryStore& telemetryStore_;
@@ -57,10 +53,8 @@ class GatewayApplication {
   uint32_t lastDisplayFingerprint_ = 0;
   uint32_t lastEspNowPublishMs_ = 0;
   volatile bool displayAsleep_ = false;
-#ifndef UNIT_TEST
   TaskHandle_t bleTaskHandle_ = nullptr;
   TaskHandle_t displayTaskHandle_ = nullptr;
-#endif
 };
 
 }  // namespace wattcycle::composition

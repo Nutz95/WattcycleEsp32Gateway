@@ -2,10 +2,7 @@
 
 #include "Telemetry/ITelemetryStore.h"
 
-#ifndef UNIT_TEST
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#endif
+#include <mutex>
 
 namespace xt369p::telemetry {
 
@@ -36,9 +33,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   GatewayStatus status_{};
   EspHealth espHealth_{};
   meter::MeterCommand pendingCommand_ = meter::MeterCommand::None;
-#ifndef UNIT_TEST
-  SemaphoreHandle_t mutex_ = nullptr;
-#endif
+  mutable std::mutex mutex_{};
 };
 
 }  // namespace xt369p::telemetry

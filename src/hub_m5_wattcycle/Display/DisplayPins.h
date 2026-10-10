@@ -11,8 +11,6 @@ constexpr int kFooterHeight = 40;
 /// Content area above the A/B/C footer tiles.
 constexpr int kContentHeight = kDisplayHeight - kFooterHeight;
 
-#ifndef UNIT_TEST
 extern const char* const kPageNames[kPageCount];
-#endif
 
 }  // namespace wattcycle::display

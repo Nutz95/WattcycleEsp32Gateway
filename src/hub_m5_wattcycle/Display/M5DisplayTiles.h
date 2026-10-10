@@ -1,12 +1,9 @@
 #pragma once
 
-#ifndef UNIT_TEST
 #include <M5Unified.h>
-#endif
 
 namespace wattcycle::display {
 
-#ifndef UNIT_TEST
 // Metro tiles: white text always; tile fill encodes status / sign (RGB332).
 constexpr uint16_t kColorBg = 0x08C4;
 constexpr uint16_t kColorTileA = 0x03BF;
@@ -28,6 +25,5 @@ void drawTile(M5Canvas& canvas, int x, int y, int w, int h, uint16_t fill,
 void drawSplashFrame(M5Canvas& canvas);
 void drawFooterTile(M5Canvas& canvas, int x, int y, int w, int h, const char* top,
                     const char* bottom);
-#endif
 
 }  // namespace wattcycle::display

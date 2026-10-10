@@ -2,10 +2,7 @@
 
 #include "Telemetry/ITelemetryStore.h"
 
-#ifndef UNIT_TEST
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#endif
+#include <mutex>
 
 namespace wattcycle::telemetry {
 
@@ -51,9 +48,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   EspHealth espHealth_{};
   EspHealth bmsBridgeHealth_{};
   bool bmsBridgeHealthValid_ = false;
-#ifndef UNIT_TEST
-  SemaphoreHandle_t mutex_ = nullptr;
-#endif
+  mutable std::mutex mutex_{};
 };
 
 }  // namespace wattcycle::telemetry

@@ -2,9 +2,7 @@
 
 #include "Display/IStatusDisplay.h"
 
-#ifndef UNIT_TEST
 #include <TFT_eSPI.h>
-#endif
 
 namespace wattcycle::display {
 
@@ -32,10 +30,8 @@ class TtgoStatusDisplay : public IStatusDisplay {
   bool ready_ = false;
   bool backlightOn_ = true;
   uint8_t pageIndex_ = 0;
-#ifndef UNIT_TEST
   TFT_eSPI tft_{};
   TFT_eSprite sprite_{&tft_};
-#endif
 };
 
 }  // namespace wattcycle::display

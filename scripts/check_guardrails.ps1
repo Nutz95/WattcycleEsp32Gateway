@@ -160,6 +160,18 @@ foreach ($file in $sourceFiles) {
   }
 }
 
+# Headers must not gate on UNIT_TEST — that leaks test scaffolding into the
+# production API surface. Use portable types (e.g. std::mutex) or keep device
+# includes unconditional in device-only headers; UNIT_TEST stubs stay in .cpp.
+foreach ($file in $sourceFiles) {
+  if ($file.Extension -ne ".h") { continue }
+  $hits = Select-String -Path $file.FullName -Pattern 'UNIT_TEST' -SimpleMatch
+  foreach ($hit in $hits) {
+    $failures += ("UNIT_TEST IN HEADER: {0}:{1} - keep UNIT_TEST out of .h" -f `
+      $hit.Path, $hit.LineNumber)
+  }
+}
+
 # Bridges must not pull in hub web/auth/ota stacks
 foreach ($bridgeName in @("bridge_xt369p", "bridge_ttgo_wattcycle", "bridge_ecoflow_delta3")) {
   $bridgeRoot = Join-Path $srcRoot $bridgeName

@@ -4,35 +4,16 @@
 
 namespace wattcycle::telemetry {
 
-InMemoryTelemetryStore::InMemoryTelemetryStore() {
-#ifndef UNIT_TEST
-  mutex_ = xSemaphoreCreateMutex();
-#endif
-}
+InMemoryTelemetryStore::InMemoryTelemetryStore() = default;
 
-InMemoryTelemetryStore::~InMemoryTelemetryStore() {
-#ifndef UNIT_TEST
-  if (mutex_ != nullptr) {
-    vSemaphoreDelete(mutex_);
-    mutex_ = nullptr;
-  }
-#endif
-}
+InMemoryTelemetryStore::~InMemoryTelemetryStore() = default;
 
 void InMemoryTelemetryStore::lock() const {
-#ifndef UNIT_TEST
-  if (mutex_ != nullptr) {
-    xSemaphoreTake(mutex_, portMAX_DELAY);
-  }
-#endif
+  mutex_.lock();
 }
 
 void InMemoryTelemetryStore::unlock() const {
-#ifndef UNIT_TEST
-  if (mutex_ != nullptr) {
-    xSemaphoreGive(mutex_);
-  }
-#endif
+  mutex_.unlock();
 }
 
 void InMemoryTelemetryStore::updateBattery(const bms::BatteryTelemetry& telemetry) {

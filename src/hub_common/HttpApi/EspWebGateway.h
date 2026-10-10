@@ -6,11 +6,9 @@
 #include "Telemetry/ITelemetryStore.h"
 #include "HttpApi/IWebGateway.h"
 
-#ifndef UNIT_TEST
 #include <WiFi.h>
 #include <WebServer.h>
 #include <memory>
-#endif
 
 namespace wattcycle::web {
 
@@ -58,9 +56,7 @@ class EspWebGateway : public IWebGateway {
   char bmsBridgeMac_[18] = {};
   char xtBridgeMac_[18] = {};
   char ecoflowBridgeMac_[18] = {};
-#ifndef UNIT_TEST
   std::unique_ptr<WebServer> server_;
-#endif
   bool started_ = false;
   char indexEtag_[17] = {};
   char cssEtag_[17] = {};
