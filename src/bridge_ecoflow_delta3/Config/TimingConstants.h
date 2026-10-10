@@ -9,12 +9,24 @@ struct TimingConstants {
   static constexpr uint32_t kEspNowPublishMs = 500;
   static constexpr uint32_t kEspHealthSampleMs = 1000;
   static constexpr uint32_t kAppLoopDelayMs = 20;
+  /// After a shared USB power cut, all ESPs boot together — wait out the inrush
+  /// before Wi-Fi.mode (thin CH343 / hub rails brownout otherwise).
+  static constexpr uint32_t kRadioBringupDelayMs = 2500;
+  /// Extra settle after ESP-NOW before NimBLE (second current spike).
+  static constexpr uint32_t kBleBringupDelayMs = 3000;
+  static constexpr uint32_t kBleTaskStackWords = 8192;
+  static constexpr uint32_t kBleTaskPriority = 1;
+  /// PRO_CPU — Wi-Fi / BT radio affinity (same as hub / BMS bridge).
+  static constexpr int kRadioCoreId = 0;
 
   // --- BLE reconnect policy (EcoFlow beeps on each connect attempt) ---
   // Keep retries spaced — each attempt makes the DELTA 3 beep.
+  // Peer drops (phone app steals the link) must recover without a reboot:
+  // pause is temporary, max backoff stays short, and soft drops reset the ladder.
   static constexpr uint32_t kBleReconnectMinMs = 15000;
-  static constexpr uint32_t kBleReconnectMaxMs = 600000;
-  static constexpr uint8_t kBleMaxFailuresBeforePause = 5;
+  static constexpr uint32_t kBleReconnectMaxMs = 120000;
+  static constexpr uint8_t kBleMaxFailuresBeforePause = 8;
+  static constexpr uint32_t kBlePauseRecoverMs = 300000;
 
   // --- BLE scan (pre-connect address-type resolve) ---
   static constexpr uint16_t kBleScanIntervalSlots = 80;  // 0.625 ms units
