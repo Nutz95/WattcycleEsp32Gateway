@@ -68,13 +68,15 @@
   function renderOverview(data) {
     const eco = data.ecoflow || {};
     const solar = data.solar || {};
-    const solarLink = !!(data.gateway && data.gateway.solarLink);
-    const ecoLink = !!eco.linkFresh || !!(data.gateway && data.gateway.ecoflowLink);
+    const gw = data.gateway || {};
+    const bmsLink = !!(data.valid || gw.telemetryFresh);
+    const solarLink = !!gw.solarLink;
+    const ecoLink = !!eco.linkFresh || !!gw.ecoflowLink;
 
     const summary = document.getElementById("flowSummary");
     if (summary) {
       const parts = [];
-      if (data.valid) parts.push("Wattcycle live");
+      if (bmsLink && data.valid) parts.push("Wattcycle live");
       if (ecoLink && eco.valid) parts.push("EcoFlow live");
       if (solarLink && solar.valid) parts.push("Solar live");
       summary.textContent = parts.length
@@ -104,7 +106,7 @@
     // Pack sign convention: + = charging (EcoFlow → Wattcycle), − = discharging (→ EcoFlow).
     const packP = data.valid ? data.power : null;
     setText("lblPackSoc", data.valid ? data.soc + "%" : "--%");
-    setText("lblPackPower", fmtW(packP));
+    setText("lblPackState", bmsLink ? (gw.ble ? "BLE up" : "BLE down") : "no link");
     if (packP != null && Math.abs(packP) > FLOW_EPS_W) {
       const packToEco = packP < 0;
       setText("lblPackLink", fmtW(Math.abs(packP)));
@@ -132,6 +134,8 @@
 
     const solarP = solar.valid ? solar.power : null;
     setText("lblSolarP", fmtW(solarP));
+    const sppOk = !!(gw.spp || solar.sppConnected);
+    setText("lblXtState", solarLink ? (sppOk ? "SPP up" : "SPP down") : "no link");
     const solarActive = solarLink && solar.valid && solarP > SOLAR_EPS_W;
     setEdge("edgeSolarPanel", solarActive, false);
     setEdge("edgeXt369p", solarActive, false);
