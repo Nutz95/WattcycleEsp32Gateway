@@ -1,5 +1,8 @@
 (function (global) {
+  // Pack / Eco / grid: ignore BMS noise under a few watts.
   const FLOW_EPS_W = 3;
+  // Solar XT369P: user tracks production from 1 W upward.
+  const SOLAR_EPS_W = 1;
 
   function fmtW(value) {
     if (value === undefined || value === null || Number.isNaN(value)) {
@@ -129,7 +132,7 @@
 
     const solarP = solar.valid ? solar.power : null;
     setText("lblSolarP", fmtW(solarP));
-    const solarActive = solarLink && solar.valid && solarP > FLOW_EPS_W;
+    const solarActive = solarLink && solar.valid && solarP > SOLAR_EPS_W;
     setEdge("edgeSolarPanel", solarActive, false);
     setEdge("edgeXt369p", solarActive, false);
     setEdge("edgeGenasun", solarActive, false);
