@@ -158,11 +158,9 @@ bool AtorchSppClient::discoverAndConnect(const char* remoteName, uint32_t timeou
   const BTAddress address = match->getAddress();
   util::copyCString(peerAddress_, sizeof(peerAddress_), address.toString().c_str());
   Serial.printf("SPP connecting to discovered %s (%s)\n", peerAddress_, name);
+  // Connect by address only — connect(String name) triggers another inquiry and
+  // often fails on weak USB hubs right after a long discover().
   connected_ = serialBt_.connect(address);
-  if (!connected_) {
-    // Fallback: library name resolver (second inquiry).
-    connected_ = serialBt_.connect(String(name));
-  }
   if (!connected_) {
     util::copyCString(lastError_, sizeof(lastError_), "spp_connect_failed");
     return false;

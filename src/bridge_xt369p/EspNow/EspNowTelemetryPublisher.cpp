@@ -68,6 +68,8 @@ bool EspNowTelemetryPublisher::begin(const char* wifiSsid, const char* peerMac,
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(false, false);
   WiFi.setSleep(WIFI_PS_MIN_MODEM);
+  // Classic BT inquiry + TFT already stress thin USB hubs — keep Wi-Fi TX modest.
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
   Serial.printf("This board STA MAC: %s\n", WiFi.macAddress().c_str());
   Serial.println(F("  -> set as ESPNOW_BRIDGE_MAC on the Wattcycle hub"));
 

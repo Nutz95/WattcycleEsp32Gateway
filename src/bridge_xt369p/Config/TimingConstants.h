@@ -11,6 +11,10 @@ struct TimingConstants {
   static constexpr uint32_t kEspHealthSampleMs = 1000;
   static constexpr uint32_t kAppLoopDelayMs = 10;
   static constexpr uint32_t kButtonDebounceMs = 220;
+  /// Shared USB hub cold boot: wait out inrush before Wi-Fi / Classic BT.
+  static constexpr uint32_t kColdBootSettleMs = 1500;
+  /// Gap after ESP-NOW before Classic BT + TFT (second current spike).
+  static constexpr uint32_t kRadioSettleMs = 500;
   static constexpr uint32_t kSppTaskStackWords = 5120;
   static constexpr uint32_t kSppTaskPriority = 1;
   static constexpr uint32_t kDisplayTaskStackWords = 3072;

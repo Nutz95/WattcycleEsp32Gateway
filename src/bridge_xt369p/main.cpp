@@ -1,5 +1,6 @@
 #include "CompositionRoot/GatewayApplication.h"
 #include "Config/AppConfig.h"
+#include "Config/TimingConstants.h"
 #include "Display/TtgoStatusDisplay.h"
 #include "EspNow/EspNowTelemetryPublisher.h"
 #include "Meter/Spp/AtorchSppClient.h"
@@ -18,9 +19,11 @@ xt369p::composition::GatewayApplication* gApplication = nullptr;
 }  // namespace
 
 void setup() {
-  // Shared USB power cut → cold boot with other bridges; don't reboot-loop on dips.
+  // Shared USB hub / power cut: settle the rail before Wi-Fi + Classic BT.
+  // BOD off avoids reboot-loops on brief dips; radio still needs a stiff enough
+  // supply for inquiry — PC USB usually works, cheap hubs often do not.
+  delay(xt369p::config::TimingConstants::kColdBootSettleMs);
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-  delay(400);
   Serial.begin(115200);
   delay(200);
   Serial.println();

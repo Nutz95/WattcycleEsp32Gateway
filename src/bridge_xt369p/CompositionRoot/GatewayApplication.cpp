@@ -20,17 +20,16 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
       statusDisplay_(statusDisplay) {}
 
 bool GatewayApplication::begin() {
-  statusDisplay_.begin();
   buttonNavigator_.begin();
   espHealthSampler_.begin();
 #ifndef UNIT_TEST
   lastInputMs_ = millis();
 #endif
   telemetryStore_.setSppState(false, appConfig_.sppDeviceName, "waiting_radio");
-  renderCurrentDisplay();
   telemetryPoller_.begin();
 
-  // 1) ESP-NOW first (Wi-Fi driver + channel scan only — no AP join / no web).
+  // Radio before TFT backlight — USB hubs brownout when display + Wi-Fi + Classic
+  // BT inquiry come up together (PC USB is stiff enough; hub rails are not).
 #ifndef UNIT_TEST
   Serial.printf("Free heap before ESP-NOW: %u\n", ESP.getFreeHeap());
 #endif
@@ -42,19 +41,24 @@ bool GatewayApplication::begin() {
 #ifndef UNIT_TEST
   Serial.printf("ESP-NOW begin=%s ch=%u err='%s' heap=%u\n", espNowOk ? "ok" : "fail",
                 espNowPublisher_.channel(), espNowPublisher_.lastError(), ESP.getFreeHeap());
-#endif
-
-  // 2) Classic SPP after the Wi-Fi radio is already claimed for ESP-NOW.
-#ifndef UNIT_TEST
+  delay(config::TimingConstants::kRadioSettleMs);
   Serial.printf("Free heap before BT: %u\n", ESP.getFreeHeap());
 #endif
+
   telemetryPoller_.enableRadio();
 #ifndef UNIT_TEST
   Serial.printf("Free heap after BT: %u\n", ESP.getFreeHeap());
 #endif
 
-  startDisplayTask();
+  // First Classic BT connect attempt runs without the backlight current spike.
   startSppTask();
+#ifndef UNIT_TEST
+  delay(config::TimingConstants::kRadioSettleMs);
+#endif
+
+  statusDisplay_.begin();
+  renderCurrentDisplay();
+  startDisplayTask();
 #ifndef UNIT_TEST
   Serial.println(F("Boot: ESP-NOW + Classic SPP armed (no web / no STA join)"));
 #endif

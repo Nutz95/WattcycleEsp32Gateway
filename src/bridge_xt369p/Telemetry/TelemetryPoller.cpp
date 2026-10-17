@@ -73,11 +73,9 @@ void TelemetryPoller::ensureConnected(uint32_t nowMs) {
     ok = client_.connectAddress(config_.xt369pBtAddress);
   }
   if (!ok) {
-    // Primary path: inquiry scan by advertised name, then connect.
-    ok = client_.discoverAndConnect(config_.sppDeviceName, 12000);
-  }
-  if (!ok) {
-    ok = client_.connectName(config_.sppDeviceName);
+    // One inquiry + connect. Do not chain connectName() after this — that runs a
+    // second inquiry and brownouts thin USB hubs (shows as spp_connect_name_failed).
+    ok = client_.discoverAndConnect(config_.sppDeviceName, 10000);
   }
 
   const char* peer = client_.peerAddress();
