@@ -24,7 +24,15 @@
     return y + "-" + m + "-" + day;
   }
 
+  function numOrUndef(raw) {
+    if (raw === undefined || raw === null || raw === "") return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : undefined;
+  }
+
   function parseCsvDay(csv) {
+    // v1: epoch,soc,pack_v,pack_a,pack_w,solar_v,solar_a,solar_w,pack_ok,solar_ok
+    // v2: + pack_ah,mos_c,pcb_c,solar_wh,solar_ah
     const pack = [];
     const solar = [];
     if (!csv) return { pack: pack, solar: solar };
@@ -39,22 +47,39 @@
       const t = epoch * 1000;
       const packOk = cols[8] === "1";
       const solarOk = cols[9] === "1";
+      const hasExt = cols.length >= 15;
       if (packOk) {
-        pack.push({
+        const row = {
           t: t,
           v: Number(cols[2]),
           i: Number(cols[3]),
           p: Number(cols[4]),
           soc: Number(cols[1])
-        });
+        };
+        if (hasExt) {
+          const ah = numOrUndef(cols[10]);
+          const mos = numOrUndef(cols[11]);
+          const pcb = numOrUndef(cols[12]);
+          if (ah !== undefined) row.ah = ah;
+          if (mos !== undefined) row.mos = mos;
+          if (pcb !== undefined) row.pcb = pcb;
+        }
+        pack.push(row);
       }
       if (solarOk) {
-        solar.push({
+        const row = {
           t: t,
           v: Number(cols[5]),
           i: Number(cols[6]),
           p: Number(cols[7])
-        });
+        };
+        if (hasExt) {
+          const wh = numOrUndef(cols[13]);
+          const ah = numOrUndef(cols[14]);
+          if (wh !== undefined) row.wh = wh;
+          if (ah !== undefined) row.ah = ah;
+        }
+        solar.push(row);
       }
     }
     return { pack: pack, solar: solar };

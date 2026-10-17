@@ -44,7 +44,7 @@ Prefer `.\scripts\pair_espnow_link.ps1` for first-time MAC + PMK setup, then
 `.\scripts\flash.ps1 -Target All` (includes EcoFlow S3 when `EcoflowBridgePort` is set).
 
 The SPA (`data/`) is flashed into hub **LittleFS**. Optional **SD** on the M5 holds
-daily CSV history (`/history/YYYY-MM-DD.csv`, UTC dates).
+daily CSV history (`/history/YYYY-MM-DD.csv`, UTC dates; v2 adds pack Ah/MOS/PCB and solar Wh/Ah).
 
 ---
 
@@ -379,7 +379,7 @@ classDiagram
 
 Each target’s `main.cpp` constructs concrete adapters and injects them into that target’s `GatewayApplication` (interfaces only); auth `begin()` runs in `main` before the composition root.
 Auth is ISP-split: `EspWebGateway` depends on `IAuthSessionService` (login/setup start only — physical confirm/reset stay private on `AuthService`); display/buttons use `IAuthPhysicalConfirm` + shared `auth::AuthPrompt`.
-Browser chart history is **localStorage** (up to 24 h): live samples append continuously, and the History tab can **merge today’s SD CSV** (UTC day files under `/history/`) into that store so charts are complete after login. Picking another day in the list loads that CSV into the charts.
+Browser chart history is **localStorage** (up to 24 h): live samples append continuously, and the History tab can **merge today’s SD CSV** (UTC day files under `/history/`) into that store so charts are complete after login. Picking another day in the list loads that CSV into the charts. CSV **v1** days only have pack/solar V·I·P; **v2** (current hub) also stores pack Ah/MOS/PCB and solar Wh/Ah. The dedicated **Wattcycle** tab shows pack live metrics + charts (no cell grid).
 M5 overview clock uses local time via `POSIX_TIMEZONE` (default Europe/Paris `CET-1CEST,M3.5.0,M10.5.0/3`); SD filenames stay UTC.
 `scripts/check_guardrails.ps1` fails if files grow past limits or concrete adapter headers leak outside `main.cpp` / their domain.
 

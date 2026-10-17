@@ -1,0 +1,47 @@
+<section class="view" data-view="wattcycle" hidden>
+  <header class="page-head">
+    <p class="brand">WattCycle</p>
+    <hr class="brand-rule" />
+    <p class="page-title">Pack BMS</p>
+    <p class="tagline" id="wattcyclePageSummary">Waiting for ESP-NOW bridge…</p>
+  </header>
+  <header class="hero">
+    <p class="eyebrow">State of charge</p>
+    <h1 id="wattcyclePageSoc">--%</h1>
+  </header>
+  <div class="metrics">
+    <article><span>Link</span><strong id="wattcyclePageLink">--</strong></article>
+    <article><span>BLE</span><strong id="wattcyclePageBle">--</strong></article>
+    <article><span>Voltage</span><strong id="wattcyclePageVoltage">-- V</strong></article>
+    <article><span>Current</span><strong id="wattcyclePageCurrent">-- A</strong></article>
+    <article><span>Power</span><strong id="wattcyclePagePower">-- W</strong></article>
+    <article><span>Capacity</span><strong id="wattcyclePageCapacity">-- / -- Ah</strong></article>
+    <article><span>Cycles</span><strong id="wattcyclePageCycles">--</strong></article>
+    <article title="State of Health — 0 means the BMS did not report a value"><span>SOH</span><strong id="wattcyclePageSoh">--%</strong></article>
+    <article><span>MOS</span><strong id="wattcyclePageMos">-- °C</strong></article>
+    <article><span>PCB</span><strong id="wattcyclePagePcb">-- °C</strong></article>
+  </div>
+  <p class="hint">Pack telemetry only — cell voltages stay on the Cells tab.</p>
+  <div class="charts">
+    <figure>
+      <figcaption>Voltage</figcaption>
+      <canvas id="chartWcVoltage" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Current</figcaption>
+      <canvas id="chartWcCurrent" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Power</figcaption>
+      <canvas id="chartWcPower" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>Capacity</figcaption>
+      <canvas id="chartWcCapacity" width="860" height="120"></canvas>
+    </figure>
+    <figure>
+      <figcaption>MOS / PCB temps</figcaption>
+      <canvas id="chartWcTemps" width="860" height="120"></canvas>
+    </figure>
+  </div>
+</section>

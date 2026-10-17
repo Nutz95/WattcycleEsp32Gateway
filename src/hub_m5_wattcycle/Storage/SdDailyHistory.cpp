@@ -97,13 +97,15 @@ void SdDailyHistory::append(const HistorySample& sample) {
     return;
   }
   if (!exists) {
-    file.println(
-        F("epoch,soc,pack_v,pack_a,pack_w,solar_v,solar_a,solar_w,pack_ok,solar_ok"));
+    file.println(F("epoch,soc,pack_v,pack_a,pack_w,solar_v,solar_a,solar_w,pack_ok,solar_ok,"
+                   "pack_ah,mos_c,pcb_c,solar_wh,solar_ah"));
   }
-  file.printf("%ld,%u,%.3f,%.3f,%.1f,%.3f,%.3f,%.1f,%u,%u\n",
+  file.printf("%ld,%u,%.3f,%.3f,%.1f,%.3f,%.3f,%.1f,%u,%u,%.2f,%.1f,%.1f,%.3f,%.3f\n",
               static_cast<long>(sample.epochUtc), sample.socPercent, sample.packVoltageV,
               sample.packCurrentA, sample.packPowerW, sample.solarVoltageV, sample.solarCurrentA,
-              sample.solarPowerW, sample.packValid ? 1u : 0u, sample.solarValid ? 1u : 0u);
+              sample.solarPowerW, sample.packValid ? 1u : 0u, sample.solarValid ? 1u : 0u,
+              sample.packRemainingAh, sample.packMosTempC, sample.packPcbTempC,
+              sample.solarEnergyWh, sample.solarCapacityAh);
   file.close();
 #else
   (void)sample;

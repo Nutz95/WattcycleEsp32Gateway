@@ -17,6 +17,12 @@ struct HistorySample {
   float solarPowerW = 0;
   bool packValid = false;
   bool solarValid = false;
+  /// Extended columns (CSV v2+); older day files omit these.
+  float packRemainingAh = 0;
+  float packMosTempC = 0;
+  float packPcbTempC = 0;
+  float solarEnergyWh = 0;
+  float solarCapacityAh = 0;
 };
 
 /// Called once with total byte size before chunks (may be 0 if unknown).

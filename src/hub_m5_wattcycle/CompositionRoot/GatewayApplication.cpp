@@ -193,10 +193,15 @@ void GatewayApplication::maybeAppendHistory() {
   sample.packCurrentA = battery.currentAmps;
   sample.packPowerW = battery.powerWatts;
   sample.packValid = battery.valid;
+  sample.packRemainingAh = battery.remainingCapacityAh;
+  sample.packMosTempC = battery.mosTemperatureC;
+  sample.packPcbTempC = battery.pcbTemperatureC;
   sample.solarVoltageV = solar.voltageV;
   sample.solarCurrentA = solar.currentA;
   sample.solarPowerW = solar.powerW;
   sample.solarValid = solar.meterValid;
+  sample.solarEnergyWh = solar.energyWh;
+  sample.solarCapacityAh = solar.capacityAh;
   historyStore_.append(sample);
 }
 

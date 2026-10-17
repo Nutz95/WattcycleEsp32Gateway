@@ -76,6 +76,7 @@
       window.WattcycleViews.overview(data);
       window.WattcycleViews.dashboard(data);
       window.WattcycleViews.solar(data, solarHistory);
+      window.WattcycleViews.wattcycle(data, packHistory);
       window.WattcycleViews.ecoflow(data);
       window.WattcycleViews.history(data, packHistory, solarHistory, ecoflowHistory);
       window.WattcycleViews.cells(data);

@@ -87,6 +87,16 @@
       [{ name: "P", color: "#f0b429", points: global.WattcycleSolarHistory.toPoints(solarHistory, "p") }],
       { unit: "W", yDigits: 2 }
     );
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartSolarEnergy"),
+      [{ name: "Wh", color: "#c084fc", points: global.WattcycleSolarHistory.toPoints(solarHistory, "wh") }],
+      { unit: "Wh", yDigits: 3 }
+    );
+    global.WattcycleCharts.drawSeries(
+      document.getElementById("chartSolarCapacity"),
+      [{ name: "Ah", color: "#38bdf8", points: global.WattcycleSolarHistory.toPoints(solarHistory, "ah") }],
+      { unit: "Ah", yDigits: 3 }
+    );
   }
 
   global.WattcycleViews = global.WattcycleViews || {};
