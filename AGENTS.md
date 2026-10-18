@@ -34,6 +34,8 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 
 - Prefer **interfaces** (`I*`) at domain boundaries.
 - Construct concrete adapters only in each target’s `main.cpp`; composition roots depend on interfaces.
+- Shared Cursor skills/rules: deploy from sibling `CursorCodingSkills` (`.\deploy.ps1 -ProjectPath` this repo). Guardrail engine: `tools/esp_cpp_guardrails` (wrapped by `scripts/check_guardrails.ps1`).
+- Dual-core defaults: radio / BLE / ESP-NOW tasks on **PRO_CPU (0)**; heavier UI / app work on **APP_CPU (1)**.
 - Layout:
   - `src/common/` — `Util/`, `EspNow/` protocols + `IEspNowCommandSender`, shared `Bms/` models
   - `src/hub_common/` — shared hub Auth, HttpApi (web), Ota, Telemetry store/codec, Esp health
@@ -46,7 +48,7 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 - Browser chart history is localStorage-only (Phase 1).
 - No nested classes; **≤ 400 lines per file**, **≤ 30 methods per class**.
 - Run `scripts/check_guardrails.ps1` (also via `scripts/run_tests.ps1`).
-- No `UNIT_TEST` gating in headers (`.h`) — keep test stubs in `.cpp` only; use portable types (`std::mutex`) or unconditional device includes in device-only TUs.
+- No `UNIT_TEST` / test ifdefs in headers **or** `.cpp`. Prefer portable types (`std::mutex`) or unconditional device includes in device-only TUs; exclude device adapters from `native` `build_src_filter` instead of ifdef stubs.
 
 ### Quality gates after meaningful changes
 

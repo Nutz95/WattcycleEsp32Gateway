@@ -53,8 +53,9 @@ sequenceDiagram
 2. **NimBLE** connects to `ECOFLOW_BLE_ADDRESS` (prefer scan-found peer).
 3. **ECDH** (SECP160r1 family): exchange public keys → shared secret.
 4. **KeyInfo**: device sends material; bridge derives **session AES key**
-   (also uses embedded `login_key.bin` from EcoFlow’s cloud login blob — fetched
-   once on a PC, never committed).
+   (also uses embedded `login_key.bin`: a **static public app table** at
+   `third_party/ecoflow/login_key.bin`, not your password / serial mapping.
+   Device auth still needs `ECOFLOW_USER_ID` + `ECOFLOW_SERIAL` for the MD5 token.)
 5. **Auth token**: `MD5(USER_ID + DEVICE_SERIAL)` as 32 ASCII hex uppercase.
 6. On success, device streams **session-encrypted** packets; version-19 payloads
    are XOR-obfuscated with `seq[0]` and may end with `0xBB 0xBB`.

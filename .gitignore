@@ -67,7 +67,7 @@ compile_commands.json
 .env.*
 !.env.example
 secrets/
-**/EcoFlow/Crypto/login_key.bin
+# Generated embed only (public table lives in third_party/ecoflow/login_key.bin)
 **/EcoFlow/Crypto/EcoFlowLoginKeyData.gen.cpp
 
 # vcpkg
@@ -82,3 +82,8 @@ Testing/
 
 # Bundled LittleFS assets (source of truth is web/)
 data/
+
+# CursorCodingSkills local deploy (junctions / copies — re-run deploy.ps1)
+.cursor/
+tools/python_guardrails/
+tools/esp_cpp_guardrails/
