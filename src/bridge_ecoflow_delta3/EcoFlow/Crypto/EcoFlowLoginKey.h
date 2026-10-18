@@ -5,8 +5,8 @@
 
 namespace ecoflow::crypto {
 
-/// Public EcoFlow app login-key table (from reverse-eng); embedded at build from
-/// secrets/ecoflow/login_key.bin — never commit the bin or generated .cpp.
+/// Public EcoFlow app login-key table (ef-ble-reverse); embedded at build from
+/// third_party/ecoflow/login_key.bin. Generated .cpp is gitignored.
 extern const uint8_t kEcoFlowLoginKey[];
 extern const size_t kEcoFlowLoginKeySize;
 

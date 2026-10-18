@@ -1,6 +1,6 @@
 Import("env")
 
-"""PlatformIO pre-script: embed secrets/ecoflow/login_key.bin."""
+"""PlatformIO pre-script: embed third_party/ecoflow/login_key.bin."""
 
 import subprocess
 from pathlib import Path
