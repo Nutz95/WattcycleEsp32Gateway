@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef UNIT_TEST
 
 namespace wattcycle::display {
 
@@ -352,4 +351,3 @@ void drawM5AuthPromptPage(M5Canvas& canvas, const auth::AuthPrompt& prompt) {
 
 }  // namespace wattcycle::display
 
-#endif

@@ -1,6 +1,5 @@
 #include "Bms/Ble/WattcycleBleClient.h"
 
-#ifndef UNIT_TEST
 
 #include "Bms/Protocol/AnalogQuantityParser.h"
 #include "Bms/Protocol/FrameBuilder.h"
@@ -240,4 +239,3 @@ bool WattcycleBleClient::readWarningFlags(WarningFlags& out) {
 
 }  // namespace wattcycle::bms
 
-#endif

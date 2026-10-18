@@ -9,12 +9,10 @@
 #include <cstddef>
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
-#endif
 
 namespace wattcycle::espnow_rx {
 
@@ -26,7 +24,6 @@ EspNowTelemetryReceiver::EspNowTelemetryReceiver(telemetry::ITelemetryStore& sto
 bool EspNowTelemetryReceiver::begin(const char* bmsBridgeMac, const char* xtBridgeMac,
                                     const char* ecoflowBridgeMac, const char* pmk,
                                     uint8_t channel) {
-#ifndef UNIT_TEST
   instance_ = this;
   ready_ = false;
 
@@ -101,22 +98,12 @@ bool EspNowTelemetryReceiver::begin(const char* bmsBridgeMac, const char* xtBrid
   Serial.printf("ESP-NOW multi-peer RX (bms=%u xt=%u eco=%u enc=%u)\n", haveBms ? 1u : 0u,
                 haveXt ? 1u : 0u, haveEco ? 1u : 0u, encrypt_ ? 1u : 0u);
   return true;
-#else
-  (void)bmsBridgeMac;
-  (void)xtBridgeMac;
-  (void)ecoflowBridgeMac;
-  (void)pmk;
-  (void)channel;
-  ready_ = true;
-  return true;
-#endif
 }
 
 void EspNowTelemetryReceiver::loop() {
   if (pendingSolar_ || pendingEcoFlow_ || pendingBmsTelemetry_ || pendingBmsProduct_) {
     applyPending();
   }
-#ifndef UNIT_TEST
   using wattcycle::config::TimingConstants;
   const auto solar = store_.solar();
   if (solar.receivedAtMs != 0 &&
@@ -139,7 +126,6 @@ void EspNowTelemetryReceiver::loop() {
       store_.status().telemetryFresh) {
     store_.setTelemetryFresh(false);
   }
-#endif
 }
 
 bool EspNowTelemetryReceiver::isReady() const {
@@ -227,7 +213,6 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
 }
 
 bool EspNowTelemetryReceiver::ensurePeer(const uint8_t mac[6]) {
-#ifndef UNIT_TEST
   if (esp_now_is_peer_exist(mac)) {
     return true;
   }
@@ -239,14 +224,9 @@ bool EspNowTelemetryReceiver::ensurePeer(const uint8_t mac[6]) {
     std::memcpy(peer.lmk, lmk_, xt369p_bridge::kPmkBytes);
   }
   return esp_now_add_peer(&peer) == ESP_OK;
-#else
-  (void)mac;
-  return true;
-#endif
 }
 
 bool EspNowTelemetryReceiver::sendMeterCommand(uint8_t command) {
-#ifndef UNIT_TEST
   if (!ready_ || !hasXtPeer_) {
     return false;
   }
@@ -259,10 +239,6 @@ bool EspNowTelemetryReceiver::sendMeterCommand(uint8_t command) {
   packet.command = command;
   return esp_now_send(xtPeerMac_, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet)) ==
          ESP_OK;
-#else
-  (void)command;
-  return false;
-#endif
 }
 
 void EspNowTelemetryReceiver::applyPending() {

@@ -44,7 +44,7 @@ void test_feed_dc_frame_esphome_sample() {
       0x00, 0x59, 0x0D, 0x36, 0x3C, 0x00, 0x00, 0x00, 0x00, 0xF0};
   AtorchFrameParser parser;
   xt369p::meter::WattmeterTelemetry out{};
-  TEST_ASSERT_TRUE(parser.feed(frame, sizeof(frame), out));
+  TEST_ASSERT_TRUE(parser.feed(frame, sizeof(frame), out, /*nowMs=*/1000u));
   TEST_ASSERT_TRUE(out.valid);
   TEST_ASSERT_FLOAT_WITHIN(0.05f, 28.2f, out.voltageV);
   TEST_ASSERT_FLOAT_WITHIN(0.05f, 12.36f, out.capacityAh);

@@ -1,6 +1,5 @@
 #include "Wifi/EspWifiConnector.h"
 
-#ifndef UNIT_TEST
 
 #include "Util/SafeCopy.h"
 
@@ -138,4 +137,3 @@ void EspWifiConnector::loop() {
 
 }  // namespace wattcycle::wifi
 
-#endif

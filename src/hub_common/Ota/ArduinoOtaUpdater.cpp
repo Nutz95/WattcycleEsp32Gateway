@@ -1,6 +1,5 @@
 #include "Ota/ArduinoOtaUpdater.h"
 
-#ifndef UNIT_TEST
 
 #include <ArduinoOTA.h>
 
@@ -28,4 +27,3 @@ void ArduinoOtaUpdater::loop() {
 
 }  // namespace wattcycle::ota
 
-#endif

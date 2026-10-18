@@ -3,9 +3,7 @@
 #include "Util/MacAddress.h"
 #include "Util/SafeCopy.h"
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#endif
 
 namespace xt369p::telemetry {
 namespace {
@@ -100,11 +98,7 @@ void TelemetryPoller::drainCommands() {
 }
 
 void TelemetryPoller::loop() {
-#ifndef UNIT_TEST
   const uint32_t nowMs = millis();
-#else
-  const uint32_t nowMs = 0;
-#endif
   if (!started_) {
     return;
   }

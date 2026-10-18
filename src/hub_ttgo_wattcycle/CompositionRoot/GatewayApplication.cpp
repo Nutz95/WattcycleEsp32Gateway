@@ -2,9 +2,7 @@
 
 #include "Config/TimingConstants.h"
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#endif
 
 namespace wattcycle::composition {
 
@@ -32,13 +30,8 @@ bool GatewayApplication::begin() {
   statusDisplay_.begin();
   buttonNavigator_.begin();
   espHealthSampler_.begin();
-#ifndef UNIT_TEST
   bootMs_ = millis();
   lastInputMs_ = bootMs_;
-#else
-  bootMs_ = 0;
-  lastInputMs_ = 0;
-#endif
 
   if (!config::AppConfigFactory::hasWifiCredentials(appConfig_)) {
     telemetryStore_.setWifiState(false, "");
@@ -60,20 +53,14 @@ bool GatewayApplication::begin() {
     otaUpdater_.begin(appConfig_.otaHostname);
     webGateway_.begin(appConfig_.webServerPort);
     telemetryStore_.setWebPort(appConfig_.webServerPort);
-#ifndef UNIT_TEST
     Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
                   appConfig_.webServerPort);
-#endif
   } else {
-#ifndef UNIT_TEST
     Serial.println(F("Wi-Fi failed - starting BLE anyway"));
-#endif
   }
 
-#ifndef UNIT_TEST
   // Give Wi-Fi stack a beat before NimBLE enables the BT controller.
   delay(500);
-#endif
   telemetryPoller_.begin();
   startBleTask();
   refreshWifiStatus(millis());
@@ -95,13 +82,9 @@ void GatewayApplication::maybeStartEspNow(uint32_t nowMs) {
     return;
   }
   espNowAttempted_ = true;
-#ifndef UNIT_TEST
   Serial.printf("Starting ESP-NOW (deferred) heap=%u\n", ESP.getFreeHeap());
-#endif
   if (!espNowReceiver_.begin(appConfig_.espNowBridgeMac, appConfig_.espNowPmk)) {
-#ifndef UNIT_TEST
     Serial.println(F("ESP-NOW off - Wi-Fi/BMS kept"));
-#endif
   }
 }
 
@@ -120,9 +103,7 @@ void GatewayApplication::loop() {
   sampleEspHealth();
   handleButtons(nowMs);
   maybeSleepDisplay(nowMs);
-#ifndef UNIT_TEST
   delay(config::TimingConstants::kAppLoopDelayMs);
-#endif
 }
 
 void GatewayApplication::sampleEspHealth() {
@@ -145,11 +126,9 @@ void GatewayApplication::refreshWifiStatus(uint32_t nowMs) {
 
 void GatewayApplication::notifyDisplay() {
   lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     xTaskNotifyGive(displayTaskHandle_);
   }
-#endif
 }
 
 bool GatewayApplication::authUiActive() const {
@@ -208,11 +187,9 @@ void GatewayApplication::sleepDisplay() {
   }
   displayAsleep_ = true;
   statusDisplay_.setBacklight(false);
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     vTaskSuspend(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::wakeDisplay(uint32_t nowMs) {
@@ -223,12 +200,10 @@ void GatewayApplication::wakeDisplay(uint32_t nowMs) {
   displayAsleep_ = false;
   statusDisplay_.setBacklight(true);
   lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     vTaskResume(displayTaskHandle_);
     xTaskNotifyGive(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
@@ -263,7 +238,6 @@ uint32_t GatewayApplication::displayFingerprint() const {
          (static_cast<uint32_t>(gateway.webPort) << 4);
 }
 
-#ifndef UNIT_TEST
 
 void GatewayApplication::startBleTask() {
   if (bleTaskHandle_ != nullptr) {
@@ -319,12 +293,5 @@ void GatewayApplication::displayTaskLoop() {
   }
 }
 
-#else
-
-void GatewayApplication::startBleTask() {}
-
-void GatewayApplication::startDisplayTask() {}
-
-#endif
 
 }  // namespace wattcycle::composition

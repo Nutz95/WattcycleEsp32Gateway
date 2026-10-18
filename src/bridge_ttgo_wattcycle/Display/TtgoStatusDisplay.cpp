@@ -2,7 +2,6 @@
 
 #include "Display/DisplayPins.h"
 
-#ifndef UNIT_TEST
 
 #include <Arduino.h>
 
@@ -274,4 +273,3 @@ void TtgoStatusDisplay::render(const telemetry::ITelemetryStore& store) {
 
 }  // namespace wattcycle::display
 
-#endif

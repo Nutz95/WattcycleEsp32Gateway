@@ -4,9 +4,7 @@
 
 #include <cstdio>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#endif
 
 namespace xt369p::display {
 namespace {
@@ -20,7 +18,6 @@ constexpr uint16_t kDanger = 0xF800;
 }  // namespace
 
 void TtgoStatusDisplay::begin() {
-#ifndef UNIT_TEST
   tft_.init();
   tft_.setRotation(1);
   tft_.fillScreen(kBg);
@@ -30,16 +27,11 @@ void TtgoStatusDisplay::begin() {
   sprite_.createSprite(240, 135);
   ready_ = true;
   backlightOn_ = true;
-#endif
 }
 
 void TtgoStatusDisplay::setBacklight(bool on) {
-#ifndef UNIT_TEST
   backlightOn_ = on;
   digitalWrite(kBacklightGpio, on ? HIGH : LOW);
-#else
-  backlightOn_ = on;
-#endif
 }
 
 bool TtgoStatusDisplay::isBacklightOn() const {
@@ -60,7 +52,6 @@ uint8_t TtgoStatusDisplay::pageIndex() const {
 }
 
 void TtgoStatusDisplay::drawChrome(const char* title) {
-#ifndef UNIT_TEST
   sprite_.fillSprite(kBg);
   sprite_.setTextDatum(TL_DATUM);
   sprite_.setTextColor(kAccent, kBg);
@@ -68,27 +59,16 @@ void TtgoStatusDisplay::drawChrome(const char* title) {
   sprite_.setTextColor(kInk, kBg);
   sprite_.drawString(title, 80, 4, 2);
   sprite_.drawFastHLine(8, 22, 224, kMuted);
-#else
-  (void)title;
-#endif
 }
 
 void TtgoStatusDisplay::drawMetric(int x, int y, const char* label, const char* value) {
-#ifndef UNIT_TEST
   sprite_.setTextColor(kMuted, kBg);
   sprite_.drawString(label, x, y, 1);
   sprite_.setTextColor(kInk, kBg);
   sprite_.drawString(value, x, y + 12, 2);
-#else
-  (void)x;
-  (void)y;
-  (void)label;
-  (void)value;
-#endif
 }
 
 void TtgoStatusDisplay::drawOverview(const telemetry::ITelemetryStore& store) {
-#ifndef UNIT_TEST
   drawChrome("Solar");
   const auto m = store.meter();
   const auto g = store.status();
@@ -128,13 +108,9 @@ void TtgoStatusDisplay::drawOverview(const telemetry::ITelemetryStore& store) {
   drawMetric(12, 98, "mAh", mah);
   drawMetric(120, 98, "Energy", e);
   sprite_.pushSprite(0, 0);
-#else
-  (void)store;
-#endif
 }
 
 void TtgoStatusDisplay::drawGateway(const telemetry::ITelemetryStore& store) {
-#ifndef UNIT_TEST
   drawChrome("Bridge");
   const auto g = store.status();
 
@@ -160,13 +136,9 @@ void TtgoStatusDisplay::drawGateway(const telemetry::ITelemetryStore& store) {
     sprite_.drawString(g.lastError, 12, 112, 1);
   }
   sprite_.pushSprite(0, 0);
-#else
-  (void)store;
-#endif
 }
 
 void TtgoStatusDisplay::drawEsp(const telemetry::ITelemetryStore& store) {
-#ifndef UNIT_TEST
   drawChrome("ESP");
   const auto e = store.espHealth();
   char c0[24];
@@ -182,9 +154,6 @@ void TtgoStatusDisplay::drawEsp(const telemetry::ITelemetryStore& store) {
   drawMetric(12, 78, "Heap", heap);
   drawMetric(120, 78, "Chip", temp);
   sprite_.pushSprite(0, 0);
-#else
-  (void)store;
-#endif
 }
 
 void TtgoStatusDisplay::render(const telemetry::ITelemetryStore& store) {

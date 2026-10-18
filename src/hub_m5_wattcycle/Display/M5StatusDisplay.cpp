@@ -8,7 +8,6 @@
 namespace wattcycle::display {
 
 void M5StatusDisplay::begin() {
-#ifndef UNIT_TEST
   bus::SharedSpiLock::begin();
   auto boardConfiguration = M5.config();
   boardConfiguration.internal_imu = false;
@@ -35,16 +34,11 @@ void M5StatusDisplay::begin() {
   pushFrame();
   Serial.printf("M5 display ready heap=%u pmic=%d\n", ESP.getFreeHeap(),
                 static_cast<int>(M5.Power.getType()));
-#else
-  ready_ = true;
-#endif
 }
 
 void M5StatusDisplay::setBacklight(bool on) {
   backlightOn_ = on;
-#ifndef UNIT_TEST
   M5.Display.setBrightness(on ? 80 : 0);
-#endif
 }
 
 bool M5StatusDisplay::isBacklightOn() const {
@@ -64,17 +58,14 @@ void M5StatusDisplay::previousPage() {
 }
 
 void M5StatusDisplay::pushFrame() {
-#ifndef UNIT_TEST
   bus::SpiGuard guard;
   canvas_.pushSprite(0, 0);
-#endif
 }
 
 void M5StatusDisplay::render(const telemetry::ITelemetryStore& store) {
   if (!ready_) {
     return;
   }
-#ifndef UNIT_TEST
   switch (pageIndex_) {
     case 0:
       drawM5OverviewPage(canvas_, store);
@@ -111,22 +102,15 @@ void M5StatusDisplay::render(const telemetry::ITelemetryStore& store) {
       break;
   }
   pushFrame();
-#else
-  (void)store;
-#endif
 }
 
 void M5StatusDisplay::renderAuthPrompt(const auth::AuthPrompt& prompt) {
-#ifndef UNIT_TEST
   if (!ready_ || prompt.kind == auth::AuthPromptKind::None) {
     return;
   }
   drawM5AuthPromptPage(canvas_, prompt);
   drawM5ButtonFooter(canvas_, pageIndex_, "OK");
   pushFrame();
-#else
-  (void)prompt;
-#endif
 }
 
 }  // namespace wattcycle::display

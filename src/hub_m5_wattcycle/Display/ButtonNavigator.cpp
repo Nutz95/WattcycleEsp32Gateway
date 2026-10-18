@@ -2,9 +2,7 @@
 
 #include "Config/TimingConstants.h"
 
-#ifndef UNIT_TEST
 #include <M5Unified.h>
-#endif
 
 namespace wattcycle::display {
 
@@ -14,7 +12,6 @@ void ButtonNavigator::begin() {
 
 ButtonEvent ButtonNavigator::poll(uint32_t nowMs) {
   ButtonEvent event{};
-#ifndef UNIT_TEST
   M5.update();
   if ((nowMs - lastEdgeMs_) < config::TimingConstants::kButtonDebounceMs) {
     return event;
@@ -32,9 +29,6 @@ ButtonEvent ButtonNavigator::poll(uint32_t nowMs) {
     event.anyPress = true;
     event.action = ButtonAction::Confirm;
   }
-#else
-  (void)nowMs;
-#endif
   return event;
 }
 

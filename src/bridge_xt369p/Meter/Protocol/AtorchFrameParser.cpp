@@ -1,9 +1,5 @@
 #include "Meter/Protocol/AtorchFrameParser.h"
 
-#ifndef UNIT_TEST
-#include <Arduino.h>
-#endif
-
 #include <cstring>
 
 namespace xt369p::meter {
@@ -78,7 +74,8 @@ float AtorchFrameParser::resolveEnergyWh(uint32_t energyRaw, float capacityAh, f
   return best;
 }
 
-bool AtorchFrameParser::feed(const uint8_t* data, size_t length, WattmeterTelemetry& out) {
+bool AtorchFrameParser::feed(const uint8_t* data, size_t length, WattmeterTelemetry& out,
+                             uint32_t nowMs) {
   bool produced = false;
   for (size_t i = 0; i < length; ++i) {
     if (len_ >= kBufCap) {
@@ -86,14 +83,14 @@ bool AtorchFrameParser::feed(const uint8_t* data, size_t length, WattmeterTeleme
       len_ = kBufCap / 2;
     }
     buf_[len_++] = data[i];
-    if (tryConsume(out)) {
+    if (tryConsume(out, nowMs)) {
       produced = true;
     }
   }
   return produced;
 }
 
-bool AtorchFrameParser::tryConsume(WattmeterTelemetry& out) {
+bool AtorchFrameParser::tryConsume(WattmeterTelemetry& out, uint32_t nowMs) {
   size_t start = 0;
   while (start + 2 < len_) {
     if (buf_[start] == 0xFF && buf_[start + 1] == 0x55) {
@@ -150,13 +147,6 @@ bool AtorchFrameParser::tryConsume(WattmeterTelemetry& out) {
       static_cast<uint32_t>(be16(f + 26)) * 3600u + static_cast<uint32_t>(f[28]) * 60u + f[29];
 
   ++frameCount_;
-#ifndef UNIT_TEST
-  if ((frameCount_ % 30u) == 1u) {
-    Serial.printf("DC raw cap=%02X%02X%02X wh=%02X%02X%02X%02X -> %.3fAh %.4fWh\n",
-                  f[10], f[11], f[12], f[13], f[14], f[15], f[16],
-                  static_cast<double>(capacity), static_cast<double>(energy));
-  }
-#endif
   out.valid = true;
   out.voltageV = voltage;
   out.currentA = current;
@@ -169,11 +159,7 @@ bool AtorchFrameParser::tryConsume(WattmeterTelemetry& out) {
   out.backlightS = f[30];
   out.checksumOk = ckOk;
   out.frameCount = frameCount_;
-#ifndef UNIT_TEST
-  out.updatedAtMs = millis();
-#else
-  out.updatedAtMs = 0;
-#endif
+  out.updatedAtMs = nowMs;
 
   std::memmove(buf_, buf_ + need, len_ - need);
   len_ -= need;

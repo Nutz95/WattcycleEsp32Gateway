@@ -5,14 +5,11 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
 #include <time.h>
-#endif
 
 namespace wattcycle::time_sync {
 namespace {
-#ifndef UNIT_TEST
 /// Retry interval while waiting for first SNTP answer (non-blocking polls).
 constexpr uint32_t kRetryMs = 15000;
 constexpr const char* kNtpServer = "pool.ntp.org";
@@ -32,11 +29,9 @@ bool wallClockLooksValid() {
   const std::time_t epoch = std::time(nullptr);
   return epoch >= kMinPlausibleEpoch;
 }
-#endif
 }  // namespace
 
 void NtpClock::begin(const char* posixTimeZone) {
-#ifndef UNIT_TEST
   wattcycle::util::copyCString(posixTimeZone_, sizeof(posixTimeZone_),
                                posixTimeZone != nullptr ? posixTimeZone : "UTC0");
   // Keep libc epoch UTC; local formatting applies posixTimeZone_ via TZ.
@@ -44,14 +39,9 @@ void NtpClock::begin(const char* posixTimeZone) {
   configTime(0, 0, kNtpServer);
   applyTimeZone(posixTimeZone_);
   begun_ = true;
-#else
-  (void)posixTimeZone;
-  begun_ = true;
-#endif
 }
 
 void NtpClock::loop(bool wifiConnected) {
-#ifndef UNIT_TEST
   if (!begun_ || !wifiConnected || synced_) {
     return;
   }
@@ -70,9 +60,6 @@ void NtpClock::loop(bool wifiConnected) {
   } else {
     Serial.println(F("NTP sync pending (non-blocking)"));
   }
-#else
-  (void)wifiConnected;
-#endif
 }
 
 bool NtpClock::isSynced() const {
@@ -80,27 +67,18 @@ bool NtpClock::isSynced() const {
 }
 
 bool NtpClock::nowUtc(struct tm& out) const {
-#ifndef UNIT_TEST
   if (!synced_ || !wallClockLooksValid()) {
     return false;
   }
   const std::time_t epoch = std::time(nullptr);
   return gmtime_r(&epoch, &out) != nullptr;
-#else
-  (void)out;
-  return false;
-#endif
 }
 
 std::time_t NtpClock::nowEpoch() const {
-#ifndef UNIT_TEST
   if (!synced_ || !wallClockLooksValid()) {
     return 0;
   }
   return std::time(nullptr);
-#else
-  return 0;
-#endif
 }
 
 bool NtpClock::formatUtcDate(char* out, size_t capacity) const {
@@ -119,7 +97,6 @@ bool NtpClock::formatUtcDate(char* out, size_t capacity) const {
 
 bool NtpClock::formatLocalDateTime(char* dateOut, size_t dateCapacity, char* timeOut,
                                    size_t timeCapacity) const {
-#ifndef UNIT_TEST
   if (!synced_ || dateOut == nullptr || timeOut == nullptr || dateCapacity < 11 ||
       timeCapacity < 6 || !wallClockLooksValid()) {
     return false;
@@ -133,13 +110,6 @@ bool NtpClock::formatLocalDateTime(char* dateOut, size_t dateCapacity, char* tim
                 info.tm_year + 1900);
   std::snprintf(timeOut, timeCapacity, "%02d:%02d", info.tm_hour, info.tm_min);
   return true;
-#else
-  (void)dateOut;
-  (void)dateCapacity;
-  (void)timeOut;
-  (void)timeCapacity;
-  return false;
-#endif
 }
 
 }  // namespace wattcycle::time_sync

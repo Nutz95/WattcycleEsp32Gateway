@@ -5,16 +5,13 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
 #include <FS.h>
 #include <SD.h>
 #include <SPI.h>
-#endif
 
 namespace wattcycle::storage {
 namespace {
-#ifndef UNIT_TEST
 constexpr int kSdCs = 4;
 constexpr int kSdSck = 18;
 constexpr int kSdMiso = 19;
@@ -38,11 +35,9 @@ bool isYmd(const char* name) {
   }
   return true;
 }
-#endif
 }  // namespace
 
 bool SdDailyHistory::begin() {
-#ifndef UNIT_TEST
   bus::SharedSpiLock::begin();
   bus::SpiGuard guard;
   SPI.begin(kSdSck, kSdMiso, kSdMosi, kSdCs);
@@ -59,10 +54,6 @@ bool SdDailyHistory::begin() {
   ready_ = true;
   Serial.println(F("SD daily history ready (/history/YYYY-MM-DD.csv)"));
   return true;
-#else
-  ready_ = true;
-  return true;
-#endif
 }
 
 bool SdDailyHistory::isReady() const {
@@ -70,7 +61,6 @@ bool SdDailyHistory::isReady() const {
 }
 
 void SdDailyHistory::append(const HistorySample& sample) {
-#ifndef UNIT_TEST
   if (!ready_ || sample.epochUtc == 0) {
     return;
   }
@@ -107,13 +97,9 @@ void SdDailyHistory::append(const HistorySample& sample) {
               sample.packRemainingAh, sample.packMosTempC, sample.packPcbTempC,
               sample.solarEnergyWh, sample.solarCapacityAh);
   file.close();
-#else
-  (void)sample;
-#endif
 }
 
 size_t SdDailyHistory::listDays(char out[][11], size_t maxDays) const {
-#ifndef UNIT_TEST
   if (!ready_ || out == nullptr || maxDays == 0) {
     return 0;
   }
@@ -142,16 +128,10 @@ size_t SdDailyHistory::listDays(char out[][11], size_t maxDays) const {
   }
   dir.close();
   return count;
-#else
-  (void)out;
-  (void)maxDays;
-  return 0;
-#endif
 }
 
 bool SdDailyHistory::streamDay(const char* yyyymmdd, HistoryStreamBegin begin,
                                HistoryChunkSink sink, void* user) const {
-#ifndef UNIT_TEST
   if (!ready_ || yyyymmdd == nullptr || begin == nullptr || sink == nullptr || !isYmd(yyyymmdd)) {
     return false;
   }
@@ -180,13 +160,6 @@ bool SdDailyHistory::streamDay(const char* yyyymmdd, HistoryStreamBegin begin,
   }
   file.close();
   return true;
-#else
-  (void)yyyymmdd;
-  (void)begin;
-  (void)sink;
-  (void)user;
-  return false;
-#endif
 }
 
 }  // namespace wattcycle::storage

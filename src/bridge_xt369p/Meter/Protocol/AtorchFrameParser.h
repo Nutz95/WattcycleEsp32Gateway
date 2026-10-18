@@ -11,7 +11,8 @@ namespace xt369p::meter {
 class AtorchFrameParser {
  public:
   /// Feed raw SPP bytes; returns true when a new DC reading was produced.
-  bool feed(const uint8_t* data, size_t length, WattmeterTelemetry& out);
+  /// nowMs is stamped onto out.updatedAtMs (pass millis() on device).
+  bool feed(const uint8_t* data, size_t length, WattmeterTelemetry& out, uint32_t nowMs);
 
   void reset();
 
@@ -29,7 +30,7 @@ class AtorchFrameParser {
   static uint32_t be24(const uint8_t* p);
   static uint32_t be32(const uint8_t* p);
   static uint16_t be16(const uint8_t* p);
-  bool tryConsume(WattmeterTelemetry& out);
+  bool tryConsume(WattmeterTelemetry& out, uint32_t nowMs);
 
   uint8_t buf_[kBufCap] = {};
   size_t len_ = 0;

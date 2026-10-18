@@ -2,7 +2,6 @@
 
 #include "Config/TimingConstants.h"
 
-#ifndef UNIT_TEST
 
 #include <Arduino.h>
 #include <esp_freertos_hooks.h>
@@ -78,20 +77,3 @@ telemetry::EspHealth EspHealthSampler::snapshot() const {
 
 }  // namespace xt369p::esp_sys
 
-#else
-
-namespace xt369p::esp_sys {
-
-void EspHealthSampler::begin() {}
-
-bool EspHealthSampler::sample() {
-  return false;
-}
-
-telemetry::EspHealth EspHealthSampler::snapshot() const {
-  return health_;
-}
-
-}  // namespace xt369p::esp_sys
-
-#endif

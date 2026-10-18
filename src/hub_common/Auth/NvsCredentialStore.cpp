@@ -4,22 +4,17 @@
 
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Preferences.h>
-#endif
 
 namespace wattcycle::auth {
 namespace {
-#ifndef UNIT_TEST
 constexpr const char* kNamespace = "wg_auth";
 constexpr const char* kKeyUser = "user";
 constexpr const char* kKeySalt = "salt";
 constexpr const char* kKeyHash = "hash";
-#endif
 }  // namespace
 
 bool NvsCredentialStore::hasCredentials() const {
-#ifndef UNIT_TEST
   // Read-write open creates the namespace if missing (avoids Preferences spam).
   Preferences prefs;
   if (!prefs.begin(kNamespace, false)) {
@@ -28,13 +23,9 @@ bool NvsCredentialStore::hasCredentials() const {
   const bool present = prefs.isKey(kKeyUser) && prefs.isKey(kKeySalt) && prefs.isKey(kKeyHash);
   prefs.end();
   return present;
-#else
-  return false;
-#endif
 }
 
 bool NvsCredentialStore::load(StoredCredentials& out) const {
-#ifndef UNIT_TEST
   Preferences prefs;
   if (!prefs.begin(kNamespace, true)) {
     return false;
@@ -52,14 +43,9 @@ bool NvsCredentialStore::load(StoredCredentials& out) const {
   prefs.getBytes(kKeyHash, out.hash, kHashBytes);
   prefs.end();
   return true;
-#else
-  (void)out;
-  return false;
-#endif
 }
 
 bool NvsCredentialStore::save(const StoredCredentials& credentials) {
-#ifndef UNIT_TEST
   Preferences prefs;
   if (!prefs.begin(kNamespace, false)) {
     return false;
@@ -69,21 +55,15 @@ bool NvsCredentialStore::save(const StoredCredentials& credentials) {
                   prefs.putBytes(kKeyHash, credentials.hash, kHashBytes) == kHashBytes;
   prefs.end();
   return ok;
-#else
-  (void)credentials;
-  return false;
-#endif
 }
 
 void NvsCredentialStore::clear() {
-#ifndef UNIT_TEST
   Preferences prefs;
   if (!prefs.begin(kNamespace, false)) {
     return;
   }
   prefs.clear();
   prefs.end();
-#endif
 }
 
 }  // namespace wattcycle::auth

@@ -4,9 +4,7 @@
 
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#endif
 
 namespace wattcycle::composition {
 
@@ -36,17 +34,12 @@ bool GatewayApplication::begin() {
   // fragments heap and classic-ESP32 STA often fails to associate.
   buttonNavigator_.begin();
   espHealthSampler_.begin();
-#ifndef UNIT_TEST
   bootMs_ = millis();
   lastInputMs_ = bootMs_;
   Serial.printf("SSID len=%u pass len=%u\n",
                 appConfig_.wifiSsid ? static_cast<unsigned>(std::strlen(appConfig_.wifiSsid)) : 0u,
                 appConfig_.wifiPassword ? static_cast<unsigned>(std::strlen(appConfig_.wifiPassword))
                                         : 0u);
-#else
-  bootMs_ = 0;
-  lastInputMs_ = 0;
-#endif
 
   // Splash first so the panel shows life during Wi-Fi / SD bring-up.
   statusDisplay_.begin();
@@ -66,9 +59,7 @@ bool GatewayApplication::begin() {
   if (wifiOk) {
     maybeStartWebServices();
   } else {
-#ifndef UNIT_TEST
     Serial.println(F("Wi-Fi IP pending - ESP-NOW will use scanned AP channel"));
-#endif
   }
 
   historyStore_.begin();
@@ -88,10 +79,8 @@ void GatewayApplication::maybeStartWebServices() {
   webGateway_.begin(appConfig_.webServerPort);
   telemetryStore_.setWebPort(appConfig_.webServerPort);
   webServicesStarted_ = true;
-#ifndef UNIT_TEST
   Serial.printf("Web UI: http://%s:%u/\n", telemetryStore_.status().wifiIp,
                 appConfig_.webServerPort);
-#endif
 }
 
 void GatewayApplication::maybeStartEspNow(uint32_t nowMs) {
@@ -113,21 +102,15 @@ void GatewayApplication::maybeStartEspNow(uint32_t nowMs) {
   if (!wifiConnector_.isConnected()) {
     channel = wifiConnector_.resolveSsidChannel(appConfig_.wifiSsid);
     if (channel == 0) {
-#ifndef UNIT_TEST
       Serial.println(F("ESP-NOW defer - SSID not in scan (no channel)"));
-#endif
       return;
     }
   }
 
-#ifndef UNIT_TEST
   Serial.printf("Starting multi-peer ESP-NOW ch=%u heap=%u\n", channel, ESP.getFreeHeap());
-#endif
   if (!espNowReceiver_.begin(appConfig_.espNowBmsBridgeMac, appConfig_.espNowXtBridgeMac,
                              appConfig_.espNowEcoflowBridgeMac, appConfig_.espNowPmk, channel)) {
-#ifndef UNIT_TEST
     Serial.println(F("ESP-NOW off - will retry"));
-#endif
   }
 }
 
@@ -139,11 +122,7 @@ void GatewayApplication::serviceNetwork() {
 }
 
 void GatewayApplication::loop() {
-#ifndef UNIT_TEST
   const uint32_t nowMs = millis();
-#else
-  const uint32_t nowMs = 0;
-#endif
   serviceNetwork();
   maybeStartWebServices();
   maybeStartEspNow(nowMs);
@@ -168,9 +147,7 @@ void GatewayApplication::loop() {
     lastBacklightRecoverMs_ = nowMs;
     statusDisplay_.setBacklight(true);
   }
-#ifndef UNIT_TEST
   delay(config::TimingConstants::kAppLoopDelayMs);
-#endif
 }
 
 void GatewayApplication::sampleEspHealth() {
@@ -218,11 +195,9 @@ void GatewayApplication::refreshWifiStatus(uint32_t nowMs) {
 
 void GatewayApplication::notifyDisplay() {
   lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     xTaskNotifyGive(displayTaskHandle_);
   }
-#endif
 }
 
 bool GatewayApplication::authUiActive() const {
@@ -283,11 +258,9 @@ void GatewayApplication::sleepDisplay() {
   }
   displayAsleep_ = true;
   statusDisplay_.setBacklight(false);
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     vTaskSuspend(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::wakeDisplay(uint32_t nowMs) {
@@ -298,12 +271,10 @@ void GatewayApplication::wakeDisplay(uint32_t nowMs) {
   displayAsleep_ = false;
   statusDisplay_.setBacklight(true);
   lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     vTaskResume(displayTaskHandle_);
     xTaskNotifyGive(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
@@ -347,7 +318,6 @@ uint32_t GatewayApplication::displayFingerprint() const {
          (static_cast<uint32_t>(ntpClock_.nowEpoch() / 60u) & 0xFFu);
 }
 
-#ifndef UNIT_TEST
 
 void GatewayApplication::startDisplayTask() {
   if (displayTaskHandle_ != nullptr) {
@@ -380,10 +350,5 @@ void GatewayApplication::displayTaskLoop() {
   }
 }
 
-#else
-
-void GatewayApplication::startDisplayTask() {}
-
-#endif
 
 }  // namespace wattcycle::composition

@@ -6,12 +6,10 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
-#endif
 
 namespace wattcycle::espnow_tx {
 namespace {
@@ -24,7 +22,6 @@ int16_t toDeciCelsius(float celsius) {
 
 uint8_t EspNowTelemetryPublisher::resolveChannel(const char* wifiSsid,
                                                  uint8_t fixedChannel) const {
-#ifndef UNIT_TEST
   if (fixedChannel >= 1 && fixedChannel <= 13) {
     return fixedChannel;
   }
@@ -41,15 +38,10 @@ uint8_t EspNowTelemetryPublisher::resolveChannel(const char* wifiSsid,
   }
   WiFi.scanDelete();
   return channel;
-#else
-  (void)wifiSsid;
-  return fixedChannel >= 1 ? fixedChannel : 1;
-#endif
 }
 
 bool EspNowTelemetryPublisher::begin(const char* wifiSsid, const char* peerMac,
                                      uint8_t fixedChannel, const char* pmk) {
-#ifndef UNIT_TEST
   ready_ = false;
   channel_ = 0;
   lastError_[0] = '\0';
@@ -117,14 +109,6 @@ bool EspNowTelemetryPublisher::begin(const char* wifiSsid, const char* peerMac,
                 peerMac_[1], peerMac_[2], peerMac_[3], peerMac_[4], peerMac_[5], channel_,
                 encrypt_ ? 1u : 0u);
   return true;
-#else
-  (void)wifiSsid;
-  (void)peerMac;
-  (void)pmk;
-  channel_ = fixedChannel >= 1 ? fixedChannel : 1;
-  ready_ = true;
-  return true;
-#endif
 }
 
 bool EspNowTelemetryPublisher::isReady() const {
@@ -136,7 +120,6 @@ uint8_t EspNowTelemetryPublisher::channel() const {
 }
 
 void EspNowTelemetryPublisher::publishProduct(const telemetry::ITelemetryStore& store) {
-#ifndef UNIT_TEST
   const auto product = store.product();
   const auto status = store.status();
   wattcycle_bridge::EspNowProductPacketV1 packet = {};
@@ -159,13 +142,9 @@ void EspNowTelemetryPublisher::publishProduct(const telemetry::ITelemetryStore& 
   if (err != ESP_OK) {
     std::snprintf(lastError_, sizeof(lastError_), "esp_now_prod_%d", static_cast<int>(err));
   }
-#else
-  (void)store;
-#endif
 }
 
 void EspNowTelemetryPublisher::publish(const telemetry::ITelemetryStore& store) {
-#ifndef UNIT_TEST
   if (!ready_) {
     return;
   }
@@ -256,9 +235,6 @@ void EspNowTelemetryPublisher::publish(const telemetry::ITelemetryStore& store) 
     lastProductPublishMs_ = nowMs;
     publishProduct(store);
   }
-#else
-  (void)store;
-#endif
 }
 
 const char* EspNowTelemetryPublisher::lastError() const {

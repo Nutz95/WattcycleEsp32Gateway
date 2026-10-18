@@ -7,13 +7,7 @@
 
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#else
-static uint32_t millis() {
-  return 0;
-}
-#endif
 
 namespace wattcycle::auth {
 

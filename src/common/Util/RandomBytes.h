@@ -5,7 +5,7 @@
 
 namespace wattcycle::util {
 
-/// Cryptographic-quality random bytes (esp_random on device, rand in native tests).
+/// Fill buffer with random bytes (esp_random on ESP, rand on host).
 void fillRandom(uint8_t* buffer, size_t length);
 
 }  // namespace wattcycle::util

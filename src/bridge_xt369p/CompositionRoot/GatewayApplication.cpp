@@ -2,9 +2,7 @@
 
 #include "Config/TimingConstants.h"
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#endif
 
 namespace xt369p::composition {
 
@@ -22,46 +20,34 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
 bool GatewayApplication::begin() {
   buttonNavigator_.begin();
   espHealthSampler_.begin();
-#ifndef UNIT_TEST
   lastInputMs_ = millis();
-#endif
   telemetryStore_.setSppState(false, appConfig_.sppDeviceName, "waiting_radio");
   telemetryPoller_.begin();
 
   // Radio before TFT backlight — USB hubs brownout when display + Wi-Fi + Classic
   // BT inquiry come up together (PC USB is stiff enough; hub rails are not).
-#ifndef UNIT_TEST
   Serial.printf("Free heap before ESP-NOW: %u\n", ESP.getFreeHeap());
-#endif
   const bool espNowOk =
       espNowPublisher_.begin(appConfig_.wifiSsid, appConfig_.espNowPeerMac, telemetryStore_,
                              appConfig_.espNowChannel, appConfig_.espNowPmk);
   telemetryStore_.setEspNowState(espNowOk, espNowPublisher_.channel(), appConfig_.espNowPeerMac,
                                  espNowOk ? "" : espNowPublisher_.lastError());
-#ifndef UNIT_TEST
   Serial.printf("ESP-NOW begin=%s ch=%u err='%s' heap=%u\n", espNowOk ? "ok" : "fail",
                 espNowPublisher_.channel(), espNowPublisher_.lastError(), ESP.getFreeHeap());
   delay(config::TimingConstants::kRadioSettleMs);
   Serial.printf("Free heap before BT: %u\n", ESP.getFreeHeap());
-#endif
 
   telemetryPoller_.enableRadio();
-#ifndef UNIT_TEST
   Serial.printf("Free heap after BT: %u\n", ESP.getFreeHeap());
-#endif
 
   // First Classic BT connect attempt runs without the backlight current spike.
   startSppTask();
-#ifndef UNIT_TEST
   delay(config::TimingConstants::kRadioSettleMs);
-#endif
 
   statusDisplay_.begin();
   renderCurrentDisplay();
   startDisplayTask();
-#ifndef UNIT_TEST
   Serial.println(F("Boot: ESP-NOW + Classic SPP armed (no web / no STA join)"));
-#endif
   return espNowOk;
 }
 
@@ -78,18 +64,12 @@ void GatewayApplication::maybePublishEspNow(uint32_t nowMs) {
 }
 
 void GatewayApplication::loop() {
-#ifndef UNIT_TEST
   const uint32_t nowMs = millis();
-#else
-  const uint32_t nowMs = 0;
-#endif
   maybePublishEspNow(nowMs);
   sampleEspHealth();
   handleButtons(nowMs);
   maybeSleepDisplay(nowMs);
-#ifndef UNIT_TEST
   delay(config::TimingConstants::kAppLoopDelayMs);
-#endif
 }
 
 void GatewayApplication::sampleEspHealth() {
@@ -101,11 +81,9 @@ void GatewayApplication::sampleEspHealth() {
 
 void GatewayApplication::notifyDisplay() {
   lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     xTaskNotifyGive(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::handleButtons(uint32_t nowMs) {
@@ -133,11 +111,9 @@ void GatewayApplication::sleepDisplay() {
   }
   displayAsleep_ = true;
   statusDisplay_.setBacklight(false);
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     vTaskSuspend(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::wakeDisplay(uint32_t nowMs) {
@@ -148,12 +124,10 @@ void GatewayApplication::wakeDisplay(uint32_t nowMs) {
   displayAsleep_ = false;
   statusDisplay_.setBacklight(true);
   lastDisplayFingerprint_ = 0;
-#ifndef UNIT_TEST
   if (displayTaskHandle_ != nullptr) {
     vTaskResume(displayTaskHandle_);
     xTaskNotifyGive(displayTaskHandle_);
   }
-#endif
 }
 
 void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
@@ -182,7 +156,6 @@ uint32_t GatewayApplication::displayFingerprint() const {
          (gateway.sppConnected ? 2u : 0u) ^ gateway.espNowChannel;
 }
 
-#ifndef UNIT_TEST
 
 void GatewayApplication::startSppTask() {
   if (sppTaskHandle_ != nullptr) {
@@ -238,12 +211,5 @@ void GatewayApplication::displayTaskLoop() {
   }
 }
 
-#else
-
-void GatewayApplication::startSppTask() {}
-
-void GatewayApplication::startDisplayTask() {}
-
-#endif
 
 }  // namespace xt369p::composition

@@ -1,6 +1,5 @@
 #include "HttpApi/EspWebGateway.h"
 
-#ifndef UNIT_TEST
 
 #include "Auth/CredentialPolicy.h"
 #include "Telemetry/BinaryTelemetryCodec.h"
@@ -367,4 +366,3 @@ void EspWebGateway::handleNotFound() {
 
 }  // namespace wattcycle::web
 
-#endif

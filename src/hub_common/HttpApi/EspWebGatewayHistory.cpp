@@ -1,6 +1,5 @@
 #include "HttpApi/EspWebGateway.h"
 
-#ifndef UNIT_TEST
 
 #include <cstdio>
 #include <cstring>
@@ -119,4 +118,3 @@ void EspWebGateway::handleDeviceInfo() {
 
 }  // namespace wattcycle::web
 
-#endif

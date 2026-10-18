@@ -1,6 +1,5 @@
 #include "Display/M5DisplayTiles.h"
 
-#ifndef UNIT_TEST
 
 namespace wattcycle::display {
 
@@ -63,4 +62,3 @@ void drawFooterTile(M5Canvas& canvas, int x, int y, int w, int h, const char* to
 
 }  // namespace wattcycle::display
 
-#endif

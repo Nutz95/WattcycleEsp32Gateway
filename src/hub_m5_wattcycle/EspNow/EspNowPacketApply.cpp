@@ -4,9 +4,7 @@
 #include "Telemetry/SolarBridgeTelemetry.h"
 #include "Util/SafeCopy.h"
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
-#endif
 
 namespace wattcycle::espnow_rx {
 
@@ -27,9 +25,7 @@ void applySolarPacket(telemetry::ITelemetryStore& store, bool encrypt,
   solar.runtimeS = packet.runtimeS;
   solar.frameCount = packet.frameCount;
   solar.seq = packet.seq;
-#ifndef UNIT_TEST
   solar.receivedAtMs = millis();
-#endif
   util::copyCString(solar.sppTarget, sizeof(solar.sppTarget), packet.sppTarget);
   util::copyCString(solar.lastError, sizeof(solar.lastError), packet.lastError);
   if (packet.version >= 2) {
@@ -64,9 +60,7 @@ void applyEcoFlowPacket(telemetry::ITelemetryStore& store, bool encrypt,
   eco.remainMinutes = packet.remainMinutes;
   eco.seq = packet.seq;
   eco.telemetryCount = packet.telemetryCount;
-#ifndef UNIT_TEST
   eco.receivedAtMs = millis();
-#endif
   util::copyCString(eco.lastError, sizeof(eco.lastError), packet.lastError);
   if ((packet.flags & ecoflow_bridge::kFlagBridgeEspValid) != 0) {
     eco.bridgeEspValid = true;
@@ -109,9 +103,7 @@ void applyBmsTelemetryPacket(telemetry::ITelemetryStore& store,
       battery.cellTemperaturesC[i] = packet.cellTempDc[i] / 10.0f;
     }
   }
-#ifndef UNIT_TEST
   battery.updatedAtMs = millis();
-#endif
   store.updateBattery(battery);
   store.setBleState((packet.flags & wattcycle_bridge::kFlagBleConnected) != 0, "", "");
   store.setTelemetryFresh(battery.valid);

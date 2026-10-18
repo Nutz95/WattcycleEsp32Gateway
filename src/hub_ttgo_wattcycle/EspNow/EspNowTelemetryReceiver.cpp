@@ -7,10 +7,8 @@
 #include <cstddef>
 #include <cstring>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
 #include <esp_now.h>
-#endif
 
 namespace wattcycle::espnow_rx {
 
@@ -20,7 +18,6 @@ EspNowTelemetryReceiver::EspNowTelemetryReceiver(telemetry::ITelemetryStore& sto
     : store_(store) {}
 
 bool EspNowTelemetryReceiver::begin(const char* bridgeMac, const char* pmk) {
-#ifndef UNIT_TEST
   instance_ = this;
   ready_ = false;
 
@@ -70,12 +67,6 @@ bool EspNowTelemetryReceiver::begin(const char* bridgeMac, const char* pmk) {
   Serial.printf("ESP-NOW RX listening (enc=%u) heap=%u\n", encrypt_ ? 1u : 0u,
                 ESP.getFreeHeap());
   return true;
-#else
-  (void)bridgeMac;
-  (void)pmk;
-  ready_ = true;
-  return true;
-#endif
 }
 
 void EspNowTelemetryReceiver::loop() {
@@ -83,7 +74,6 @@ void EspNowTelemetryReceiver::loop() {
     applyPending();
   }
 
-#ifndef UNIT_TEST
   // Mark link stale if no packet for a few seconds.
   const auto solar = store_.solar();
   if (solar.receivedAtMs != 0 && (millis() - solar.receivedAtMs) > 5000u) {
@@ -93,7 +83,6 @@ void EspNowTelemetryReceiver::loop() {
       store_.updateSolar(stale);
     }
   }
-#endif
 }
 
 bool EspNowTelemetryReceiver::isReady() const {
@@ -137,7 +126,6 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
 }
 
 bool EspNowTelemetryReceiver::ensurePeer(const uint8_t mac[6]) {
-#ifndef UNIT_TEST
   if (esp_now_is_peer_exist(mac)) {
     return true;
   }
@@ -149,14 +137,9 @@ bool EspNowTelemetryReceiver::ensurePeer(const uint8_t mac[6]) {
     std::memcpy(peer.lmk, lmk_, xt369p_bridge::kPmkBytes);
   }
   return esp_now_add_peer(&peer) == ESP_OK;
-#else
-  (void)mac;
-  return true;
-#endif
 }
 
 bool EspNowTelemetryReceiver::sendMeterCommand(uint8_t command) {
-#ifndef UNIT_TEST
   if (!ready_ || !hasPeer_) {
     return false;
   }
@@ -169,10 +152,6 @@ bool EspNowTelemetryReceiver::sendMeterCommand(uint8_t command) {
   packet.command = command;
   return esp_now_send(peerMac_, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet)) ==
          ESP_OK;
-#else
-  (void)command;
-  return false;
-#endif
 }
 
 void EspNowTelemetryReceiver::applyPending() {
@@ -198,9 +177,7 @@ void EspNowTelemetryReceiver::applyPending() {
   solar.runtimeS = packet.runtimeS;
   solar.frameCount = packet.frameCount;
   solar.seq = packet.seq;
-#ifndef UNIT_TEST
   solar.receivedAtMs = millis();
-#endif
   util::copyCString(solar.sppTarget, sizeof(solar.sppTarget), packet.sppTarget);
   util::copyCString(solar.lastError, sizeof(solar.lastError), packet.lastError);
   if (packet.version >= 2) {

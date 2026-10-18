@@ -7,12 +7,10 @@
 #include <cstring>
 #include <string>
 
-#ifndef UNIT_TEST
 #include <Arduino.h>
 #include <BTAddress.h>
 #include <BTAdvertisedDevice.h>
 #include <BTScan.h>
-#endif
 
 namespace xt369p::meter {
 
@@ -39,7 +37,6 @@ bool AtorchSppClient::looksLikeBogusAddress(const uint8_t addr[6]) {
 }
 
 bool AtorchSppClient::beginAsMaster(const char* localName) {
-#ifndef UNIT_TEST
   if (started_) {
     return true;
   }
@@ -51,15 +48,9 @@ bool AtorchSppClient::beginAsMaster(const char* localName) {
   started_ = true;
   util::copyCString(lastError_, sizeof(lastError_), "");
   return true;
-#else
-  (void)localName;
-  started_ = true;
-  return true;
-#endif
 }
 
 bool AtorchSppClient::connectAddress(const char* btAddress) {
-#ifndef UNIT_TEST
   if (!started_ && !beginAsMaster("XT369P_GW")) {
     return false;
   }
@@ -86,15 +77,9 @@ bool AtorchSppClient::connectAddress(const char* btAddress) {
   parser_.reset();
   util::copyCString(lastError_, sizeof(lastError_), "");
   return true;
-#else
-  (void)btAddress;
-  connected_ = true;
-  return true;
-#endif
 }
 
 bool AtorchSppClient::connectName(const char* remoteName) {
-#ifndef UNIT_TEST
   if (!started_ && !beginAsMaster("XT369P_GW")) {
     return false;
   }
@@ -109,15 +94,9 @@ bool AtorchSppClient::connectName(const char* remoteName) {
   parser_.reset();
   util::copyCString(lastError_, sizeof(lastError_), "");
   return true;
-#else
-  (void)remoteName;
-  connected_ = true;
-  return true;
-#endif
 }
 
 bool AtorchSppClient::discoverAndConnect(const char* remoteName, uint32_t timeoutMs) {
-#ifndef UNIT_TEST
   if (!started_ && !beginAsMaster("XT369P_GW")) {
     return false;
   }
@@ -168,19 +147,12 @@ bool AtorchSppClient::discoverAndConnect(const char* remoteName, uint32_t timeou
   parser_.reset();
   util::copyCString(lastError_, sizeof(lastError_), "");
   return true;
-#else
-  (void)remoteName;
-  (void)timeoutMs;
-  return false;
-#endif
 }
 
 void AtorchSppClient::disconnect() {
-#ifndef UNIT_TEST
   if (connected_) {
     serialBt_.disconnect();
   }
-#endif
   connected_ = false;
   parser_.reset();
 }
@@ -190,7 +162,6 @@ bool AtorchSppClient::isConnected() const {
 }
 
 bool AtorchSppClient::poll(WattmeterTelemetry& out) {
-#ifndef UNIT_TEST
   if (!connected_ || !serialBt_.connected()) {
     connected_ = false;
     return false;
@@ -202,19 +173,14 @@ bool AtorchSppClient::poll(WattmeterTelemetry& out) {
     if (n <= 0) {
       break;
     }
-    if (parser_.feed(chunk, static_cast<size_t>(n), out)) {
+    if (parser_.feed(chunk, static_cast<size_t>(n), out, millis())) {
       produced = true;
     }
   }
   return produced;
-#else
-  (void)out;
-  return false;
-#endif
 }
 
 bool AtorchSppClient::sendCommand(MeterCommand command) {
-#ifndef UNIT_TEST
   if (!connected_ || !serialBt_.connected()) {
     connected_ = false;
     util::copyCString(lastError_, sizeof(lastError_), "spp_not_connected");
@@ -232,10 +198,6 @@ bool AtorchSppClient::sendCommand(MeterCommand command) {
   }
   util::copyCString(lastError_, sizeof(lastError_), "");
   return true;
-#else
-  (void)command;
-  return false;
-#endif
 }
 
 const char* AtorchSppClient::lastError() const {

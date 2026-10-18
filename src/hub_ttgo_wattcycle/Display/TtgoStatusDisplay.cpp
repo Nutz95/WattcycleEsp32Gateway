@@ -2,7 +2,6 @@
 
 #include "Display/DisplayPins.h"
 
-#ifndef UNIT_TEST
 
 #include <Arduino.h>
 
@@ -311,4 +310,3 @@ void TtgoStatusDisplay::renderAuthPrompt(const auth::AuthPrompt& prompt) {
 
 }  // namespace wattcycle::display
 
-#endif
