@@ -6,8 +6,11 @@
 #include "Bms/Protocol/ProductInfoParser.h"
 #include "Bms/Protocol/WarningInfoParser.h"
 
+#include <Arduino.h>
 #include <NimBLEDevice.h>
+
 #include <cstring>
+#include <string>
 
 namespace wattcycle::bms {
 namespace {
@@ -63,7 +66,11 @@ bool WattcycleBleClient::connect(const char* address, uint32_t timeoutMs) {
   scan->setActiveScan(true);
   scan->setInterval(45);
   scan->setWindow(15);
+#if defined(WATTCYCLE_NIMBLE_V2)
+  scan->start(2000, false, true);
+#else
   scan->start(2, false);
+#endif
   scan->clearResults();
 
   // Wattcycle / XDZN packs typically advertise a random address.
@@ -71,11 +78,19 @@ bool WattcycleBleClient::connect(const char* address, uint32_t timeoutMs) {
   NimBLEClient* client = nullptr;
   for (uint8_t addressType : addressTypes) {
     client = NimBLEDevice::createClient();
+#if defined(WATTCYCLE_NIMBLE_V2)
+    client->setConnectTimeout(timeoutMs < 1000 ? 1000 : timeoutMs);
+    Serial.printf("BLE connect %s type=%u...\n", address, addressType);
+    const bool connected =
+        client->connect(NimBLEAddress(std::string(address), addressType));
+#else
     const uint32_t timeoutSeconds =
         timeoutMs < 1000 ? 1 : (timeoutMs + 999) / 1000;
     client->setConnectTimeout(timeoutSeconds);
     Serial.printf("BLE connect %s type=%u...\n", address, addressType);
-    if (client->connect(NimBLEAddress(address, addressType))) {
+    const bool connected = client->connect(NimBLEAddress(address, addressType));
+#endif
+    if (connected) {
       Serial.printf("BLE connected (type=%u)\n", addressType);
       break;
     }
@@ -94,7 +109,12 @@ bool WattcycleBleClient::connect(const char* address, uint32_t timeoutMs) {
   }
 
   auto* notify = asCharacteristic(notifyCharacteristic_);
-  if (!notify->subscribe(true, notifyCallback)) {
+#if defined(WATTCYCLE_NIMBLE_V2)
+  const bool subscribed = notify->subscribe(true, notifyCallback, true);
+#else
+  const bool subscribed = notify->subscribe(true, notifyCallback);
+#endif
+  if (!subscribed) {
     Serial.println(F("BLE notify subscribe failed"));
     disconnect();
     return false;

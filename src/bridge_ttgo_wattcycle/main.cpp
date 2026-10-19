@@ -2,6 +2,7 @@
 #include "CompositionRoot/GatewayApplication.h"
 #include "Config/AppConfig.h"
 #include "Config/TimingConstants.h"
+#include "Display/ButtonNavigator.h"
 #include "Display/TtgoStatusDisplay.h"
 #include "EspNow/EspNowTelemetryPublisher.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
@@ -42,9 +43,10 @@ void setup() {
   static wattcycle::telemetry::InMemoryTelemetryStore telemetryStore;
   static wattcycle::espnow_tx::EspNowTelemetryPublisher espNowPublisher;
   static wattcycle::display::TtgoStatusDisplay statusDisplay;
+  static wattcycle::display::ButtonNavigator buttonSource;
 
   static wattcycle::composition::GatewayApplication application(
-      config, bleClient, telemetryStore, espNowPublisher, statusDisplay);
+      config, bleClient, telemetryStore, espNowPublisher, statusDisplay, buttonSource);
   gApplication = &application;
 
   if (!application.begin()) {

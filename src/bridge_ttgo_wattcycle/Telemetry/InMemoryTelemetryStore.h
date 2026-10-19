@@ -15,6 +15,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   void updateProduct(const bms::ProductInfo& product) override;
   void updateWarnings(const bms::WarningFlags& warnings) override;
   void setBleState(bool connected, const char* address, const char* error) override;
+  void setBleConnectProgress(uint32_t attempts, uint32_t nextRetryAtMs) override;
   void setEspNowState(bool ready, uint8_t channel, const char* peerMac,
                       const char* error) override;
   void setTelemetryFresh(bool fresh) override;

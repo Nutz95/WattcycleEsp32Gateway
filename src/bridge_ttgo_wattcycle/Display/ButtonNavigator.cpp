@@ -3,7 +3,6 @@
 #include "Config/TimingConstants.h"
 #include "Display/DisplayPins.h"
 
-
 #include <Arduino.h>
 
 namespace wattcycle::display {
@@ -41,4 +40,3 @@ ButtonEvent ButtonNavigator::poll(uint32_t nowMs) {
 }
 
 }  // namespace wattcycle::display
-

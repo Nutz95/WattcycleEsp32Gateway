@@ -10,38 +10,57 @@ GatewayApplication::GatewayApplication(const config::AppConfig& appConfig,
                                        bms::IBmsBleClient& bleClient,
                                        telemetry::ITelemetryStore& telemetryStore,
                                        espnow_tx::IEspNowTelemetryPublisher& espNowPublisher,
-                                       display::IStatusDisplay& statusDisplay)
+                                       display::IStatusDisplay& statusDisplay,
+                                       display::IButtonSource& buttonSource)
     : appConfig_(appConfig),
       telemetryStore_(telemetryStore),
       telemetryPoller_(bleClient, telemetryStore, appConfig),
       espNowPublisher_(espNowPublisher),
-      statusDisplay_(statusDisplay) {}
+      statusDisplay_(statusDisplay),
+      buttonSource_(buttonSource),
+      displayUi_(*this) {}
 
 bool GatewayApplication::begin() {
-  buttonNavigator_.begin();
+  buttonSource_.begin();
   espHealthSampler_.begin();
   lastInputMs_ = millis();
   telemetryStore_.setBleState(false, appConfig_.bmsBleAddress, "waiting_radio");
 
-  // Radio before TFT backlight — shared USB cold boot hung with display+Wi-Fi together.
-  Serial.printf("Free heap before ESP-NOW: %u\n", ESP.getFreeHeap());
-  const bool espNowOk =
-      espNowPublisher_.begin(appConfig_.wifiSsid, appConfig_.espNowPeerMac,
-                             appConfig_.espNowChannel, appConfig_.espNowPmk);
-  telemetryStore_.setEspNowState(espNowOk, espNowPublisher_.channel(), appConfig_.espNowPeerMac,
-                                 espNowOk ? "" : espNowPublisher_.lastError());
-  Serial.printf("ESP-NOW begin=%s ch=%u err='%s'\n", espNowOk ? "ok" : "fail",
-                espNowPublisher_.channel(), espNowPublisher_.lastError());
-  delay(300);
-
+  // Display first — verify TFT without BLE pack / hub nearby.
   statusDisplay_.begin();
   renderCurrentDisplay();
 
+  bool espNowOk = false;
+  const bool havePeer =
+      appConfig_.espNowPeerMac != nullptr && appConfig_.espNowPeerMac[0] != '\0';
+  if (havePeer) {
+    Serial.printf("Free heap before ESP-NOW: %u\n", ESP.getFreeHeap());
+    espNowOk = espNowPublisher_.begin(appConfig_.wifiSsid, appConfig_.espNowPeerMac,
+                                      appConfig_.espNowChannel, appConfig_.espNowPmk);
+    telemetryStore_.setEspNowState(espNowOk, espNowPublisher_.channel(), appConfig_.espNowPeerMac,
+                                   espNowOk ? "" : espNowPublisher_.lastError());
+    Serial.printf("ESP-NOW begin=%s ch=%u err='%s'\n", espNowOk ? "ok" : "fail",
+                  espNowPublisher_.channel(), espNowPublisher_.lastError());
+    delay(300);
+    notifyDisplay();
+  } else {
+    telemetryStore_.setEspNowState(false, 0, "", "no_peer_mac");
+    Serial.println(F("ESP-NOW skipped (set ESPNOW_PEER_MAC)"));
+  }
+
   telemetryPoller_.begin();
-  startDisplayTask();
+
+  boards::ui::AppCoreDisplayUiTaskConfig displayUiConfig;
+  displayUiConfig.taskName = "displayUi";
+  displayUiConfig.stackWords = config::TimingConstants::kDisplayTaskStackWords;
+  displayUiConfig.priority = config::TimingConstants::kDisplayTaskPriority;
+  displayUiConfig.refreshMs = config::TimingConstants::kDisplayRefreshMs;
+  displayUiConfig.coreId = config::TimingConstants::kAppCoreId;
+  displayUi_.start(displayUiConfig);
+
   startBleTask();
-  Serial.println(F("Boot: ESP-NOW + NimBLE BMS bridge (no web / no STA join)"));
-  return espNowOk;
+  Serial.println(F("Boot: display(APP_CPU) + NimBLE BMS (PRO_CPU); ESP-NOW optional"));
+  return true;
 }
 
 void GatewayApplication::maybePublishEspNow(uint32_t nowMs) {
@@ -74,13 +93,11 @@ void GatewayApplication::sampleEspHealth() {
 
 void GatewayApplication::notifyDisplay() {
   lastDisplayFingerprint_ = 0;
-  if (displayTaskHandle_ != nullptr) {
-    xTaskNotifyGive(displayTaskHandle_);
-  }
+  displayUi_.notify();
 }
 
 void GatewayApplication::handleButtons(uint32_t nowMs) {
-  const display::ButtonEvent event = buttonNavigator_.poll(nowMs);
+  const display::ButtonEvent event = buttonSource_.poll(nowMs);
   if (!event.anyPress) {
     return;
   }
@@ -90,6 +107,10 @@ void GatewayApplication::handleButtons(uint32_t nowMs) {
   }
 
   lastInputMs_ = nowMs;
+  if (event.action == display::ButtonAction::Sleep) {
+    sleepDisplay();
+    return;
+  }
   if (event.action == display::ButtonAction::Previous) {
     statusDisplay_.previousPage();
   } else if (event.action == display::ButtonAction::Next) {
@@ -104,9 +125,7 @@ void GatewayApplication::sleepDisplay() {
   }
   displayAsleep_ = true;
   statusDisplay_.setBacklight(false);
-  if (displayTaskHandle_ != nullptr) {
-    vTaskSuspend(displayTaskHandle_);
-  }
+  displayUi_.suspend();
 }
 
 void GatewayApplication::wakeDisplay(uint32_t nowMs) {
@@ -117,10 +136,7 @@ void GatewayApplication::wakeDisplay(uint32_t nowMs) {
   displayAsleep_ = false;
   statusDisplay_.setBacklight(true);
   lastDisplayFingerprint_ = 0;
-  if (displayTaskHandle_ != nullptr) {
-    vTaskResume(displayTaskHandle_);
-    xTaskNotifyGive(displayTaskHandle_);
-  }
+  displayUi_.resume();
 }
 
 void GatewayApplication::maybeSleepDisplay(uint32_t nowMs) {
@@ -137,17 +153,31 @@ void GatewayApplication::renderCurrentDisplay() {
   statusDisplay_.render(telemetryStore_);
 }
 
+bool GatewayApplication::isDisplayAsleep() const {
+  return displayAsleep_;
+}
+
+void GatewayApplication::refreshIfDirty() {
+  const uint32_t fingerprint = displayFingerprint();
+  if (fingerprint == lastDisplayFingerprint_) {
+    return;
+  }
+  renderCurrentDisplay();
+  lastDisplayFingerprint_ = fingerprint;
+}
+
 uint32_t GatewayApplication::displayFingerprint() const {
   const auto battery = telemetryStore_.battery();
   const auto esp = telemetryStore_.espHealth();
   const auto gateway = telemetryStore_.status();
+  const uint32_t bleRetryTick =
+      gateway.bleConnected ? 0u : static_cast<uint32_t>(millis() / 1000u);
   return (static_cast<uint32_t>(statusDisplay_.pageIndex()) << 24) ^ battery.updatedAtMs ^
          (static_cast<uint32_t>(battery.stateOfChargePercent) << 16) ^
          (static_cast<uint32_t>(esp.cpuCore0Percent) << 8) ^ esp.cpuCore1Percent ^
          (gateway.espNowReady ? 1u : 0u) ^ (gateway.bleConnected ? 2u : 0u) ^
-         gateway.espNowChannel;
+         gateway.espNowChannel ^ gateway.bleConnectAttempts ^ bleRetryTick;
 }
-
 
 void GatewayApplication::startBleTask() {
   if (bleTaskHandle_ != nullptr) {
@@ -170,37 +200,5 @@ void GatewayApplication::bleTaskLoop() {
     vTaskDelay(pdMS_TO_TICKS(delayMs));
   }
 }
-
-void GatewayApplication::startDisplayTask() {
-  if (displayTaskHandle_ != nullptr) {
-    return;
-  }
-  xTaskCreatePinnedToCore(&GatewayApplication::displayTaskTrampoline, "displayUi",
-                          config::TimingConstants::kDisplayTaskStackWords, this,
-                          config::TimingConstants::kDisplayTaskPriority, &displayTaskHandle_,
-                          config::TimingConstants::kAppCoreId);
-}
-
-void GatewayApplication::displayTaskTrampoline(void* context) {
-  static_cast<GatewayApplication*>(context)->displayTaskLoop();
-}
-
-void GatewayApplication::displayTaskLoop() {
-  for (;;) {
-    if (displayAsleep_) {
-      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-      continue;
-    }
-
-    const uint32_t fingerprint = displayFingerprint();
-    if (fingerprint != lastDisplayFingerprint_) {
-      renderCurrentDisplay();
-      lastDisplayFingerprint_ = fingerprint;
-    }
-
-    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(config::TimingConstants::kDisplayRefreshMs));
-  }
-}
-
 
 }  // namespace wattcycle::composition

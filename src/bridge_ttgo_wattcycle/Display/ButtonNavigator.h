@@ -1,26 +1,14 @@
 #pragma once
 
-#include <cstdint>
+#include "Display/IButtonSource.h"
 
 namespace wattcycle::display {
 
-enum class ButtonAction : uint8_t {
-  None = 0,
-  Previous,  // bottom / cancel edge
-  Next,      // top / confirm edge
-};
-
-struct ButtonEvent {
-  ButtonAction action = ButtonAction::None;
-  bool anyPress = false;
-  bool cancelHeld = false;
-};
-
 /// Debounced TTGO front-button edges (GPIO0 bottom, GPIO35 top).
-class ButtonNavigator {
+class ButtonNavigator : public IButtonSource {
  public:
-  void begin();
-  ButtonEvent poll(uint32_t nowMs);
+  void begin() override;
+  ButtonEvent poll(uint32_t nowMs) override;
 
  private:
   uint32_t lastEdgeMs_ = 0;

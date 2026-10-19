@@ -1,17 +1,17 @@
 #pragma once
 
+#include "boards/ttgo_tdisplay/BoardPins.h"
+
 namespace wattcycle::display {
 
-/// TTGO T-Display front buttons (active low). No capacitive touch on this board.
-/// Physical layout: GPIO0 = bottom (cancel / previous), GPIO35 = top (confirm / next).
-constexpr int kButtonCancelGpio = 0;
-constexpr int kButtonConfirmGpio = 35;
+constexpr int kButtonCancelGpio = boards::ttgo_tdisplay::kButtonCancelGpio;
+constexpr int kButtonConfirmGpio = boards::ttgo_tdisplay::kButtonConfirmGpio;
 constexpr int kButtonPrevGpio = kButtonCancelGpio;
 constexpr int kButtonNextGpio = kButtonConfirmGpio;
-constexpr int kBacklightGpio = 4;
+constexpr int kBacklightGpio = boards::ttgo_tdisplay::kBacklightGpio;
 
-constexpr int kDisplayWidth = 240;
-constexpr int kDisplayHeight = 135;
+constexpr int kDisplayWidth = boards::ttgo_tdisplay::kDisplayWidth;
+constexpr int kDisplayHeight = boards::ttgo_tdisplay::kDisplayHeight;
 
 constexpr uint8_t kPageCount = 6;
 

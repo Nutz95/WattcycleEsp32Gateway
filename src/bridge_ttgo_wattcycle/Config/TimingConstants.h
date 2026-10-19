@@ -15,6 +15,8 @@ struct TimingConstants {
   static constexpr uint32_t kColdBootSettleMs = 1500;
   static constexpr uint32_t kBleTaskStackWords = 6144;
   static constexpr uint32_t kBleTaskPriority = 1;
+  /// Pause between failed BLE connect attempts (UI shows countdown on Link).
+  static constexpr uint32_t kBleReconnectIntervalMs = 5000;
   static constexpr uint32_t kDisplayTaskStackWords = 3072;
   static constexpr uint32_t kDisplayTaskPriority = 1;
   static constexpr int kRadioCoreId = 0;

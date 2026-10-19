@@ -47,6 +47,13 @@ void InMemoryTelemetryStore::setBleState(bool connected, const char* address,
   unlock();
 }
 
+void InMemoryTelemetryStore::setBleConnectProgress(uint32_t attempts, uint32_t nextRetryAtMs) {
+  lock();
+  status_.bleConnectAttempts = attempts;
+  status_.bleNextRetryAtMs = nextRetryAtMs;
+  unlock();
+}
+
 void InMemoryTelemetryStore::setEspNowState(bool ready, uint8_t channel, const char* peerMac,
                                            const char* error) {
   lock();

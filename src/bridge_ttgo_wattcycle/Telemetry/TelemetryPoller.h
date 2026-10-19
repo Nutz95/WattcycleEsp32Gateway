@@ -19,12 +19,15 @@ class TelemetryPoller {
 
  private:
   bool ensureConnected(uint32_t nowMs);
+  void failAndBackoff(uint32_t nowMs, const char* error);
   void pollOnce(uint32_t nowMs);
 
   bms::IBmsBleClient& bleClient_;
   ITelemetryStore& store_;
   config::AppConfig appConfig_;
   uint32_t lastPollMs_ = 0;
+  uint32_t connectAttempts_ = 0;
+  uint32_t nextConnectAllowedMs_ = 0;
   bool frameHeadDetected_ = false;
   bool productInfoLoaded_ = false;
 };
