@@ -47,6 +47,53 @@ if ($null -eq $env:ECOFLOW_USER_ID) { $env:ECOFLOW_USER_ID = "" }
 # Environments build one after another; -j parallelizes object compiles within each env.
 $jobs = [Environment]::ProcessorCount
 if ($jobs -lt 1) { $jobs = 1 }
-pio run -j $jobs -e hub_m5_wattcycle -e bridge_ttgo_wattcycle -e bridge_xt369p -e bridge_ecoflow_delta3 -e hub_ttgo_wattcycle
-exit $LASTEXITCODE
 
+$envs = @(
+  "hub_m5_wattcycle",
+  "bridge_ttgo_wattcycle",
+  "bridge_wattcycle_tdongle",
+  "bridge_xt369p",
+  "bridge_ecoflow_delta3",
+  "hub_ttgo_wattcycle"
+)
+
+function Invoke-PioEnv {
+  param(
+    [Parameter(Mandatory)][string]$EnvName,
+    [Parameter(Mandatory)][int]$JobCount
+  )
+  $logPath = Join-Path $env:TEMP ("wattcycle-pio-" + $EnvName + ".log")
+  & pio run -j $JobCount -e $EnvName *> $logPath
+  $code = $LASTEXITCODE
+  Get-Content -LiteralPath $logPath | Write-Host
+  return @{
+    ExitCode = $code
+    LogPath  = $logPath
+  }
+}
+
+foreach ($envName in $envs) {
+  Write-Host ("==> Compile " + $envName) -ForegroundColor Cyan
+  $result = Invoke-PioEnv -EnvName $envName -JobCount $jobs
+  if ($result.ExitCode -eq 0) {
+    continue
+  }
+
+  $logText = Get-Content -LiteralPath $result.LogPath -Raw
+  $depfileRace = $logText -match "opening dependency file"
+  if (-not $depfileRace) {
+    exit $result.ExitCode
+  }
+
+  Write-Warning ("SCons depfile race on " + $envName + " - cleaning build dir and retrying once")
+  $buildDir = Join-Path $repoRoot (".pio\build\" + $envName)
+  if (Test-Path -LiteralPath $buildDir) {
+    Remove-Item -Recurse -Force -LiteralPath $buildDir
+  }
+  $retry = Invoke-PioEnv -EnvName $envName -JobCount $jobs
+  if ($retry.ExitCode -ne 0) {
+    exit $retry.ExitCode
+  }
+}
+
+exit 0

@@ -7,10 +7,11 @@ This file is the contract for humans and coding agents working in this repositor
 Maintain a **monorepo** (Phase 2 cutover in progress):
 
 1. **`hub_m5_wattcycle`** (COM23) — M5Stack Basic web hub (:6789) + multi-peer ESP-NOW RX (BMS + solar) + auth/OTA.
-2. **`bridge_ttgo_wattcycle`** (COM19) — Wattcycle / XDZN BMS over BLE → ESP-NOW TX (no web / auth / OTA).
-3. **`bridge_xt369p`** (COM22) — ATorch XT369P over Classic SPP → ESP-NOW TX (no web / auth / OTA).
-4. **`bridge_ecoflow_delta3`** (COM8, ESP32-S3) — EcoFlow DELTA 3 BLE → ESP-NOW TX (scaffold → read-only; no web / auth / OTA).
-5. **`hub_ttgo_wattcycle`** (legacy) — Phase 1 combined hub; keep until M5 cutover is verified (tag V1.0.0 rollback).
+2. **`bridge_ttgo_wattcycle`** (COM19) — Wattcycle / XDZN BMS over BLE → ESP-NOW TX (TTGO; no web / auth / OTA).
+3. **`bridge_wattcycle_tdongle`** (COM7) — same BMS bridge on **Pocket-Dongle-S3-0.96** (ST7735 + 1 button; NimBLE 2.x).
+4. **`bridge_xt369p`** (COM22) — ATorch XT369P over Classic SPP → ESP-NOW TX (TTGO only; S3 has no Classic BT).
+5. **`bridge_ecoflow_delta3`** (COM8, Pocket-Dongle-S3-0.96) — EcoFlow DELTA 3 BLE → ESP-NOW TX (read-only UI; `*_headless` for bare DevKit).
+6. **`hub_ttgo_wattcycle`** (legacy) — Phase 1 combined hub; keep until M5 cutover is verified (tag V1.0.0 rollback).
 
 Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `WattcycleEspNowProtocol`).
 
@@ -40,9 +41,10 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
   - `src/common/` — `Util/`, `EspNow/` protocols + `IEspNowCommandSender`, shared `Bms/` models
   - `src/hub_common/` — shared hub Auth, HttpApi (web), Ota, Telemetry store/codec, Esp health
   - `src/hub_m5_wattcycle/` — M5 display, Wifi, multi-peer EspNow RX, composition root
-  - `src/bridge_ttgo_wattcycle/` — Bms BLE, EspNow TX, TTGO display — **no** Auth/HttpApi/Ota
+  - `src/boards/` — shared board HAL (`IButtonSource`, TTGO / T-Dongle pin maps)
+  - `src/bridge_ttgo_wattcycle/` — Bms BLE, EspNow TX, TTGO or T-Dongle display — **no** Auth/HttpApi/Ota
   - `src/bridge_xt369p/` — Meter/SPP, EspNow TX, Display — **no** Auth/HttpApi/Ota
-  - `src/bridge_ecoflow_delta3/` — EcoFlow BLE (read-only), EspNow TX, headless S3 — **no** Auth/HttpApi/Ota/display
+  - `src/bridge_ecoflow_delta3/` — EcoFlow BLE (read-only), EspNow TX, T-Dongle UI (or Null headless) — **no** Auth/HttpApi/Ota
   - `src/hub_ttgo_wattcycle/` — legacy Phase 1 hub (target-specific BLE poller / display)
   - `web/` SPA → `scripts/bundle_web.ps1` → LittleFS `data/` (hub only)
 - Browser chart history is localStorage-only (Phase 1).
@@ -58,9 +60,10 @@ Shared wire protocols and utils live in `src/common/` (`Xt369pEspNowProtocol`, `
 
 ### Platform / hardware assumptions
 
-- Classic **ESP32** (`ESP32-D0WDQ6`), **not** ESP32-S3 (Phase 1 targets).
-- Default ports: M5 hub **COM23**, BMS bridge **COM19**, XT bridge **COM22**, EcoFlow S3 bridge **COM8**.
+- Classic **ESP32** (`ESP32-D0WDQ6`) for TTGO hubs/bridges; **ESP32-S3** for Pocket-Dongle BMS + EcoFlow (BLE only — no Classic SPP).
+- Default ports: M5 hub **COM23**, BMS TTGO **COM19**, BMS Pocket-Dongle **COM7**, XT **COM22**, EcoFlow Pocket-Dongle **COM8**.
 - TTGO display: ST7789V pins MOSI=19, SCLK=18, CS=5, DC=16, RST=23, BL=4.
+- Pocket-Dongle-S3-0.96 display: ST7735 80×160 pins MOSI=11, SCLK=10, CS=12, DC=13, RST=14; backlight hard-wired (no GPIO); button GPIO0. Skill: `esp-pocket-dongle-s3-096-display`.
 - Protocol refs: [qume/wattcycle_ble](https://github.com/qume/wattcycle_ble); `docs/XT369P_PROTOCOL.md`.
 
 ### Documentation style
@@ -85,6 +88,7 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"
 
 .\scripts\run_tests.ps1
 .\scripts\flash.ps1 -Target HubTtgoWattcycle -Port COM19
+.\scripts\flash.ps1 -Target BridgeWattcycleTdongle -Port COM7
 .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
 .\scripts\flash.ps1 -Target BridgeEcoflowDelta3 -Port COM8
 .\scripts\flash.ps1 -Target Both -HubPort COM19 -BridgePort COM22

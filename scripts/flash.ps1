@@ -7,6 +7,8 @@
 .EXAMPLE
   .\scripts\flash.ps1 -Target BridgeTtgoWattcycle -Port COM19
 .EXAMPLE
+  .\scripts\flash.ps1 -Target BridgeWattcycleTdongle -Port COM7
+.EXAMPLE
   .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
 .EXAMPLE
   .\scripts\flash.ps1 -Target BridgeEcoflowDelta3 -Port COM8
@@ -16,12 +18,16 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory)]
-  [ValidateSet("HubM5", "HubTtgoWattcycle", "BridgeTtgoWattcycle", "BridgeXt369p", "BridgeEcoflowDelta3", "All", "Both")]
+  [ValidateSet(
+    "HubM5", "HubTtgoWattcycle", "BridgeTtgoWattcycle", "BridgeWattcycleTdongle",
+    "BridgeXt369p", "BridgeEcoflowDelta3", "BridgeTdongleTftSmoke", "All", "Both"
+  )]
   [string]$Target,
 
   [string]$Port = "",
   [string]$HubPort = "COM23",
   [string]$BmsBridgePort = "COM19",
+  [string]$BmsTdonglePort = "COM7",
   [string]$XtBridgePort = "COM22",
   [string]$EcoflowBridgePort = "COM8",
   # Legacy alias used by Phase 1 Both target
@@ -125,8 +131,31 @@ function Invoke-FlashBridgeTtgoWattcycle {
   if (-not $env:ESPNOW_PEER_MAC) {
     Write-Error "ESPNOW_PEER_MAC must be set to the M5 hub STA MAC."
   }
-  Write-Host "==> Build + upload BMS bridge on $UploadPort" -ForegroundColor Cyan
+  Write-Host "==> Build + upload BMS bridge (TTGO) on $UploadPort" -ForegroundColor Cyan
   pio run -e bridge_ttgo_wattcycle -t upload --upload-port $UploadPort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+
+function Invoke-FlashBridgeWattcycleTdongle {
+  param([string]$UploadPort)
+  Import-UserEnv @("WIFI_SSID", "BMS_BLE_ADDRESS", "ESPNOW_PEER_MAC", "ESPNOW_PMK", "ESPNOW_CHANNEL")
+  # UI bring-up is allowed without secrets; radio/BLE stay idle until set.
+  if (-not $env:WIFI_SSID) {
+    Write-Warning "WIFI_SSID unset - ESP-NOW uses ESPNOW_CHANNEL or falls back to ch1 (no STA join)."
+    $env:WIFI_SSID = ""
+  }
+  if (-not $env:BMS_BLE_ADDRESS) {
+    Write-Warning "BMS_BLE_ADDRESS unset - BLE poll skipped until set (display still runs)."
+    $env:BMS_BLE_ADDRESS = ""
+  }
+  if (-not $env:ESPNOW_PEER_MAC) {
+    Write-Warning "ESPNOW_PEER_MAC unset - ESP-NOW TX skipped (display still runs)."
+    $env:ESPNOW_PEER_MAC = ""
+  }
+  if (-not $env:ESPNOW_PMK) { $env:ESPNOW_PMK = "" }
+  if (-not $env:ESPNOW_CHANNEL) { $env:ESPNOW_CHANNEL = "0" }
+  Write-Host "==> Build + upload BMS bridge (T-Dongle-S3) on $UploadPort" -ForegroundColor Cyan
+  pio run -e bridge_wattcycle_tdongle -t upload --upload-port $UploadPort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -152,6 +181,16 @@ function Invoke-FlashBridgeXt369p {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+function Invoke-FlashBridgeTdongleTftSmoke {
+  param([string]$UploadPort)
+  Write-Host "==> TFT smoke (Pocket-Dongle ST7735 pins 11/10/12/13/14) on $UploadPort" -ForegroundColor Cyan
+  Write-Host "    Expect: panel RED/GREEN/BLUE/YELLOW cycle (BL is hard-wired)." -ForegroundColor DarkGray
+  Write-Host "    Then: pio device monitor -p $UploadPort -b 115200" -ForegroundColor DarkGray
+  pio run -e bridge_tdongle_tft_smoke -t upload --upload-port $UploadPort
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  Write-Host "Flash OK - look at the panel for color cycle." -ForegroundColor Yellow
+}
+
 function Invoke-FlashBridgeEcoflowDelta3 {
   param([string]$UploadPort)
   Import-UserEnv @(
@@ -174,7 +213,7 @@ function Invoke-FlashBridgeEcoflowDelta3 {
   if (-not $env:ESPNOW_PEER_MAC) {
     Write-Warning "ESPNOW_PEER_MAC unset - ESP-NOW TX skipped until hub STA MAC is set."
   }
-  Write-Host "==> Build + upload EcoFlow DELTA 3 bridge (ESP32-S3) on $UploadPort" -ForegroundColor Cyan
+  Write-Host "==> Build + upload EcoFlow DELTA 3 bridge (T-Dongle-S3) on $UploadPort" -ForegroundColor Cyan
   Write-Host "    Copy printed STA MAC into User env ESPNOW_ECOFLOW_BRIDGE_MAC, then reflash HubM5." -ForegroundColor DarkGray
   pio run -e bridge_ecoflow_delta3 -t upload --upload-port $UploadPort
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -193,6 +232,10 @@ switch ($Target) {
     $p = if ($Port) { $Port } else { $BmsBridgePort }
     Invoke-FlashBridgeTtgoWattcycle -UploadPort $p
   }
+  "BridgeWattcycleTdongle" {
+    $p = if ($Port) { $Port } else { $BmsTdonglePort }
+    Invoke-FlashBridgeWattcycleTdongle -UploadPort $p
+  }
   "BridgeXt369p" {
     $p = if ($Port) { $Port } else { $XtBridgePort }
     Invoke-FlashBridgeXt369p -UploadPort $p
@@ -200,6 +243,10 @@ switch ($Target) {
   "BridgeEcoflowDelta3" {
     $p = if ($Port) { $Port } else { $EcoflowBridgePort }
     Invoke-FlashBridgeEcoflowDelta3 -UploadPort $p
+  }
+  "BridgeTdongleTftSmoke" {
+    $p = if ($Port) { $Port } else { $BmsTdonglePort }
+    Invoke-FlashBridgeTdongleTftSmoke -UploadPort $p
   }
   "Both" {
     Write-Warning "Target Both is legacy (hub_ttgo + XT). Prefer -Target All for Phase 2."

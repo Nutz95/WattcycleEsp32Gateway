@@ -51,14 +51,18 @@ daily CSV history (`/history/YYYY-MM-DD.csv`, UTC dates; v2 adds pack Ah/MOS/PCB
 ## Hardware
 
 Classic hubs/bridges use **ESP32-D0WDQ6**, 4 MB flash, Silicon Labs CP210x USB-UART.  
-The EcoFlow bridge uses an **ESP32-S3** DevKitC (native USB flash + separate USB-UART console).
+BLE bridges also run on **Pocket-Dongle-S3-0.96** (ESP32-S3, ST7735 80×160, one button; BL hard-wired).  
+Dongle UI: shared `DonglePanelShell` + DRAM/PSRAM double-buffer + `AppCoreDisplayUiTask` on **APP_CPU (1)**; BLE/ESP-NOW on **PRO_CPU (0)**.  
+Pocket/LilyGO ST7735 envs live in `platformio.dongle.ini` (included via `extra_configs`).  
+XT369P stays on TTGO — Classic SPP is unavailable on ESP32-S3.
 
 | Role | Board | Port | Notes |
 |------|-------|------|-------|
 | Web hub | **M5Stack Basic** | **COM23** | Wi-Fi SPA :6789, multi-peer ESP-NOW RX, optional SD, NTP |
 | BMS bridge | LILYGO TTGO T-Display | **COM19** | Wattcycle BLE → ESP-NOW TX (no web) |
+| BMS bridge (alt) | Pocket-Dongle-S3-0.96 | **COM7** | Same BMS path; NimBLE 2.x + compact UI |
 | Solar bridge | LILYGO TTGO T-Display | **COM22** | XT369P Classic SPP → ESP-NOW TX (no web) |
-| EcoFlow bridge | ESP32-S3 DevKitC | **COM8** | DELTA 3 BLE → ESP-NOW TX (read-only; no web / OTA) |
+| EcoFlow bridge | Pocket-Dongle-S3-0.96 | **COM8** | DELTA 3 BLE → ESP-NOW TX (read-only UI; no web / OTA) |
 
 ### TTGO bridge display (ST7789V 1.14″)
 
@@ -121,9 +125,10 @@ src/
   common/                 # Util + ESP-NOW protocols (+ shared Bms models)
   hub_common/             # Auth, HttpApi, Ota, Telemetry store, NTP helpers
   hub_m5_wattcycle/       # Web hub (COM23): multi-peer ESP-NOW RX + SD
-  bridge_ttgo_wattcycle/  # BMS BLE → ESP-NOW TX (COM19)
+  boards/                 # Shared board HAL (TTGO / T-Dongle pins + buttons)
+  bridge_ttgo_wattcycle/  # BMS BLE → ESP-NOW TX (COM19 TTGO / COM7 T-Dongle)
   bridge_xt369p/          # XT369P SPP → ESP-NOW TX (COM22)
-  bridge_ecoflow_delta3/  # EcoFlow DELTA 3 BLE → ESP-NOW TX (COM8, S3)
+  bridge_ecoflow_delta3/  # EcoFlow DELTA 3 BLE → ESP-NOW TX (COM8 T-Dongle)
   hub_ttgo_wattcycle/     # Optional combined TTGO hub (rollback / single-board)
 web/                      # SPA (hub LittleFS only)
 docs/                     # protocol notes + EcoFlow bridge plan
@@ -134,9 +139,11 @@ test/                     # native Unity tests (hub parsers)
 | PlatformIO env | Port | Role |
 |----------------|------|------|
 | `hub_m5_wattcycle` | COM23 | Web hub + multi-peer ESP-NOW RX + SD/NTP |
-| `bridge_ttgo_wattcycle` | COM19 | BMS BLE → ESP-NOW TX |
+| `bridge_ttgo_wattcycle` | COM19 | BMS BLE → ESP-NOW TX (TTGO) |
+| `bridge_wattcycle_tdongle` | COM7 | BMS BLE → ESP-NOW TX (T-Dongle-S3) |
 | `bridge_xt369p` | COM22 | SPP → ESP-NOW TX (no web) |
-| `bridge_ecoflow_delta3` | COM8 | EcoFlow DELTA 3 BLE → ESP-NOW TX (S3; USB flash only for now) |
+| `bridge_ecoflow_delta3` | COM8 | EcoFlow DELTA 3 BLE → ESP-NOW TX (T-Dongle UI) |
+| `bridge_ecoflow_delta3_headless` | COM8 | EcoFlow without TFT (bare S3 DevKit) |
 | `hub_ttgo_wattcycle` | COM19 | Optional combined TTGO hub (BLE + web on one board) |
 | `native` | — | Host unit tests |
 
@@ -178,6 +185,7 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # on BMS bridge — BLE MAC only
 
 # Individual bridges
 .\scripts\flash.ps1 -Target BridgeTtgoWattcycle -Port COM19
+.\scripts\flash.ps1 -Target BridgeWattcycleTdongle -Port COM7
 .\scripts\flash.ps1 -Target BridgeXt369p -Port COM22
 .\scripts\flash.ps1 -Target BridgeEcoflowDelta3 -Port COM8
 
@@ -314,11 +322,13 @@ Each image matches one dashboard tab (**same order as the SPA nav**).
 pio test -e native
 pio run -e hub_m5_wattcycle
 pio run -e bridge_ttgo_wattcycle
+pio run -e bridge_wattcycle_tdongle
 pio run -e bridge_xt369p
 pio run -e bridge_ecoflow_delta3
 pio run -e hub_m5_wattcycle -t upload --upload-port COM23
 pio run -e hub_m5_wattcycle -t uploadfs --upload-port COM23
 pio run -e bridge_ttgo_wattcycle -t upload --upload-port COM19
+pio run -e bridge_wattcycle_tdongle -t upload --upload-port COM7
 pio run -e bridge_xt369p -t upload --upload-port COM22
 pio run -e bridge_ecoflow_delta3 -t upload --upload-port COM8
 pio device monitor -p COM23 -b 115200

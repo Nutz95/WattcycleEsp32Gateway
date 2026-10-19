@@ -30,6 +30,10 @@ $concreteAdapterHeaders = @(
   "WattcycleBleClient.h",
   "EspWebGateway.h",
   "TtgoStatusDisplay.h",
+  "DongleStatusDisplay.h",
+  "NullStatusDisplay.h",
+  "DongleButtonSource.h",
+  "NullButtonSource.h",
   "M5StatusDisplay.h",
   "InMemoryTelemetryStore.h",
   "NvsCredentialStore.h",
@@ -48,6 +52,7 @@ $targetPrefixes = @(
   "bridge_ttgo_wattcycle/",
   "bridge_xt369p/",
   "bridge_ecoflow_delta3/",
+  "boards/",
   "common/",
   "hub_common/"
 )
@@ -73,14 +78,19 @@ $domainLeakRules = @(
   -MaxMethodsPerClass 30 `
   -MaxFunctionBodyLines 60 `
   -FunctionBodyPathRegex '[\\/]bridge_ecoflow_delta3[\\/]' `
-  -OneTypePerHeaderRoots @((Join-Path $srcRoot "bridge_ecoflow_delta3")) `
+  -OneTypePerHeaderRoots @(
+    (Join-Path $srcRoot "bridge_ecoflow_delta3"),
+    (Join-Path $srcRoot "boards")
+  ) `
   -ConcreteAdapterHeaders $concreteAdapterHeaders `
   -TargetPrefixes $targetPrefixes `
-  -CompositionRootNamePatterns @("main.cpp", "CompositionRoot*") `
+  -CompositionRootNamePatterns @("main.cpp", "main_tdongle.cpp", "main_headless.cpp", "CompositionRoot*") `
   -ForbidUnitTestInHeaders $true `
   -ForbidUnitTestInCpp $true `
   -PublicCommentRoots @(
     (Join-Path $srcRoot "bridge_ecoflow_delta3"),
+    (Join-Path $srcRoot "bridge_ttgo_wattcycle"),
+    (Join-Path $srcRoot "boards"),
     (Join-Path $srcRoot "common"),
     (Join-Path $srcRoot "hub_common")
   ) `
