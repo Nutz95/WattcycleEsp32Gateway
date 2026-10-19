@@ -9,6 +9,12 @@ struct TimingConstants {
   static constexpr uint32_t kEspNowPublishMs = 500;
   static constexpr uint32_t kEspHealthSampleMs = 1000;
   static constexpr uint32_t kAppLoopDelayMs = 20;
+  static constexpr uint32_t kDisplayRefreshMs = 500;
+  static constexpr uint32_t kDisplaySleepMs = 60000;
+  static constexpr uint32_t kButtonDebounceMs = 220;
+  static constexpr uint32_t kDisplayTaskStackWords = 3072;
+  static constexpr uint32_t kDisplayTaskPriority = 1;
+  static constexpr int kAppCoreId = 1;
   /// After a shared USB power cut, all ESPs boot together — wait out the inrush
   /// before Wi-Fi.mode (thin CH343 / hub rails brownout otherwise).
   static constexpr uint32_t kRadioBringupDelayMs = 2500;
