@@ -157,7 +157,15 @@ Design goals: **SOLID**, constructor injection, files **&lt; 400 lines**, classe
 
 - [PlatformIO Core](https://platformio.org/install/cli) (`pio` on PATH)
 - PowerShell 5+ / 7+
-- M5 hub on USB (**COM23**); BMS bridge **COM19**; XT bridge **COM22**; EcoFlow S3 bridge **COM8**
+- M5 hub on USB (**COM23**); BMS TTGO **COM19** or Pocket-Dongle **COM7**; XT bridge **COM22**; EcoFlow S3 **COM8**
+
+Install toolchains and libraries once (Arduino-ESP32 cores are large; `flash.ps1` otherwise downloads them on first use and can look stuck):
+
+```powershell
+.\scripts\setup_pio.ps1
+```
+
+Dongle builds use the installed `espressif32` platform and `tool-esptoolpy` 4.9. The ST7735 SPI fix is in-tree — do not pin `espressif32@6.5.0` (that forces the 2.0.14 core, ~230 MB, and is no longer required).
 - Environment variables (**required**, never commit secrets):
 
 ```powershell
