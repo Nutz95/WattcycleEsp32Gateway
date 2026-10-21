@@ -83,6 +83,9 @@ Testing/
 # Bundled LittleFS assets (source of truth is web/)
 data/
 
+# Local plans (not part of the repo)
+docs/local/
+
 # CursorCodingSkills local deploy (junctions / copies — re-run deploy.ps1)
 .cursor/
 tools/python_guardrails/

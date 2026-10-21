@@ -62,7 +62,7 @@ XT369P stays on TTGO — Classic SPP is unavailable on ESP32-S3.
 | BMS bridge | LILYGO TTGO T-Display | **COM19** | Wattcycle BLE → ESP-NOW TX (no web) |
 | BMS bridge (alt) | Pocket-Dongle-S3-0.96 | **COM7** | Same BMS path; NimBLE 2.x + compact UI |
 | Solar bridge | LILYGO TTGO T-Display | **COM22** | XT369P Classic SPP → ESP-NOW TX (no web) |
-| EcoFlow bridge | Pocket-Dongle-S3-0.96 | **COM8** | DELTA 3 BLE → ESP-NOW TX (read-only UI; no web / OTA) |
+| EcoFlow bridge | Pocket-Dongle-S3-0.96 | **COM8** | DELTA 3 BLE → ESP-NOW TX (SoC, ports, SOH, cell/MOS temps; no web / OTA) |
 
 ### TTGO bridge display (ST7789V 1.14″)
 

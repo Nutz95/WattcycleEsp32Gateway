@@ -87,7 +87,10 @@ flowchart TD
 | `kCmdSetAuth` | `0x35` | Auth command set |
 | `kCmdAuthStatus` | `0x89` | Ask auth status |
 | `kCmdAutoAuth` | `0x86` | Send MD5 token |
-| `kDisplayCmdSet/Id` | `0xFE` / `0x15` | DisplayPropertyUpload |
+| `kDisplayCmdSet` | `0xFE` | Property uploads |
+| `kFullDisplayCmdId` | `0x01` | Full DisplayPropertyUpload |
+| `kDisplayCmdId` | `0x15` | Incremental DisplayPropertyUpload |
+| `kRuntimeCmdId` | `0x16` | RuntimePropertyUpload (V/A, cell mV) |
 | `kCmdSetRetTime` | `0x52` | Device RTC request |
 
 ---
@@ -96,11 +99,23 @@ flowchart TD
 
 `DisplayPropertyUpload` is a **protobuf** map of field numbers → floats/varints.
 We merge partial frames (device often sends subsets). Field numbers are taken
-from community pd335 maps (see credits). USB port **on** is derived from
-`flow_info_qcusb*` / `flow_info_typec*` (bit1 set ⇒ on), same pattern as AC/DC.
+from community pd335 maps (see credits). Port **on** is `flow_info_*` bit1
+(2/14 on, 4 off). USB **on** latches when any USB watt field is present.
 
-ESP-NOW uplink magic `EF3P` (`EcoFlowEspNowProtocol.h`) carries the snapshot to
-the M5 hub (encrypted when `ESPNOW_PMK` is set).
+Decoded today: SoC (CMS preferred), SOH, AC/DC/USB/PV watts, input and output
+sums, signed BMS watts, AC frequency, fan level, charge/discharge state,
+charge and discharge SoC limits, cell and MOS min/max °C, device/BMS error
+code, and remaining minutes. `RuntimePropertyUpload` adds AC volts and amps,
+pack volts and amps (CMS preferred over BMS), min/max cell mV, capacity mAh,
+and PCS temperatures. Volts are stored ×10 and amps ×100, saturated to int16.
+
+Battery terminal power keeps the station's sign: negative discharges the pack,
+positive charges it (same reading as the Wattcycle pack).
+
+ESP-NOW uplink magic `EF3P` version 3 (`EcoFlowEspNowProtocol.h`) carries the
+snapshot to the M5 hub (encrypted when `ESPNOW_PMK` is set). Presence bits
+live in `flags`, `extraFlags`, and `runtimeFlags` (SoC-limit presence is
+`runtimeFlags` bits 6 and 7). The hub web snapshot is binary codec version 9.
 
 ---
 
