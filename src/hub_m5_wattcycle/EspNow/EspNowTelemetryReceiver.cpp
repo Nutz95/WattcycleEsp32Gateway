@@ -6,7 +6,6 @@
 #include "Telemetry/SolarBridgeTelemetry.h"
 #include "Util/MacAddress.h"
 
-#include <cstddef>
 #include <cstring>
 
 #include <Arduino.h>
@@ -146,83 +145,9 @@ void EspNowTelemetryReceiver::onReceiveTrampoline(const uint8_t* mac, const uint
 }
 
 void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data, int len) {
-  (void)mac;
-  if (data == nullptr || len < 8) {
-    return;
-  }
-  const uint32_t magic = static_cast<uint32_t>(data[0]) | (static_cast<uint32_t>(data[1]) << 8) |
-                         (static_cast<uint32_t>(data[2]) << 16) |
-                         (static_cast<uint32_t>(data[3]) << 24);
-  const uint8_t version = data[4];
-
-  if (magic == xt369p_bridge::kMagic && version > 0 && version <= xt369p_bridge::kVersion) {
-    const int requiredLen =
-        version >= 2 ? static_cast<int>(sizeof(xt369p_bridge::EspNowPacketV1))
-                     : static_cast<int>(offsetof(xt369p_bridge::EspNowPacketV1, cpu0Percent));
-    if (len < requiredLen) {
-      return;
-    }
-    xt369p_bridge::EspNowPacketV1 packet = {};
-    std::memcpy(&packet, data, static_cast<size_t>(requiredLen));
-    solarPacket_ = packet;
-    if (mac != nullptr) {
-      std::memcpy(xtPeerMac_, mac, 6);
-      hasXtPeer_ = true;
-    }
-    pendingSolar_ = true;
-    static uint32_t xtRxCount = 0;
-    if ((++xtRxCount % 10u) == 1u) {
-      Serial.printf("ESP-NOW RX XT seq=%u n=%u\n", packet.seq, xtRxCount);
-    }
-    return;
-  }
-
-  if (magic == ecoflow_bridge::kMagic && version > 0 && version <= ecoflow_bridge::kVersion) {
-    int requiredLen = static_cast<int>(offsetof(ecoflow_bridge::EspNowPacketV1, inSumW));
-    if (version >= 3) {
-      requiredLen = static_cast<int>(sizeof(ecoflow_bridge::EspNowPacketV1));
-    } else if (version >= 2) {
-      requiredLen = static_cast<int>(offsetof(ecoflow_bridge::EspNowPacketV1, acInVoltsDeci));
-    }
-    if (len < requiredLen) {
-      return;
-    }
-    ecoflowPacket_ = {};
-    std::memcpy(&ecoflowPacket_, data, static_cast<size_t>(requiredLen));
-    pendingEcoFlow_ = true;
-    static uint32_t ecoRxCount = 0;
-    if ((++ecoRxCount % 10u) == 1u) {
-      Serial.printf("ESP-NOW RX EF soc=%u n=%u\n", ecoflowPacket_.socPercent, ecoRxCount);
-    }
-    return;
-  }
-
-  if (magic == wattcycle_bridge::kMagic && version > 0 && version <= wattcycle_bridge::kVersion) {
-    const int requiredLen =
-        version >= 2 ? static_cast<int>(sizeof(wattcycle_bridge::EspNowTelemetryPacketV1))
-                     : static_cast<int>(offsetof(wattcycle_bridge::EspNowTelemetryPacketV1,
-                                                 cellSensorCount));
-    if (len < requiredLen) {
-      return;
-    }
-    bmsPacket_ = {};
-    std::memcpy(&bmsPacket_, data, static_cast<size_t>(requiredLen));
-    pendingBmsTelemetry_ = true;
-    static uint32_t bmsRxCount = 0;
-    if ((++bmsRxCount % 10u) == 1u) {
-      Serial.printf("ESP-NOW RX BMS soc=%u n=%u\n", bmsPacket_.socPercent, bmsRxCount);
-    }
-    return;
-  }
-
-  if (magic == wattcycle_bridge::kProductMagic && version > 0 &&
-      version <= wattcycle_bridge::kProductVersion) {
-    if (len < static_cast<int>(sizeof(wattcycle_bridge::EspNowProductPacketV1))) {
-      return;
-    }
-    std::memcpy(&productPacket_, data, sizeof(productPacket_));
-    pendingBmsProduct_ = true;
-  }
+  ingestEspNowFrame(mac, data, len, xtPeerMac_, hasXtPeer_, pendingSolar_, pendingEcoFlow_,
+                    pendingBmsTelemetry_, pendingBmsProduct_, solarPacket_, ecoflowPacket_,
+                    bmsPacket_, productPacket_);
 }
 
 bool EspNowTelemetryReceiver::ensurePeer(const uint8_t mac[6]) {
