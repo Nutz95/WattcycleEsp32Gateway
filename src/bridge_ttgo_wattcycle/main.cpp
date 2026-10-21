@@ -8,6 +8,7 @@
 #include "Telemetry/InMemoryTelemetryStore.h"
 
 #include <Arduino.h>
+#include <NimBLEDevice.h>
 
 #include "soc/rtc_cntl_reg.h"
 #include "soc/soc.h"
@@ -39,7 +40,7 @@ void setup() {
   Serial.printf("ESP-NOW peer: %s\n",
                 config.espNowPeerMac[0] ? config.espNowPeerMac : "(unset)");
 
-  static wattcycle::bms::WattcycleBleClient bleClient;
+  static wattcycle::bms::WattcycleBleClient bleClient(ESP_PWR_LVL_P9);
   static wattcycle::telemetry::InMemoryTelemetryStore telemetryStore;
   static wattcycle::espnow_tx::EspNowTelemetryPublisher espNowPublisher;
   static wattcycle::display::TtgoStatusDisplay statusDisplay;

@@ -10,7 +10,8 @@ using LoopYieldFn = void (*)();
 
 class WattcycleBleClient : public IBmsBleClient {
  public:
-  WattcycleBleClient();
+  /// txPower is esp_power_level_t on NimBLE 1 and dBm on NimBLE 2.
+  explicit WattcycleBleClient(int8_t txPower);
   ~WattcycleBleClient() override;
 
   static void setLoopYield(LoopYieldFn yieldFn);
@@ -32,6 +33,7 @@ class WattcycleBleClient : public IBmsBleClient {
   bool requestDataPoint(uint16_t dataPoint, ParsedFrame& outFrame);
 
   BlePacketAssembler assembler_;
+  int8_t txPower_;
   uint8_t frameHead_ = kFrameHead;
   bool connected_ = false;
   void* clientHandle_ = nullptr;

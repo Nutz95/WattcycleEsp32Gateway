@@ -39,13 +39,38 @@ void pumpGatewayLoop() {
   }
 }
 
+int addressTypeSeenInScan(NimBLEScan* scan, const char* address) {
+#if defined(WATTCYCLE_NIMBLE_V2)
+  const NimBLEScanResults results = scan->getResults();
+  for (int i = 0; i < results.getCount(); ++i) {
+    const NimBLEAdvertisedDevice* device = results.getDevice(i);
+    if (device == nullptr) {
+      continue;
+    }
+    if (strcasecmp(device->getAddress().toString().c_str(), address) == 0) {
+      return device->getAddress().getType();
+    }
+  }
+#else
+  // NimBLE 1 returns devices by value and its getters are non-const.
+  NimBLEScanResults results = scan->getResults();
+  for (int i = 0; i < results.getCount(); ++i) {
+    NimBLEAdvertisedDevice device = results.getDevice(i);
+    if (strcasecmp(device.getAddress().toString().c_str(), address) == 0) {
+      return device.getAddress().getType();
+    }
+  }
+#endif
+  return -1;
+}
+
 }  // namespace
 
 void WattcycleBleClient::setLoopYield(LoopYieldFn yieldFn) {
   gLoopYield = yieldFn;
 }
 
-WattcycleBleClient::WattcycleBleClient() = default;
+WattcycleBleClient::WattcycleBleClient(int8_t txPower) : txPower_(txPower) {}
 
 WattcycleBleClient::~WattcycleBleClient() {
   disconnect();
@@ -58,25 +83,38 @@ bool WattcycleBleClient::connect(const char* address, uint32_t timeoutMs) {
 
   disconnect();
   NimBLEDevice::init("WattcycleGateway");
-  NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+#if defined(WATTCYCLE_NIMBLE_V2)
+  NimBLEDevice::setPower(txPower_);
+#else
+  NimBLEDevice::setPower(static_cast<esp_power_level_t>(txPower_));
+#endif
   NimBLEDevice::setMTU(247);
 
-  // Brief scan helps some stacks resolve peer address type / RPA.
+  // Brief scan resolves the real address type (random vs public) before connect.
   NimBLEScan* scan = NimBLEDevice::getScan();
   scan->setActiveScan(true);
   scan->setInterval(45);
   scan->setWindow(15);
 #if defined(WATTCYCLE_NIMBLE_V2)
-  scan->start(2000, false, true);
+  scan->start(2500, false, true);
 #else
-  scan->start(2, false);
+  scan->start(3, false);
 #endif
+
+  // Prefer the type seen in the scan. Guessing the wrong type first burns a full timeout.
+  uint8_t addressTypes[2] = {BLE_ADDR_RANDOM, BLE_ADDR_PUBLIC};
+  uint8_t typeCount = 2;
+  const int scannedType = addressTypeSeenInScan(scan, address);
+  if (scannedType >= 0) {
+    addressTypes[0] = static_cast<uint8_t>(scannedType);
+    typeCount = 1;
+    Serial.printf("BLE scan matched %s type=%u\n", address, addressTypes[0]);
+  }
   scan->clearResults();
 
-  // Wattcycle / XDZN packs typically advertise a random address.
-  const uint8_t addressTypes[] = {BLE_ADDR_RANDOM, BLE_ADDR_PUBLIC};
   NimBLEClient* client = nullptr;
-  for (uint8_t addressType : addressTypes) {
+  for (uint8_t typeIndex = 0; typeIndex < typeCount; ++typeIndex) {
+    const uint8_t addressType = addressTypes[typeIndex];
     client = NimBLEDevice::createClient();
 #if defined(WATTCYCLE_NIMBLE_V2)
     client->setConnectTimeout(timeoutMs < 1000 ? 1000 : timeoutMs);

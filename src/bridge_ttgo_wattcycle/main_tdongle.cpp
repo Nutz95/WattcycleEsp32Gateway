@@ -37,7 +37,8 @@ void setup() {
   Serial.printf("ESP-NOW peer: %s\n",
                 config.espNowPeerMac[0] ? config.espNowPeerMac : "(unset)");
 
-  static wattcycle::bms::WattcycleBleClient bleClient;
+  // NimBLE 2 setPower is dBm. +9 dBm browns out the dongle USB rail with Wi-Fi up.
+  static wattcycle::bms::WattcycleBleClient bleClient(3);
   static wattcycle::telemetry::InMemoryTelemetryStore telemetryStore;
   static wattcycle::espnow_tx::EspNowTelemetryPublisher espNowPublisher;
   static wattcycle::display::DongleStatusDisplay statusDisplay;
