@@ -13,7 +13,13 @@ namespace {
 
 using boards::dongle_s3::DonglePanelPalette;
 
-const char* kPageTitles[4] = {"BMS Overview", "BMS Energy", "BMS Link", "BMS ESP"};
+const char* kPageTitles[6] = {"Overview", "Cells", "Temps", "Alerts", "Link", "ESP"};
+
+void textLine(TFT_eSprite& canvas, int y, const char* text, uint16_t color) {
+  canvas.setTextColor(color, DonglePanelPalette::kBackground);
+  canvas.setTextSize(1);
+  canvas.drawString(text, 4, y);
+}
 
 }  // namespace
 
@@ -46,88 +52,110 @@ void DongleStatusDisplay::drawOverview(const telemetry::ITelemetryStore& store) 
   TFT_eSprite& canvas = panel_.canvas();
   const auto battery = store.battery();
   const auto gateway = store.status();
-  char line[28];
+  char line[40];
 
   if (!battery.valid) {
-    canvas.setTextColor(DonglePanelPalette::kWarn, DonglePanelPalette::kBackground);
-    canvas.drawString("Waiting BMS...", 6, 28);
-    canvas.setTextColor(DonglePanelPalette::kMuted, DonglePanelPalette::kBackground);
-    canvas.drawString(gateway.lastError, 6, 44);
-    return;
+    textLine(canvas, 20, "Waiting BMS...", DonglePanelPalette::kWarn);
+    textLine(canvas, 34, gateway.lastError[0] ? gateway.lastError : "no frame yet",
+             DonglePanelPalette::kMuted);
+  } else {
+    std::snprintf(line, sizeof(line), "%u%%  %.1fV", battery.stateOfChargePercent,
+                  battery.moduleVoltage);
+    textLine(canvas, 18, line, DonglePanelPalette::kAccent);
+    std::snprintf(line, sizeof(line), "%.1fA  %.0fW", battery.currentAmps, battery.powerWatts);
+    textLine(canvas, 32, line, DonglePanelPalette::kText);
+    std::snprintf(line, sizeof(line), "%.1f/%.1fAh", battery.remainingCapacityAh,
+                  battery.totalCapacityAh);
+    textLine(canvas, 46, line, DonglePanelPalette::kMuted);
   }
-  std::snprintf(line, sizeof(line), "%u%%", battery.stateOfChargePercent);
-  canvas.setTextColor(DonglePanelPalette::kAccent, DonglePanelPalette::kBackground);
-  canvas.setTextSize(2);
-  canvas.drawString(line, 6, 22);
-  canvas.setTextSize(1);
-  std::snprintf(line, sizeof(line), "%.1fV  %.1fA", battery.moduleVoltage, battery.currentAmps);
-  canvas.setTextColor(DonglePanelPalette::kText, DonglePanelPalette::kBackground);
-  canvas.drawString(line, 6, 48);
-  canvas.setTextColor(gateway.bleConnected ? DonglePanelPalette::kAccent : DonglePanelPalette::kDanger,
-                      DonglePanelPalette::kBackground);
-  canvas.drawString(gateway.bleConnected ? "BLE" : "BLE!", 110, 28);
-  canvas.setTextColor(gateway.espNowReady ? DonglePanelPalette::kAccent : DonglePanelPalette::kDanger,
-                      DonglePanelPalette::kBackground);
-  canvas.drawString(gateway.espNowReady ? "NOW" : "NOW!", 110, 44);
+  std::snprintf(line, sizeof(line), "%s  %s  ch%u", gateway.bleConnected ? "BLE" : "BLE!",
+                gateway.espNowReady ? "NOW" : "NOW!", gateway.espNowChannel);
+  textLine(canvas, 62, line,
+           (gateway.bleConnected && gateway.espNowReady) ? DonglePanelPalette::kAccent
+                                                         : DonglePanelPalette::kDanger);
 }
 
-void DongleStatusDisplay::drawEnergy(const telemetry::ITelemetryStore& store) {
+void DongleStatusDisplay::drawCells(const telemetry::ITelemetryStore& store) {
   panel_.drawChrome(kPageTitles[1], pageIndex_, kPageCount);
   TFT_eSprite& canvas = panel_.canvas();
   const auto battery = store.battery();
-  char line[28];
-  if (!battery.valid) {
-    canvas.setTextColor(DonglePanelPalette::kMuted, DonglePanelPalette::kBackground);
-    canvas.drawString("No battery data", 6, 32);
+  if (!battery.valid || battery.cellCount == 0) {
+    textLine(canvas, 28, "No cell data", DonglePanelPalette::kMuted);
     return;
   }
-  std::snprintf(line, sizeof(line), "MOS %.0fC", battery.mosTemperatureC);
-  canvas.setTextColor(DonglePanelPalette::kText, DonglePanelPalette::kBackground);
-  canvas.drawString(line, 6, 24);
-  std::snprintf(line, sizeof(line), "PCB %.0fC", battery.pcbTemperatureC);
-  canvas.drawString(line, 6, 40);
-  std::snprintf(line, sizeof(line), "cells %u", battery.cellCount);
-  canvas.setTextColor(DonglePanelPalette::kMuted, DonglePanelPalette::kBackground);
-  canvas.drawString(line, 6, 56);
+  float minV = battery.cellVoltages[0];
+  float maxV = minV;
+  for (uint8_t i = 1; i < battery.cellCount; ++i) {
+    if (battery.cellVoltages[i] < minV) minV = battery.cellVoltages[i];
+    if (battery.cellVoltages[i] > maxV) maxV = battery.cellVoltages[i];
+  }
+  const auto warnings = store.warnings();
+  char line[40];
+  std::snprintf(line, sizeof(line), "dV %.0fmV  n=%u", (maxV - minV) * 1000.0f, battery.cellCount);
+  textLine(canvas, 18, line, DonglePanelPalette::kMuted);
+  const uint8_t shown = battery.cellCount > 8 ? 8 : battery.cellCount;
+  for (uint8_t i = 0; i < shown; ++i) {
+    const int col = (i < 4) ? 0 : 1;
+    const int row = static_cast<int>(i % 4);
+    const float voltage = battery.cellVoltages[i];
+    uint16_t color = DonglePanelPalette::kText;
+    if (warnings.cellBalancing[i]) {
+      color = DonglePanelPalette::kWarn;
+    } else if (voltage >= maxV - 0.0001f) {
+      color = DonglePanelPalette::kAccent;
+    } else if (voltage <= minV + 0.0001f) {
+      color = DonglePanelPalette::kDanger;
+    }
+    std::snprintf(line, sizeof(line), "%u %.3f", i + 1, voltage);
+    canvas.setTextColor(color, DonglePanelPalette::kBackground);
+    canvas.setTextSize(1);
+    canvas.drawString(line, 4 + col * 78, 30 + row * 12);
+  }
+}
+
+void DongleStatusDisplay::drawTemps(const telemetry::ITelemetryStore& store) {
+  panel_.drawChrome(kPageTitles[2], pageIndex_, kPageCount);
+  TFT_eSprite& canvas = panel_.canvas();
+  const auto battery = store.battery();
+  char line[32];
+  std::snprintf(line, sizeof(line), "MOS  %.1f C", battery.mosTemperatureC);
+  textLine(canvas, 24, line, DonglePanelPalette::kText);
+  std::snprintf(line, sizeof(line), "PCB  %.1f C", battery.pcbTemperatureC);
+  textLine(canvas, 40, line, DonglePanelPalette::kText);
+  textLine(canvas, 58, "Cell temps: web Temps", DonglePanelPalette::kMuted);
+}
+
+void DongleStatusDisplay::drawAlerts(const telemetry::ITelemetryStore& store) {
+  panel_.drawChrome(kPageTitles[3], pageIndex_, kPageCount);
+  TFT_eSprite& canvas = panel_.canvas();
+  const auto warnings = store.warnings();
+  textLine(canvas, 20, warnings.hasActiveProtection ? "Protection ACTIVE" : "Protection clear",
+           warnings.hasActiveProtection ? DonglePanelPalette::kDanger : DonglePanelPalette::kAccent);
+  textLine(canvas, 34, warnings.hasFault ? "Fault ACTIVE" : "Fault clear",
+           warnings.hasFault ? DonglePanelPalette::kDanger : DonglePanelPalette::kAccent);
+  char line[40];
+  std::snprintf(line, sizeof(line), "SR %02X %02X %02X", warnings.statusRegister1,
+                warnings.statusRegister2, warnings.statusRegister5);
+  textLine(canvas, 52, line, DonglePanelPalette::kMuted);
 }
 
 void DongleStatusDisplay::drawLink(const telemetry::ITelemetryStore& store) {
-  panel_.drawChrome(kPageTitles[2], pageIndex_, kPageCount);
+  panel_.drawChrome(kPageTitles[4], pageIndex_, kPageCount);
   TFT_eSprite& canvas = panel_.canvas();
   const auto gateway = store.status();
-  char line[36];
-  canvas.setTextColor(gateway.bleConnected ? DonglePanelPalette::kAccent : DonglePanelPalette::kDanger,
-                      DonglePanelPalette::kBackground);
-  canvas.drawString(gateway.bleConnected ? "BLE up" : "BLE down", 6, 20);
-  if (gateway.bleConnected) {
-    std::snprintf(line, sizeof(line), "tries %lu",
-                  static_cast<unsigned long>(gateway.bleConnectAttempts));
-    canvas.setTextColor(DonglePanelPalette::kMuted, DonglePanelPalette::kBackground);
-    canvas.drawString(line, 70, 20);
-  } else {
-    const uint32_t nowMs = millis();
-    if (gateway.bleNextRetryAtMs > nowMs) {
-      const uint32_t secondsLeft = (gateway.bleNextRetryAtMs - nowMs + 999u) / 1000u;
-      std::snprintf(line, sizeof(line), "try#%lu next %lus",
-                    static_cast<unsigned long>(gateway.bleConnectAttempts),
-                    static_cast<unsigned long>(secondsLeft));
-    } else if (gateway.bleConnectAttempts > 0) {
-      std::snprintf(line, sizeof(line), "try#%lu connecting",
-                    static_cast<unsigned long>(gateway.bleConnectAttempts));
-    } else {
-      std::snprintf(line, sizeof(line), "waiting BLE...");
-    }
-    canvas.setTextColor(DonglePanelPalette::kWarn, DonglePanelPalette::kBackground);
-    canvas.drawString(line, 6, 34);
-  }
-  std::snprintf(line, sizeof(line), "NOW %s ch%u", gateway.espNowReady ? "OK" : "--",
+  const auto product = store.product();
+  char line[48];
+  std::snprintf(line, sizeof(line), "NOW %s ch%u", gateway.espNowReady ? "OK" : "DOWN",
                 gateway.espNowChannel);
-  canvas.setTextColor(DonglePanelPalette::kText, DonglePanelPalette::kBackground);
-  canvas.drawString(line, 6, gateway.bleConnected ? 38 : 50);
-  if (gateway.bleConnected) {
-    canvas.setTextColor(DonglePanelPalette::kMuted, DonglePanelPalette::kBackground);
-    canvas.drawString(gateway.espNowPeerMac[0] ? gateway.espNowPeerMac : "(no peer)", 6, 54);
-  }
+  textLine(canvas, 18, line,
+           gateway.espNowReady ? DonglePanelPalette::kAccent : DonglePanelPalette::kDanger);
+  textLine(canvas, 30, gateway.espNowPeerMac[0] ? gateway.espNowPeerMac : "(no peer)",
+           DonglePanelPalette::kText);
+  textLine(canvas, 42, gateway.bleAddress[0] ? gateway.bleAddress : "(no BLE mac)",
+           DonglePanelPalette::kText);
+  const char* tail = gateway.lastError[0] ? gateway.lastError
+                     : (product.serialNumber[0] ? product.serialNumber : product.manufacturerName);
+  textLine(canvas, 56, tail[0] ? tail : "link idle", DonglePanelPalette::kMuted);
 }
 
 void DongleStatusDisplay::drawEsp(const telemetry::ITelemetryStore& store) {
@@ -140,7 +168,7 @@ void DongleStatusDisplay::drawEsp(const telemetry::ITelemetryStore& store) {
   lines.freeHeapBytes = espHealth.freeHeapBytes;
   lines.uptimeSeconds = espHealth.uptimeSeconds;
   lines.chipTemperatureC = espHealth.chipTemperatureC;
-  panel_.drawEspPage(kPageTitles[3], pageIndex_, kPageCount, lines);
+  panel_.drawEspPage(kPageTitles[5], pageIndex_, kPageCount, lines);
 }
 
 void DongleStatusDisplay::render(const telemetry::ITelemetryStore& store) {
@@ -152,12 +180,18 @@ void DongleStatusDisplay::render(const telemetry::ITelemetryStore& store) {
       drawOverview(store);
       break;
     case 1:
-      drawEnergy(store);
+      drawCells(store);
       break;
     case 2:
-      drawLink(store);
+      drawTemps(store);
       break;
     case 3:
+      drawAlerts(store);
+      break;
+    case 4:
+      drawLink(store);
+      break;
+    case 5:
       drawEsp(store);
       break;
     default:
