@@ -1,7 +1,26 @@
 /* Wattcycle gateway binary telemetry decoder (little-endian). */
 (function (global) {
   const MAGIC = 0x4d475457;
-  const VERSION = 6;
+  const VERSION = 9;
+  const VOLT_DECI = 10;
+  const AMP_CENTI = 100;
+  // Mirrors ecoflow_bridge::ExtraFlags / RuntimeFlags.
+  const EXTRA_AC_INPUT_ON = 1 << 0;
+  const EXTRA_PV_INPUT_ON = 1 << 1;
+  const EXTRA_CELL_TEMP = 1 << 2;
+  const EXTRA_SOH = 1 << 3;
+  const EXTRA_FREQ = 1 << 4;
+  const EXTRA_ERR = 1 << 5;
+  const EXTRA_CHG_STATE = 1 << 6;
+  const EXTRA_FAN = 1 << 7;
+  const RUNTIME_AC_IN = 1 << 0;
+  const RUNTIME_AC_OUT = 1 << 1;
+  const RUNTIME_BMS = 1 << 2;
+  const RUNTIME_CELL_VOLTS = 1 << 3;
+  const RUNTIME_CAPACITY = 1 << 4;
+  const RUNTIME_PCS_TEMP = 1 << 5;
+  const RUNTIME_CHG_LIMIT = 1 << 6;
+  const RUNTIME_DSG_LIMIT = 1 << 7;
 
   function u8(view, offset) { return view.getUint8(offset); }
   function u16(view, offset) { return view.getUint16(offset, true); }
@@ -204,6 +223,63 @@
       valid: data.ecoflow.bridgeEspValid
     };
     offset += 10;
+
+    // v9: station detail, 25 bytes. extraFlags match the ESP-NOW extra bits.
+    const ECOFLOW_DETAIL_BYTES = 25;
+    if (offset + ECOFLOW_DETAIL_BYTES > bytes.length) {
+      throw new Error("Truncated telemetry EcoFlow detail");
+    }
+    const extra = u8(view, offset); offset += 1;
+    data.ecoflow.acInputOn = (extra & EXTRA_AC_INPUT_ON) !== 0;
+    data.ecoflow.pvInputOn = (extra & EXTRA_PV_INPUT_ON) !== 0;
+    data.ecoflow.haveCellTemp = (extra & EXTRA_CELL_TEMP) !== 0;
+    data.ecoflow.haveSoh = (extra & EXTRA_SOH) !== 0;
+    data.ecoflow.haveFreq = (extra & EXTRA_FREQ) !== 0;
+    data.ecoflow.haveErr = (extra & EXTRA_ERR) !== 0;
+    data.ecoflow.haveChgState = (extra & EXTRA_CHG_STATE) !== 0;
+    data.ecoflow.haveFan = (extra & EXTRA_FAN) !== 0;
+    data.ecoflow.soh = data.ecoflow.haveSoh ? u8(view, offset) : null; offset += 1;
+    data.ecoflow.acInFreqHz = data.ecoflow.haveFreq ? u8(view, offset) : null; offset += 1;
+    data.ecoflow.chgDsgState = data.ecoflow.haveChgState ? u8(view, offset) : null; offset += 1;
+    data.ecoflow.fanLevel = data.ecoflow.haveFan ? u8(view, offset) : null; offset += 1;
+    data.ecoflow.chargeLimitPercent = data.ecoflow.haveChargeLimit ? u8(view, offset) : null;
+    offset += 1;
+    data.ecoflow.dischargeLimitPercent = data.ecoflow.haveDischargeLimit ? u8(view, offset) : null;
+    offset += 1;
+    data.ecoflow.inSumW = i16(view, offset); offset += 2;
+    data.ecoflow.outSumW = i16(view, offset); offset += 2;
+    data.ecoflow.bmsPowerW = i16(view, offset); offset += 2;
+    data.ecoflow.minCellTempC = data.ecoflow.haveCellTemp ? i16(view, offset) : null; offset += 2;
+    data.ecoflow.maxCellTempC = data.ecoflow.haveCellTemp ? i16(view, offset) : null; offset += 2;
+    data.ecoflow.minMosTempC = data.ecoflow.haveCellTemp ? i16(view, offset) : null; offset += 2;
+    data.ecoflow.maxMosTempC = data.ecoflow.haveCellTemp ? i16(view, offset) : null; offset += 2;
+    data.ecoflow.errCode = data.ecoflow.haveErr ? u32(view, offset) : null; offset += 4;
+
+    const ECOFLOW_RUNTIME_BYTES = 25;
+    if (offset + ECOFLOW_RUNTIME_BYTES > bytes.length) {
+      throw new Error("Truncated telemetry EcoFlow runtime");
+    }
+    const runtime = u8(view, offset); offset += 1;
+    data.ecoflow.haveAcInElec = (runtime & RUNTIME_AC_IN) !== 0;
+    data.ecoflow.haveAcOutElec = (runtime & RUNTIME_AC_OUT) !== 0;
+    data.ecoflow.haveBmsElec = (runtime & RUNTIME_BMS) !== 0;
+    data.ecoflow.haveCellVolts = (runtime & RUNTIME_CELL_VOLTS) !== 0;
+    data.ecoflow.haveCapacity = (runtime & RUNTIME_CAPACITY) !== 0;
+    data.ecoflow.havePcsTemp = (runtime & RUNTIME_PCS_TEMP) !== 0;
+    data.ecoflow.haveChargeLimit = (runtime & RUNTIME_CHG_LIMIT) !== 0;
+    data.ecoflow.haveDischargeLimit = (runtime & RUNTIME_DSG_LIMIT) !== 0;
+    data.ecoflow.acInVolts = data.ecoflow.haveAcInElec ? i16(view, offset) / VOLT_DECI : null; offset += 2;
+    data.ecoflow.acOutVolts = data.ecoflow.haveAcOutElec ? i16(view, offset) / VOLT_DECI : null; offset += 2;
+    data.ecoflow.acInAmps = data.ecoflow.haveAcInElec ? i16(view, offset) / AMP_CENTI : null; offset += 2;
+    data.ecoflow.acOutAmps = data.ecoflow.haveAcOutElec ? i16(view, offset) / AMP_CENTI : null; offset += 2;
+    data.ecoflow.bmsVolts = data.ecoflow.haveBmsElec ? i16(view, offset) / AMP_CENTI : null; offset += 2;
+    data.ecoflow.bmsAmps = data.ecoflow.haveBmsElec ? i16(view, offset) / AMP_CENTI : null; offset += 2;
+    data.ecoflow.minCellMv = data.ecoflow.haveCellVolts ? u16(view, offset) : null; offset += 2;
+    data.ecoflow.maxCellMv = data.ecoflow.haveCellVolts ? u16(view, offset) : null; offset += 2;
+    data.ecoflow.fullCapMah = data.ecoflow.haveCapacity ? u16(view, offset) : null; offset += 2;
+    data.ecoflow.remainCapMah = data.ecoflow.haveCapacity ? u16(view, offset) : null; offset += 2;
+    data.ecoflow.pcsDcTempC = data.ecoflow.havePcsTemp ? i16(view, offset) : null; offset += 2;
+    data.ecoflow.pcsAcTempC = data.ecoflow.havePcsTemp ? i16(view, offset) : null; offset += 2;
 
     return data;
   }

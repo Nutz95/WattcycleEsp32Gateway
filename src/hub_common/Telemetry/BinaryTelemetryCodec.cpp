@@ -1,6 +1,7 @@
 #include "Telemetry/BinaryTelemetryCodec.h"
 
 #include "Bms/Protocol/ProtocolConstants.h"
+#include "EspNow/EcoFlowEspNowProtocol.h"
 
 #include <cstring>
 
@@ -44,6 +45,58 @@ void writeFixedString(uint8_t*& cursor, const char* text, size_t fieldLength) {
 
 int16_t toDeciCelsius(float celsius) {
   return static_cast<int16_t>(celsius * 10.0f);
+}
+
+void writeEcoFlowDetail(uint8_t*& cursor, const EcoFlowBridgeTelemetry& ecoflow) {
+  uint8_t extra = 0;
+  if (ecoflow.acInputOn) extra |= ecoflow_bridge::kExtraAcInputOn;
+  if (ecoflow.pvInputOn) extra |= ecoflow_bridge::kExtraPvInputOn;
+  if (ecoflow.haveCellTemp) extra |= ecoflow_bridge::kExtraCellTemp;
+  if (ecoflow.haveSoh) extra |= ecoflow_bridge::kExtraSoh;
+  if (ecoflow.haveFreq) extra |= ecoflow_bridge::kExtraFreq;
+  if (ecoflow.haveErr) extra |= ecoflow_bridge::kExtraErr;
+  if (ecoflow.haveChgState) extra |= ecoflow_bridge::kExtraChgState;
+  if (ecoflow.haveFan) extra |= ecoflow_bridge::kExtraFan;
+  writeU8(cursor, extra);
+  writeU8(cursor, ecoflow.sohPercent);
+  writeU8(cursor, ecoflow.acInFreqHz);
+  writeU8(cursor, ecoflow.chgDsgState);
+  writeU8(cursor, ecoflow.fanLevel);
+  writeU8(cursor, ecoflow.chargeLimitPercent);
+  writeU8(cursor, ecoflow.dischargeLimitPercent);
+  writeI16(cursor, ecoflow.inSumW);
+  writeI16(cursor, ecoflow.outSumW);
+  writeI16(cursor, ecoflow.bmsPowerW);
+  writeI16(cursor, ecoflow.minCellTempC);
+  writeI16(cursor, ecoflow.maxCellTempC);
+  writeI16(cursor, ecoflow.minMosTempC);
+  writeI16(cursor, ecoflow.maxMosTempC);
+  writeU32(cursor, ecoflow.errCode);
+}
+
+void writeEcoFlowRuntime(uint8_t*& cursor, const EcoFlowBridgeTelemetry& ecoflow) {
+  uint8_t flags = 0;
+  if (ecoflow.haveAcInElec) flags |= ecoflow_bridge::kRuntimeAcIn;
+  if (ecoflow.haveAcOutElec) flags |= ecoflow_bridge::kRuntimeAcOut;
+  if (ecoflow.haveBmsElec) flags |= ecoflow_bridge::kRuntimeBms;
+  if (ecoflow.haveCellVolts) flags |= ecoflow_bridge::kRuntimeCellVolts;
+  if (ecoflow.haveCapacity) flags |= ecoflow_bridge::kRuntimeCapacity;
+  if (ecoflow.havePcsTemp) flags |= ecoflow_bridge::kRuntimePcsTemp;
+  if (ecoflow.haveChargeLimit) flags |= ecoflow_bridge::kRuntimeChgLimit;
+  if (ecoflow.haveDischargeLimit) flags |= ecoflow_bridge::kRuntimeDsgLimit;
+  writeU8(cursor, flags);
+  writeI16(cursor, ecoflow.acInVoltsDeci);
+  writeI16(cursor, ecoflow.acOutVoltsDeci);
+  writeI16(cursor, ecoflow.acInCentiamps);
+  writeI16(cursor, ecoflow.acOutCentiamps);
+  writeI16(cursor, ecoflow.bmsVoltsCenti);
+  writeI16(cursor, ecoflow.bmsCentiamps);
+  writeU16(cursor, ecoflow.minCellMv);
+  writeU16(cursor, ecoflow.maxCellMv);
+  writeU16(cursor, ecoflow.fullCapMah);
+  writeU16(cursor, ecoflow.remainCapMah);
+  writeI16(cursor, ecoflow.pcsDcTempC);
+  writeI16(cursor, ecoflow.pcsAcTempC);
 }
 
 }  // namespace
@@ -261,6 +314,9 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeI16(cursor, toDeciCelsius(ecoflow.bridgeEsp.chipTemperatureC));
   writeU16(cursor, static_cast<uint16_t>(ecoflow.bridgeEsp.freeHeapBytes / 1024u));
   writeU32(cursor, ecoflow.bridgeEsp.uptimeSeconds);
+  // v9: station detail (25 bytes) then runtime. Flag bits are EcoFlowEspNowProtocol.
+  writeEcoFlowDetail(cursor, ecoflow);
+  writeEcoFlowRuntime(cursor, ecoflow);
 
   const size_t written = static_cast<size_t>(cursor - buffer);
   if (written > capacity) {

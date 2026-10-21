@@ -110,6 +110,8 @@ void EspNowTelemetryReceiver::loop() {
       (millis() - solar.receivedAtMs) > TimingConstants::kSolarLinkStaleMs && solar.linkFresh) {
     telemetry::SolarBridgeTelemetry stale = solar;
     stale.linkFresh = false;
+    stale.sppConnected = false;
+    stale.meterValid = false;
     store_.updateSolar(stale);
   }
   const auto ecoflow = store_.ecoflow();
@@ -118,6 +120,8 @@ void EspNowTelemetryReceiver::loop() {
       ecoflow.linkFresh) {
     telemetry::EcoFlowBridgeTelemetry stale = ecoflow;
     stale.linkFresh = false;
+    stale.bleConnected = false;
+    stale.meterValid = false;
     store_.updateEcoFlow(stale);
   }
   const auto battery = store_.battery();
@@ -174,10 +178,17 @@ void EspNowTelemetryReceiver::onReceive(const uint8_t* mac, const uint8_t* data,
   }
 
   if (magic == ecoflow_bridge::kMagic && version > 0 && version <= ecoflow_bridge::kVersion) {
-    if (len < static_cast<int>(sizeof(ecoflow_bridge::EspNowPacketV1))) {
+    int requiredLen = static_cast<int>(offsetof(ecoflow_bridge::EspNowPacketV1, inSumW));
+    if (version >= 3) {
+      requiredLen = static_cast<int>(sizeof(ecoflow_bridge::EspNowPacketV1));
+    } else if (version >= 2) {
+      requiredLen = static_cast<int>(offsetof(ecoflow_bridge::EspNowPacketV1, acInVoltsDeci));
+    }
+    if (len < requiredLen) {
       return;
     }
-    std::memcpy(&ecoflowPacket_, data, sizeof(ecoflowPacket_));
+    ecoflowPacket_ = {};
+    std::memcpy(&ecoflowPacket_, data, static_cast<size_t>(requiredLen));
     pendingEcoFlow_ = true;
     static uint32_t ecoRxCount = 0;
     if ((++ecoRxCount % 10u) == 1u) {

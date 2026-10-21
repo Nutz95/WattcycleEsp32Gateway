@@ -39,6 +39,57 @@ void applySolarPacket(telemetry::ITelemetryStore& store, bool encrypt,
   store.updateSolar(solar);
 }
 
+void copyEcoFlowDetail(telemetry::EcoFlowBridgeTelemetry& eco,
+                       const ecoflow_bridge::EspNowPacketV1& packet) {
+  eco.inSumW = packet.inSumW;
+  eco.outSumW = packet.outSumW;
+  eco.bmsPowerW = packet.bmsPowerW;
+  eco.sohPercent = packet.sohPercent;
+  eco.acInFreqHz = packet.acInFreqHz;
+  eco.chgDsgState = packet.chgDsgState;
+  eco.fanLevel = packet.fanLevel;
+  eco.chargeLimitPercent = packet.chargeLimitPercent;
+  eco.dischargeLimitPercent = packet.dischargeLimitPercent;
+  eco.minCellTempC = packet.minCellTempC;
+  eco.maxCellTempC = packet.maxCellTempC;
+  eco.minMosTempC = packet.minMosTempC;
+  eco.maxMosTempC = packet.maxMosTempC;
+  eco.errCode = packet.errCode;
+  const uint8_t extra = packet.extraFlags;
+  eco.acInputOn = (extra & ecoflow_bridge::kExtraAcInputOn) != 0;
+  eco.pvInputOn = (extra & ecoflow_bridge::kExtraPvInputOn) != 0;
+  eco.haveCellTemp = (extra & ecoflow_bridge::kExtraCellTemp) != 0;
+  eco.haveSoh = (extra & ecoflow_bridge::kExtraSoh) != 0;
+  eco.haveFreq = (extra & ecoflow_bridge::kExtraFreq) != 0;
+  eco.haveErr = (extra & ecoflow_bridge::kExtraErr) != 0;
+  eco.haveChgState = (extra & ecoflow_bridge::kExtraChgState) != 0;
+  eco.haveFan = (extra & ecoflow_bridge::kExtraFan) != 0;
+  if (packet.version < 3) {
+    return;
+  }
+  eco.acInVoltsDeci = packet.acInVoltsDeci;
+  eco.acOutVoltsDeci = packet.acOutVoltsDeci;
+  eco.acInCentiamps = packet.acInCentiamps;
+  eco.acOutCentiamps = packet.acOutCentiamps;
+  eco.bmsVoltsCenti = packet.bmsVoltsCenti;
+  eco.bmsCentiamps = packet.bmsCentiamps;
+  eco.minCellMv = packet.minCellMv;
+  eco.maxCellMv = packet.maxCellMv;
+  eco.fullCapMah = packet.fullCapMah;
+  eco.remainCapMah = packet.remainCapMah;
+  eco.pcsDcTempC = packet.pcsDcTempC;
+  eco.pcsAcTempC = packet.pcsAcTempC;
+  const uint8_t runtime = packet.runtimeFlags;
+  eco.haveAcInElec = (runtime & ecoflow_bridge::kRuntimeAcIn) != 0;
+  eco.haveAcOutElec = (runtime & ecoflow_bridge::kRuntimeAcOut) != 0;
+  eco.haveBmsElec = (runtime & ecoflow_bridge::kRuntimeBms) != 0;
+  eco.haveCellVolts = (runtime & ecoflow_bridge::kRuntimeCellVolts) != 0;
+  eco.haveCapacity = (runtime & ecoflow_bridge::kRuntimeCapacity) != 0;
+  eco.havePcsTemp = (runtime & ecoflow_bridge::kRuntimePcsTemp) != 0;
+  eco.haveChargeLimit = (runtime & ecoflow_bridge::kRuntimeChgLimit) != 0;
+  eco.haveDischargeLimit = (runtime & ecoflow_bridge::kRuntimeDsgLimit) != 0;
+}
+
 void applyEcoFlowPacket(telemetry::ITelemetryStore& store, bool encrypt,
                         const ecoflow_bridge::EspNowPacketV1& packet) {
   telemetry::EcoFlowBridgeTelemetry eco = {};
@@ -69,6 +120,9 @@ void applyEcoFlowPacket(telemetry::ITelemetryStore& store, bool encrypt,
     eco.bridgeEsp.chipTemperatureC = packet.chipTempDc / 10.0f;
     eco.bridgeEsp.freeHeapBytes = static_cast<uint32_t>(packet.heapKb) * 1024u;
     eco.bridgeEsp.uptimeSeconds = packet.uptimeSec;
+  }
+  if (packet.version >= 2) {
+    copyEcoFlowDetail(eco, packet);
   }
   store.updateEcoFlow(eco);
 }

@@ -78,7 +78,12 @@
     if (!encrypted && (gateway.solarLink || solar.target)) {
       document.getElementById("espNowEnc").className = "warn";
     }
-    setLink("solarSppGw", gateway.spp, gateway.spp ? "connected" : "down");
+    const solarLive = !!gateway.solarLink;
+    setLink(
+      "solarSppGw",
+      solarLive && !!gateway.spp,
+      solarLive ? (gateway.spp ? "connected" : "down") : "no link"
+    );
     document.getElementById("solarTarget").textContent = solar.target || "--";
     document.getElementById("solarError").textContent = solar.error || "none";
 
@@ -94,7 +99,11 @@
       const encEl = document.getElementById("ecoflowEncGw");
       if (encEl) encEl.className = "warn";
     }
-    setLink("ecoflowBleGw", eco.bleConnected, eco.bleConnected ? "connected" : "down");
+    setLink(
+      "ecoflowBleGw",
+      ecoLink && !!eco.bleConnected,
+      ecoLink ? (eco.bleConnected ? "connected" : "down") : "no link"
+    );
     const ecoErr = document.getElementById("ecoflowError");
     if (ecoErr) ecoErr.textContent = eco.error || "none";
   }

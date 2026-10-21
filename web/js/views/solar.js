@@ -56,7 +56,11 @@
       ? (solar.valid ? "Live XT369P via ESP-NOW" : "Bridge up — waiting for meter")
       : "No ESP-NOW link";
     setLink("solarPageLink", solarLink, solarLink ? "fresh" : "stale");
-    setLink("solarPageSpp", sppOk, sppOk ? "connected" : "down");
+    setLink(
+      "solarPageSpp",
+      solarLink && sppOk,
+      solarLink ? (sppOk ? "connected" : "down") : "no link"
+    );
     const encrypted = !!solar.espNowEncrypted;
     const encEl = document.getElementById("solarPageEnc");
     if (encEl) {

@@ -122,6 +122,52 @@ uint8_t EspNowTelemetryPublisher::channel() const {
   return channel_;
 }
 
+void fillStationDetail(ecoflow_bridge::EspNowPacketV1& packet,
+                       const models::PowerStationTelemetry& telemetry) {
+  packet.inSumW = telemetry.inSumW;
+  packet.outSumW = telemetry.outSumW;
+  packet.bmsPowerW = telemetry.bmsPowerW;
+  packet.sohPercent = telemetry.sohPercent;
+  packet.acInFreqHz = telemetry.acInFreqHz;
+  packet.chgDsgState = telemetry.chgDsgState;
+  packet.fanLevel = telemetry.fanLevel;
+  packet.chargeLimitPercent = telemetry.chargeLimitPercent;
+  packet.dischargeLimitPercent = telemetry.dischargeLimitPercent;
+  packet.minCellTempC = telemetry.minCellTempC;
+  packet.maxCellTempC = telemetry.maxCellTempC;
+  packet.minMosTempC = telemetry.minMosTempC;
+  packet.maxMosTempC = telemetry.maxMosTempC;
+  packet.errCode = telemetry.errCode;
+  if (telemetry.acInputOn) packet.extraFlags |= ecoflow_bridge::kExtraAcInputOn;
+  if (telemetry.pvInputOn) packet.extraFlags |= ecoflow_bridge::kExtraPvInputOn;
+  if (telemetry.haveCellTemp) packet.extraFlags |= ecoflow_bridge::kExtraCellTemp;
+  if (telemetry.haveSoh) packet.extraFlags |= ecoflow_bridge::kExtraSoh;
+  if (telemetry.haveFreq) packet.extraFlags |= ecoflow_bridge::kExtraFreq;
+  if (telemetry.haveErr) packet.extraFlags |= ecoflow_bridge::kExtraErr;
+  if (telemetry.haveChgState) packet.extraFlags |= ecoflow_bridge::kExtraChgState;
+  if (telemetry.haveFan) packet.extraFlags |= ecoflow_bridge::kExtraFan;
+  packet.acInVoltsDeci = telemetry.acInVoltsDeci;
+  packet.acOutVoltsDeci = telemetry.acOutVoltsDeci;
+  packet.acInCentiamps = telemetry.acInCentiamps;
+  packet.acOutCentiamps = telemetry.acOutCentiamps;
+  packet.bmsVoltsCenti = telemetry.bmsVoltsCenti;
+  packet.bmsCentiamps = telemetry.bmsCentiamps;
+  packet.minCellMv = telemetry.minCellMv;
+  packet.maxCellMv = telemetry.maxCellMv;
+  packet.fullCapMah = telemetry.fullCapMah;
+  packet.remainCapMah = telemetry.remainCapMah;
+  packet.pcsDcTempC = telemetry.pcsDcTempC;
+  packet.pcsAcTempC = telemetry.pcsAcTempC;
+  if (telemetry.haveAcInElec) packet.runtimeFlags |= ecoflow_bridge::kRuntimeAcIn;
+  if (telemetry.haveAcOutElec) packet.runtimeFlags |= ecoflow_bridge::kRuntimeAcOut;
+  if (telemetry.haveBmsElec) packet.runtimeFlags |= ecoflow_bridge::kRuntimeBms;
+  if (telemetry.haveCellVolts) packet.runtimeFlags |= ecoflow_bridge::kRuntimeCellVolts;
+  if (telemetry.haveCapacity) packet.runtimeFlags |= ecoflow_bridge::kRuntimeCapacity;
+  if (telemetry.havePcsTemp) packet.runtimeFlags |= ecoflow_bridge::kRuntimePcsTemp;
+  if (telemetry.haveChargeLimit) packet.runtimeFlags |= ecoflow_bridge::kRuntimeChgLimit;
+  if (telemetry.haveDischargeLimit) packet.runtimeFlags |= ecoflow_bridge::kRuntimeDsgLimit;
+}
+
 void EspNowTelemetryPublisher::publish(const models::PowerStationTelemetry& telemetry,
                                        bool bleConnected, uint32_t telemetryCount,
                                        const char* lastError,
@@ -172,6 +218,7 @@ void EspNowTelemetryPublisher::publish(const models::PowerStationTelemetry& tele
   packet.chipTempDc = static_cast<int16_t>(health.chipTemperatureC * 10.0f);
   packet.heapKb = static_cast<uint16_t>(health.freeHeapBytes / 1024u);
   packet.uptimeSec = health.uptimeSeconds;
+  fillStationDetail(packet, telemetry);
 
   const esp_err_t err =
       esp_now_send(peerMac_, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet));

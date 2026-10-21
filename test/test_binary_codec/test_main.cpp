@@ -25,9 +25,10 @@ void test_encode_magic_and_soc() {
   store.setWifiState(true, "10.0.0.8");
   store.setBleState(true, "AA:BB:CC:DD:EE:FF", "");
 
-  uint8_t buffer[512];
+  uint8_t buffer[BinaryTelemetryCodec::kMaxEncodedBytes];
   const size_t written = BinaryTelemetryCodec::encode(store, buffer, sizeof(buffer));
   TEST_ASSERT_TRUE(written > 32);
+  TEST_ASSERT_TRUE(written <= sizeof(buffer));
   TEST_ASSERT_EQUAL_HEX8(0x57, buffer[0]);  // W
   TEST_ASSERT_EQUAL_HEX8(0x54, buffer[1]);  // T
   TEST_ASSERT_EQUAL_HEX8(0x47, buffer[2]);  // G
