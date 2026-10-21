@@ -16,6 +16,21 @@
     });
   });
 
+  function gotoFromNode(event) {
+    const node = event.target.closest("[data-goto]");
+    if (!node || !node.closest("#views")) return;
+    activateTab(node.getAttribute("data-goto"));
+  }
+
+  document.addEventListener("click", gotoFromNode);
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const node = event.target.closest("[data-goto]");
+    if (!node) return;
+    event.preventDefault();
+    activateTab(node.getAttribute("data-goto"));
+  });
+
   async function refresh() {
     try {
       const response = await fetch("/api/telemetry.bin", {

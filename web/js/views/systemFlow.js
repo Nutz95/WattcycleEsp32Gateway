@@ -41,6 +41,13 @@
     el.removeAttribute("marker-start");
   }
 
+  function setLinkNode(id, up) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.toggle("link-up", !!up);
+    node.classList.toggle("link-down", !up);
+  }
+
   function setPortNode(nodeId, portLabelId, on) {
     const node = document.getElementById(nodeId);
     if (node) {
@@ -89,7 +96,9 @@
     setEdge("edgeGridEco", eco.valid && acIn > FLOW_EPS_W, false);
 
     setText("lblEcoSoc", eco.valid && eco.soc != null ? eco.soc + "%" : "--%");
+    const ecoBleUp = ecoLink && !!eco.bleConnected;
     setText("lblEcoState", ecoLink ? (eco.bleConnected ? "BLE up" : "BLE down") : "no link");
+    setLinkNode("nodeEco", ecoBleUp);
 
     setText("lblEcoAcOut", fmtW(eco.acOutputW));
     setPortNode("nodeAcOut", "lblAcPort", !!eco.acOutputOn);
@@ -106,7 +115,9 @@
     // Pack sign convention: + = charging (EcoFlow → Wattcycle), − = discharging (→ EcoFlow).
     const packP = data.valid ? data.power : null;
     setText("lblPackSoc", data.valid ? data.soc + "%" : "--%");
+    const packBleUp = bmsLink && !!gw.ble;
     setText("lblPackState", bmsLink ? (gw.ble ? "BLE up" : "BLE down") : "no link");
+    setLinkNode("nodePack", packBleUp);
     if (packP != null && Math.abs(packP) > FLOW_EPS_W) {
       const packToEco = packP < 0;
       setText("lblPackLink", fmtW(Math.abs(packP)));
@@ -136,6 +147,7 @@
     setText("lblSolarP", fmtW(solarP));
     const sppOk = !!(gw.spp || solar.sppConnected);
     setText("lblXtState", solarLink ? (sppOk ? "SPP up" : "SPP down") : "no link");
+    setLinkNode("nodeXt", solarLink && sppOk);
     const solarActive = solarLink && solar.valid && solarP > SOLAR_EPS_W;
     setEdge("edgeSolarPanel", solarActive, false);
     setEdge("edgeXt369p", solarActive, false);

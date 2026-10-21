@@ -6,8 +6,8 @@
     <p class="tagline" id="flowSummary">Power-flow diagram — waiting for telemetry…</p>
   </header>
   <div class="system-flow-wrap">
-    <svg class="system-flow" viewBox="0 0 360 358" role="img" aria-labelledby="flowTitle flowDesc"
-         preserveAspectRatio="xMidYMin meet">
+    <svg class="system-flow" viewBox="0 0 360 358" role="group" aria-labelledby="flowTitle"
+         aria-describedby="flowDesc" preserveAspectRatio="xMidYMin meet">
       <title id="flowTitle">System power flow</title>
       <desc id="flowDesc">Grid, EcoFlow station, Wattcycle pack, and solar chain</desc>
       <defs>
@@ -26,7 +26,8 @@
       </g>
 
       <!-- EcoFlow hub -->
-      <g class="flow-node flow-node-hub" transform="translate(108,68)">
+      <g id="nodeEco" class="flow-node flow-node-hub flow-node-link link-down" data-goto="ecoflow"
+         role="button" tabindex="0" aria-label="Open EcoFlow" transform="translate(108,68)">
         <rect width="144" height="72" rx="10" />
         <text x="72" y="22" text-anchor="middle" class="flow-node-title">EcoFlow</text>
         <text x="72" y="40" text-anchor="middle" class="flow-node-sub" id="lblEcoSoc">--%</text>
@@ -65,7 +66,8 @@
             marker-end="url(#flowArrow)" />
       <text class="flow-label" x="198" y="178" id="lblPackLink">-- W</text>
 
-      <g class="flow-node" transform="translate(108,210)">
+      <g id="nodePack" class="flow-node flow-node-link link-down" data-goto="wattcycle"
+         role="button" tabindex="0" aria-label="Open Wattcycle" transform="translate(108,210)">
         <rect width="144" height="72" rx="10" />
         <text x="72" y="22" text-anchor="middle" class="flow-node-title">Wattcycle</text>
         <text x="72" y="40" text-anchor="middle" class="flow-node-sub" id="lblPackSoc">--%</text>
@@ -80,7 +82,8 @@
       <path id="edgeSolarPanel" class="flow-edge" d="M 96 330 H 120" marker-end="url(#flowArrow)" />
       <text class="flow-label" x="108" y="318" text-anchor="middle" id="lblSolarP">-- W</text>
 
-      <g class="flow-node" transform="translate(120,304)">
+      <g id="nodeXt" class="flow-node flow-node-link link-down" data-goto="solar"
+         role="button" tabindex="0" aria-label="Open XT369P" transform="translate(120,304)">
         <rect width="72" height="52" rx="8" />
         <text x="36" y="20" text-anchor="middle" class="flow-node-title">XT369P</text>
         <text x="36" y="38" text-anchor="middle" class="flow-node-sub" id="lblXtState">--</text>
