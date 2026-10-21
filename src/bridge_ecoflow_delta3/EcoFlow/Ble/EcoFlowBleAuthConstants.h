@@ -29,9 +29,14 @@ constexpr uint8_t kCmdAuthStatus = 0x89;
 /// Session: MD5(user_id+serial) auto-auth response.
 constexpr uint8_t kCmdAutoAuth = 0x86;
 
-/// pd335 DisplayPropertyUpload (SoC / watts / port flags).
+/// pd335 property command set (display + runtime uploads share it).
 constexpr uint8_t kDisplayCmdSet = 0xFE;
+/// Full DisplayPropertyUpload (SOH, fan, limits, and other slow fields).
+constexpr uint8_t kFullDisplayCmdId = 0x01;
+/// Incremental DisplayPropertyUpload (SoC / watts / port flags).
 constexpr uint8_t kDisplayCmdId = 0x15;
+/// RuntimePropertyUpload (volts, amps, cell mV, PCS temperatures).
+constexpr uint8_t kRuntimeCmdId = 0x16;
 
 /// Simple-payload type byte for KeyInfo ciphertext.
 constexpr uint8_t kSimpleTypeKeyInfo = 0x02;

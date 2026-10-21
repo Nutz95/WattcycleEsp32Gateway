@@ -23,6 +23,8 @@ using AuthWire::kCmdSetRetTime;
 using AuthWire::kCmdSetRtc;
 using AuthWire::kDisplayCmdId;
 using AuthWire::kDisplayCmdSet;
+using AuthWire::kFullDisplayCmdId;
+using AuthWire::kRuntimeCmdId;
 using AuthWire::kFrameCommand;
 using AuthWire::kRtcFallbackUnix;
 using AuthWire::kSimpleGetKeyInfo;
@@ -214,9 +216,18 @@ bool EcoFlowBleAuth::isRtcAck(const EcoFlowPacket& packet) {
 }
 
 bool EcoFlowBleAuth::handleDisplayUpload(const EcoFlowPacket& packet) {
-  if (packet.cmdSet != kDisplayCmdSet || packet.cmdId != kDisplayCmdId ||
-      packet.payload == nullptr || packet.payloadLength == 0) {
+  const bool propertyUpload = packet.cmdId == kFullDisplayCmdId || packet.cmdId == kDisplayCmdId ||
+                              packet.cmdId == kRuntimeCmdId;
+  if (packet.cmdSet != kDisplayCmdSet || !propertyUpload || packet.payload == nullptr ||
+      packet.payloadLength == 0) {
     return false;
+  }
+  if (packet.cmdId != kDisplayCmdId) {
+    static uint32_t extraLogs = 0;
+    if ((extraLogs++ % 20u) == 0u) {
+      Serial.printf("[ecoflow-auth] property upload id=%02X len=%u\n", packet.cmdId,
+                    static_cast<unsigned>(packet.payloadLength));
+    }
   }
   ++telemetryCount_;
   if (displayDecoder_.merge(packet.payload, packet.payloadLength, telemetry_)) {
