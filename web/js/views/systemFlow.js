@@ -69,7 +69,7 @@
     const eco = data.ecoflow || {};
     const solar = data.solar || {};
     const gw = data.gateway || {};
-    const bmsLink = !!(data.valid || gw.telemetryFresh);
+    const bmsLink = !!gw.telemetryFresh;
     const solarLink = !!gw.solarLink;
     const ecoLink = !!eco.linkFresh || !!gw.ecoflowLink;
 

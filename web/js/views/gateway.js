@@ -54,7 +54,12 @@
       ecoflowMacEl.textContent = "--";
     }
 
-    setLink("ble", gateway.ble, gateway.ble ? "connected" : "down");
+    const bleLive = !!gateway.telemetryFresh;
+    setLink(
+      "ble",
+      bleLive && !!gateway.ble,
+      bleLive ? (gateway.ble ? "connected" : "down") : "no link"
+    );
     const bleAddress = gateway.bleAddress || "";
     if (bleAddress) {
       lastBleAddress = bleAddress;

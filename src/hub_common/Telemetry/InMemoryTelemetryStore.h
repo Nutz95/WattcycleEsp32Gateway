@@ -22,6 +22,7 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   void setWebPort(uint16_t port) override;
   void setBleState(bool connected, const char* address, const char* error) override;
   void setTelemetryFresh(bool fresh) override;
+  void setBmsLink(bool telemetryFresh, bool bleConnected) override;
   void updateEspHealth(const EspHealth& health) override;
   void updateBmsBridgeHealth(const EspHealth& health, bool valid) override;
 

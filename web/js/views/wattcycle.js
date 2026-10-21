@@ -15,7 +15,9 @@
 
   function renderWattcycle(data, packHistory) {
     const gw = data.gateway || {};
-    const link = !!(data.valid || gw.telemetryFresh);
+    // Fresh = recent ESP-NOW from BMS bridge (not last battery.valid latch).
+    const link = !!gw.telemetryFresh;
+    const bleUp = link && !!gw.ble;
 
     document.getElementById("wattcyclePageSoc").textContent = data.valid
       ? data.soc + "%"
@@ -24,7 +26,7 @@
       ? (data.valid ? "Live Wattcycle BMS via ESP-NOW" : "Bridge up — waiting for BMS frames")
       : "No ESP-NOW link from BMS bridge";
     setLink("wattcyclePageLink", link, link ? "fresh" : "stale");
-    setLink("wattcyclePageBle", !!gw.ble, gw.ble ? "up" : "down");
+    setLink("wattcyclePageBle", bleUp, link ? (gw.ble ? "up" : "down") : "no link");
 
     document.getElementById("wattcyclePageVoltage").textContent = fmt(data.voltage, "V", 2);
     document.getElementById("wattcyclePageCurrent").textContent = fmt(data.current, "A", 2);

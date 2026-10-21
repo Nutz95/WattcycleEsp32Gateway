@@ -246,8 +246,12 @@ void drawM5GatewayPage(M5Canvas& canvas, const telemetry::ITelemetryStore& store
   }
   char web[12] = {};
   std::snprintf(web, sizeof(web), ":%u", gateway.webPort);
-  char bleValue[12] = {};
-  std::snprintf(bleValue, sizeof(bleValue), "%s", gateway.bleConnected ? "OK" : "DOWN");
+  char bleValue[12] = "no link";
+  uint16_t bleFill = kColorBad;
+  if (gateway.telemetryFresh) {
+    bleFill = statusTileFill(gateway.bleConnected);
+    std::snprintf(bleValue, sizeof(bleValue), "%s", gateway.bleConnected ? "OK" : "DOWN");
+  }
   char ntpValue[16] = {};
   std::snprintf(ntpValue, sizeof(ntpValue), "%s", gateway.ntpSynced ? "synced" : "pending");
   char xtValue[16] = {};
@@ -258,8 +262,7 @@ void drawM5GatewayPage(M5Canvas& canvas, const telemetry::ITelemetryStore& store
   drawTile(canvas, kColLeft, kRowY0, kColW, kRowH, statusTileFill(gateway.wifiConnected), "WiFi",
            wifi, 1);
   drawTile(canvas, kColRight, kRowY0, kColW, kRowH, kColorTileA, "IP", ip, 1);
-  drawTile(canvas, kColLeft, kRowY1, kColW, kRowH, statusTileFill(gateway.bleConnected),
-           "BMS BLE", bleValue, 1);
+  drawTile(canvas, kColLeft, kRowY1, kColW, kRowH, bleFill, "BMS BLE", bleValue, 1);
   drawTile(canvas, kColRight, kRowY1, kColW, kRowH, warnTileFill(gateway.ntpSynced), "NTP",
            ntpValue, 1);
   drawTile(canvas, kColLeft, kRowY2, kColW, kRowH, warnTileFill(solar.linkFresh), "XT LINK",

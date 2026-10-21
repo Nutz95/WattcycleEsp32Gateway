@@ -105,8 +105,8 @@ void applyBmsTelemetryPacket(telemetry::ITelemetryStore& store,
   }
   battery.updatedAtMs = millis();
   store.updateBattery(battery);
-  store.setBleState((packet.flags & wattcycle_bridge::kFlagBleConnected) != 0, "", "");
-  store.setTelemetryFresh(battery.valid);
+  store.setBmsLink(battery.valid,
+                   (packet.flags & wattcycle_bridge::kFlagBleConnected) != 0);
 
   if ((packet.flags & wattcycle_bridge::kFlagBridgeEspValid) != 0) {
     telemetry::EspHealth bridgeEsp = {};

@@ -122,9 +122,11 @@ void EspNowTelemetryReceiver::loop() {
   }
   const auto battery = store_.battery();
   if (battery.updatedAtMs != 0 &&
-      (millis() - battery.updatedAtMs) > TimingConstants::kBmsTelemetryStaleMs &&
-      store_.status().telemetryFresh) {
-    store_.setTelemetryFresh(false);
+      (millis() - battery.updatedAtMs) > TimingConstants::kBmsTelemetryStaleMs) {
+    const auto status = store_.status();
+    if (status.telemetryFresh || status.bleConnected) {
+      store_.setBmsLink(false, false);
+    }
   }
 }
 

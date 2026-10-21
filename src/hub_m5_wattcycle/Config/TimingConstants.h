@@ -19,7 +19,7 @@ struct TimingConstants {
   static constexpr uint32_t kSolarLinkStaleMs = 5000;
   /// EcoFlow BLE reconnect can pause publishes; keep Overview calm.
   static constexpr uint32_t kEcoFlowLinkStaleMs = 12000;
-  /// Mark BMS telemetry stale when no fresh packet arrives.
+  /// Mark BMS ESP-NOW link stale (clears telemetryFresh + bleConnected latch).
   static constexpr uint32_t kBmsTelemetryStaleMs = 8000;
   static constexpr uint32_t kAppLoopDelayMs = 10;
   static constexpr uint32_t kButtonDebounceMs = 220;

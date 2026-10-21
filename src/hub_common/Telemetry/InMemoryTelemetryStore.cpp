@@ -98,6 +98,13 @@ void InMemoryTelemetryStore::setTelemetryFresh(bool fresh) {
   unlock();
 }
 
+void InMemoryTelemetryStore::setBmsLink(bool telemetryFresh, bool bleConnected) {
+  lock();
+  status_.telemetryFresh = telemetryFresh;
+  status_.bleConnected = bleConnected;
+  unlock();
+}
+
 void InMemoryTelemetryStore::updateEspHealth(const EspHealth& health) {
   lock();
   espHealth_ = health;

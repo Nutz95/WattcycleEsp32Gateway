@@ -24,6 +24,8 @@ class ITelemetryStore {
   virtual void setWebPort(uint16_t port) = 0;
   virtual void setBleState(bool connected, const char* address, const char* error) = 0;
   virtual void setTelemetryFresh(bool fresh) = 0;
+  /// Set BMS link flags together. Does not touch address or lastError.
+  virtual void setBmsLink(bool telemetryFresh, bool bleConnected) = 0;
   virtual void updateEspHealth(const EspHealth& health) = 0;
   virtual void updateBmsBridgeHealth(const EspHealth& health, bool valid) = 0;
 
