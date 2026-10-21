@@ -107,7 +107,11 @@ void GatewayApplication::renderCurrentDisplay() {
     return;
   }
   espHealth_.sample();
-  statusDisplay_.render(bleClient_.snapshot(), espHealth_.snapshot());
+  display::DongleBridgeLink link;
+  link.espNowReady = espNowPublisher_.isReady();
+  link.channel = appConfig_.espNowChannel;
+  link.peerMac = appConfig_.espNowPeerMac != nullptr ? appConfig_.espNowPeerMac : "";
+  statusDisplay_.render(bleClient_.snapshot(), espHealth_.snapshot(), link);
 }
 
 bool GatewayApplication::isDisplayAsleep() const {
@@ -128,10 +132,8 @@ uint32_t GatewayApplication::displayFingerprint() const {
   const auto health = espHealth_.snapshot();
   return (static_cast<uint32_t>(statusDisplay_.pageIndex()) << 24) ^
          (bleSnapshot.connected ? 1u : 0u) ^ (bleSnapshot.authenticated ? 2u : 0u) ^
-         (static_cast<uint32_t>(bleSnapshot.telemetry.socPercent) << 16) ^
-         (static_cast<uint32_t>(static_cast<uint16_t>(bleSnapshot.telemetry.acOutputW)) << 8) ^
-         (static_cast<uint32_t>(static_cast<uint16_t>(bleSnapshot.telemetry.solarInputW))) ^
-         bleSnapshot.telemetryCount ^ (health.freeHeapBytes >> 10);
+         (espNowPublisher_.isReady() ? 4u : 0u) ^ bleSnapshot.telemetryCount ^
+         (health.freeHeapBytes >> 10);
 }
 
 void GatewayApplication::notifyDisplay() {

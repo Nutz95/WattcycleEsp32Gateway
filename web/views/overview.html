@@ -33,7 +33,8 @@
         <text x="72" y="40" text-anchor="middle" class="flow-node-sub" id="lblEcoSoc">--%</text>
         <text x="72" y="56" text-anchor="middle" class="flow-node-sub" id="lblEcoState">--</text>
       </g>
-      <text class="flow-label flow-label-balance" x="100" y="108" text-anchor="end" id="lblEcoBalance"></text>
+      <text class="flow-label flow-label-balance" x="100" y="92" text-anchor="end" id="lblEcoBalance"></text>
+      <text class="flow-label flow-label-self" x="100" y="108" text-anchor="end" id="lblEcoSelf"></text>
 
       <!-- EcoFlow outputs (right column) -->
       <path id="edgeEcoAcOut" class="flow-edge" d="M 252 86 H 300" marker-end="url(#flowArrow)" />
@@ -102,6 +103,6 @@
     </svg>
   </div>
   <p class="hint" id="flowHint">
-    + pack: EcoFlow → Wattcycle · − pack: Wattcycle → EcoFlow · EcoFlow Δ = inputs − outputs (charge / self)
+    + pack: EcoFlow → Wattcycle · − pack: Wattcycle → EcoFlow · batt = EcoFlow battery (− discharge) · out−in = ports shortfall · self = station consumption
   </p>
 </section>

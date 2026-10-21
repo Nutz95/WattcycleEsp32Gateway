@@ -10,7 +10,8 @@ class NullStatusDisplay : public IStatusDisplay {
   /// No-op panel init.
   void begin() override {}
   /// No-op render.
-  void render(const ble::EcoFlowBleSnapshot&, const esp_sys::EspHealthSnapshot&) override {}
+  void render(const ble::EcoFlowBleSnapshot&, const esp_sys::EspHealthSnapshot&,
+              const DongleBridgeLink&) override {}
   /// No-op page advance.
   void nextPage() override {}
   /// No-op page back.

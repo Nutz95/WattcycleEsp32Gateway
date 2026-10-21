@@ -13,7 +13,7 @@ namespace {
 
 using boards::dongle_s3::DonglePanelPalette;
 
-const char* kPageTitles[6] = {"Overview", "Cells", "Temps", "Alerts", "Link", "ESP"};
+const char* kPageTitles[6] = {"BMS Overview", "BMS Cells", "BMS Temps", "BMS Alerts", "BMS Link", "BMS ESP"};
 
 void textLine(TFT_eSprite& canvas, int y, const char* text, uint16_t color) {
   canvas.setTextColor(color, DonglePanelPalette::kBackground);
@@ -24,7 +24,7 @@ void textLine(TFT_eSprite& canvas, int y, const char* text, uint16_t color) {
 }  // namespace
 
 void DongleStatusDisplay::begin() {
-  panel_.begin("bms-ui", "BMS bridge");
+  panel_.begin("bms-ui", "WATTCYCLE");
 }
 
 void DongleStatusDisplay::setBacklight(bool on) {

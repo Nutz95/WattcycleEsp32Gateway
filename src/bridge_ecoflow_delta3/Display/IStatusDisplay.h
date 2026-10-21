@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Display/DongleBridgeLink.h"
 #include "EcoFlow/Ble/EcoFlowBleSnapshot.h"
 #include "Esp/EspHealthSnapshot.h"
 
@@ -13,9 +14,10 @@ class IStatusDisplay {
   virtual ~IStatusDisplay() = default;
   /// Init panel / backlight (no-op for Null).
   virtual void begin() = 0;
-  /// Draw latest BLE + health snapshot.
+  /// Draw latest BLE, ESP-NOW, and health snapshots.
   virtual void render(const ble::EcoFlowBleSnapshot& bleSnapshot,
-                      const esp_sys::EspHealthSnapshot& health) = 0;
+                      const esp_sys::EspHealthSnapshot& health,
+                      const DongleBridgeLink& link) = 0;
   /// Advance to the next UI page (wraps).
   virtual void nextPage() = 0;
   /// Go back one UI page (wraps).

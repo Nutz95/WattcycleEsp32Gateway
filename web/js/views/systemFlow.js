@@ -16,6 +16,54 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function formatRemain(minutes) {
+    const total = Number(minutes);
+    if (!Number.isFinite(total) || total <= 0) {
+      return "";
+    }
+    if (total >= 60) {
+      const hours = Math.floor(total / 60);
+      const mins = total % 60;
+      return hours + "h" + String(mins).padStart(2, "0");
+    }
+    return total + "min";
+  }
+
+  function setEcoHeadline(eco) {
+    const el = document.getElementById("lblEcoSoc");
+    if (!el) return;
+    el.replaceChildren();
+    if (!eco.valid || eco.soc == null) {
+      el.textContent = "--%";
+      return;
+    }
+    const remainLabel = formatRemain(eco.remainMinutes);
+    el.textContent = remainLabel ? eco.soc + "%  " + remainLabel : eco.soc + "%";
+  }
+
+  function setEcoBatteryLine(eco, ecoLink) {
+    const el = document.getElementById("lblEcoState");
+    if (!el) return;
+    el.classList.remove("flow-batt-neg", "flow-batt-pos");
+    const watts = Number(eco.bmsPowerW);
+    if (eco.valid && Number.isFinite(watts) && Math.abs(watts) > FLOW_EPS_W) {
+      el.textContent = "batt " + (watts > 0 ? "+" : "") + Math.round(watts) + "W";
+      el.classList.add(watts < 0 ? "flow-batt-neg" : "flow-batt-pos");
+      return;
+    }
+    el.textContent = ecoLink ? (eco.bleConnected ? "BLE up" : "BLE down") : "no link";
+  }
+
+  /** Station own use: port gap minus signed battery power. Positive watts only. */
+  function stationSelfW(balance, batteryW) {
+    if (balance == null || !Number.isFinite(batteryW) || Math.abs(batteryW) <= FLOW_EPS_W) {
+      return null;
+    }
+    const self = balance - batteryW;
+    if (self <= FLOW_EPS_W) return null;
+    return self;
+  }
+
   function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
@@ -95,9 +143,9 @@
     setText("lblGridAcIn", fmtW(acIn));
     setEdge("edgeGridEco", eco.valid && acIn > FLOW_EPS_W, false);
 
-    setText("lblEcoSoc", eco.valid && eco.soc != null ? eco.soc + "%" : "--%");
+    setEcoHeadline(eco);
     const ecoBleUp = ecoLink && !!eco.bleConnected;
-    setText("lblEcoState", ecoLink ? (eco.bleConnected ? "BLE up" : "BLE down") : "no link");
+    setEcoBatteryLine(eco, ecoLink);
     setLinkNode("nodeEco", ecoBleUp);
 
     setText("lblEcoAcOut", fmtW(eco.acOutputW));
@@ -133,14 +181,20 @@
       if (balance != null && Math.abs(balance) > FLOW_EPS_W) {
         const watts = Math.round(Math.abs(balance));
         balEl.textContent = balance > 0
-          ? "~" + watts + " W charge/self"
-          : "~" + watts + " W from batt";
+          ? "~" + watts + " W in−out"
+          : "~" + watts + " W out−in";
         balEl.classList.toggle("flow-balance-pos", balance > 0);
         balEl.classList.toggle("flow-balance-neg", balance < 0);
       } else {
         balEl.textContent = "";
         balEl.classList.remove("flow-balance-pos", "flow-balance-neg");
       }
+    }
+    const selfEl = document.getElementById("lblEcoSelf");
+    if (selfEl) {
+      const batteryW = eco.valid ? Number(eco.bmsPowerW) : NaN;
+      const self = stationSelfW(balance, batteryW);
+      selfEl.textContent = self == null ? "" : "~" + Math.round(self) + " W self";
     }
 
     const solarP = solar.valid ? solar.power : null;

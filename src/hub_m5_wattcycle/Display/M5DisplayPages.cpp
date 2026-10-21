@@ -143,17 +143,37 @@ void drawM5EcoflowPage(M5Canvas& canvas, const telemetry::ITelemetryStore& store
     std::snprintf(ble, sizeof(ble), "%s", ecoflow.bleConnected ? "OK" : "DOWN");
     if (ecoflow.meterValid) {
       socFill = kColorTileD;
-      std::snprintf(soc, sizeof(soc), "%u%%", ecoflow.socPercent);
-      std::snprintf(acIn, sizeof(acIn), "%dW", static_cast<int>(ecoflow.acInputW));
+      if (ecoflow.haveSoh) {
+        std::snprintf(soc, sizeof(soc), "%u%% s%u", ecoflow.socPercent, ecoflow.sohPercent);
+      } else {
+        std::snprintf(soc, sizeof(soc), "%u%%", ecoflow.socPercent);
+      }
+      if (ecoflow.haveFreq) {
+        std::snprintf(acIn, sizeof(acIn), "%dW %uHz", static_cast<int>(ecoflow.acInputW),
+                      ecoflow.acInFreqHz);
+      } else {
+        std::snprintf(acIn, sizeof(acIn), "%dW", static_cast<int>(ecoflow.acInputW));
+      }
       std::snprintf(acOut, sizeof(acOut), "%dW", static_cast<int>(ecoflow.acOutputW));
       std::snprintf(dcOut, sizeof(dcOut), "%dW", static_cast<int>(ecoflow.dcOutputW));
       std::snprintf(usbOut, sizeof(usbOut), "%dW", static_cast<int>(ecoflow.usbOutputW));
       std::snprintf(remain, sizeof(remain), "%u min", ecoflow.remainMinutes);
       acOutFill = signedTileFill(static_cast<float>(ecoflow.acOutputW), kColorTileC);
       dcOutFill = signedTileFill(static_cast<float>(ecoflow.dcOutputW), kColorTileA);
-      std::snprintf(portState, sizeof(portState), "%s %s %s",
-                    ecoflow.acOutputOn ? "ON" : "off", ecoflow.dcOutputOn ? "ON" : "off",
-                    ecoflow.usbOutputOn ? "ON" : "off");
+      if (ecoflow.haveErr && ecoflow.errCode != 0) {
+        std::snprintf(ports, sizeof(ports), "ERR");
+        std::snprintf(portState, sizeof(portState), "%lu",
+                      static_cast<unsigned long>(ecoflow.errCode));
+      } else if (ecoflow.haveCellTemp) {
+        std::snprintf(ports, sizeof(ports), "CELL");
+        std::snprintf(portState, sizeof(portState), "%d/%dC",
+                      static_cast<int>(ecoflow.minCellTempC),
+                      static_cast<int>(ecoflow.maxCellTempC));
+      } else {
+        std::snprintf(portState, sizeof(portState), "%s %s %s",
+                      ecoflow.acOutputOn ? "ON" : "off", ecoflow.dcOutputOn ? "ON" : "off",
+                      ecoflow.usbOutputOn ? "ON" : "off");
+      }
     } else {
       std::snprintf(soc, sizeof(soc), "wait");
       socFill = kColorWarn;
