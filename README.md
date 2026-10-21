@@ -123,8 +123,9 @@ Classic SPP name `XT369P_SPP` → TTGO `bridge_xt369p` → ESP-NOW → hub. Fram
 ```text
 src/
   common/                 # Util + ESP-NOW protocols (+ shared Bms models)
-  hub_common/             # Auth, HttpApi, Ota, Telemetry store, NTP helpers
-  hub_m5_wattcycle/       # Web hub (COM23): multi-peer ESP-NOW RX + SD
+  hub_common/             # Auth, HttpApi, Ota, Telemetry store, hub IStatusDisplay
+  hub_m5_wattcycle/       # M5 web hub (COM23): ESP-NOW RX, SD, M5GFX pages
+  hub_p4_wattcycle/       # P4 page shell and overview flow model. LVGL and ESP-NOW come later
   boards/                 # Shared board HAL (TTGO / T-Dongle pins + buttons)
   bridge_ttgo_wattcycle/  # BMS BLE → ESP-NOW TX (COM19 TTGO / COM7 T-Dongle)
   bridge_xt369p/          # XT369P SPP → ESP-NOW TX (COM22)
