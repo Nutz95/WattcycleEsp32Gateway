@@ -1,0 +1,15 @@
+#!/bin/sh
+# Refuse staged additions that name a machine path or a hardware address.
+slash=$(printf '/')
+users=$(printf '%s%s%s' "$slash" 'Users' "$slash")
+homes=$(printf '%s%s%s' "$slash" 'home' "$slash")
+drive='[A-Za-z]:[/\\]'
+mac='([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}'
+added=$(git diff --cached --diff-filter=ACMR -U0 -- .) || exit 1
+bad=$(printf '%s\n' "$added" | grep -E '^\+[^+]' | grep -v 'git-allow-identifier' | grep -E "$drive|$users|$homes|$mac") || true
+if [ -n "$bad" ]; then
+  echo "Refusing commit: local path or hardware address in staged lines."
+  printf '%s\n' "$bad"
+  exit 1
+fi
+exit 0
