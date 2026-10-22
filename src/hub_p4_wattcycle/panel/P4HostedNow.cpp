@@ -1,3 +1,5 @@
+#include "P4HostedNow.h"
+
 #include <esp_now.h>
 #include <esp_wifi.h>
 
@@ -134,18 +136,20 @@ esp_err_t transact(uint8_t opcode, const uint8_t* payload, uint16_t payloadLen) 
 
 }  // namespace
 
-extern "C" esp_err_t esp_now_init(void) {
+namespace wattcycle::panel {
+
+esp_err_t hostedNowInit() {
   return transact(kOpInit, nullptr, 0);
 }
 
-extern "C" esp_err_t esp_now_set_pmk(const uint8_t* pmk) {
+esp_err_t hostedNowSetPmk(const uint8_t* pmk) {
   if (pmk == nullptr) {
     return ESP_ERR_INVALID_ARG;
   }
   return transact(kOpSetPmk, pmk, 16);
 }
 
-extern "C" esp_err_t esp_now_add_peer(const esp_now_peer_info_t* peer) {
+esp_err_t hostedNowAddPeer(const esp_now_peer_info_t* peer) {
   if (peer == nullptr) {
     return ESP_ERR_INVALID_ARG;
   }
@@ -165,7 +169,7 @@ extern "C" esp_err_t esp_now_add_peer(const esp_now_peer_info_t* peer) {
   return status;
 }
 
-extern "C" esp_err_t esp_now_send(const uint8_t* peer, const uint8_t* data, size_t len) {
+esp_err_t hostedNowSend(const uint8_t* peer, const uint8_t* data, size_t len) {
   if (peer == nullptr || data == nullptr || len == 0 || len > 26) {
     return ESP_ERR_INVALID_ARG;
   }
@@ -175,11 +179,9 @@ extern "C" esp_err_t esp_now_send(const uint8_t* peer, const uint8_t* data, size
   return transact(kOpSend, raw, static_cast<uint16_t>(6u + len));
 }
 
-extern "C" bool esp_now_is_peer_exist(const uint8_t* peerAddr) {
-  return peerAddr != nullptr && peerCached(peerAddr);
-}
-
-extern "C" esp_err_t esp_now_register_recv_cb(esp_now_recv_cb_t cb) {
+esp_err_t hostedNowOnRecv(esp_now_recv_cb_t cb) {
   recvCallback = cb;
   return ESP_OK;
 }
+
+}  // namespace wattcycle::panel

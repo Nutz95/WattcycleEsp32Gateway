@@ -77,10 +77,8 @@ int newestMonth(const char periods[][8], size_t count, int year) {
   return 0;
 }
 
-void choosePeriod(const char periods[][8], size_t count, int& year, int& month) {
-  int nowYear = 0;
-  int nowMonth = 0;
-  currentUtc(nowYear, nowMonth);
+void choosePeriod(const char periods[][8], size_t count, int nowYear, int nowMonth, int& year,
+                  int& month) {
   if (year <= 0) {
     year = nowYear > 0 ? nowYear : (count > 0 ? periodYear(periods[0]) : 0);
   }
@@ -100,62 +98,51 @@ size_t appendText(char* json, size_t cap, size_t pos, const char* text) {
   return pos + static_cast<size_t>(wrote);
 }
 
-size_t appendYears(char* json, size_t cap, size_t pos, const char periods[][8], size_t count,
-                   int nowYear) {
-  pos = appendText(json, cap, pos, "\"years\":[");
-  bool first = true;
-  int previous = 0;
-  if (nowYear >= 2024) {
-    pos += static_cast<size_t>(std::snprintf(json + pos, cap - pos, "%d", nowYear));
-    first = false;
-    previous = nowYear;
-  }
-  for (size_t i = 0; i < count && pos + 8 < cap; ++i) {
-    const int year = periodYear(periods[i]);
-    if (year < 2024 || year == previous) {
-      continue;
+bool hasInt(const int* values, size_t count, int value) {
+  for (size_t i = 0; i < count; ++i) {
+    if (values[i] == value) {
+      return true;
     }
-    pos += static_cast<size_t>(
-        std::snprintf(json + pos, cap - pos, "%s%d", first ? "" : ",", year));
-    first = false;
-    previous = year;
   }
-  return appendText(json, cap, pos, "]");
+  return false;
 }
 
-size_t appendMonths(char* json, size_t cap, size_t pos, const char periods[][8], size_t count,
-                    int year, int extraMonth) {
-  int months[12] = {};
-  size_t monthCount = 0;
-  if (extraMonth >= 1 && extraMonth <= 12) {
-    months[monthCount++] = extraMonth;
+void pushInt(int* values, size_t& count, size_t maxCount, int value) {
+  if (count >= maxCount || hasInt(values, count, value)) {
+    return;
   }
-  for (size_t i = 0; i < count && monthCount < 12; ++i) {
-    if (periodYear(periods[i]) != year) {
-      continue;
+  values[count] = value;
+  ++count;
+}
+
+void collectLists(const char periods[][8], size_t count, int nowYear, int nowMonth, int year,
+                  int* years, size_t& yearCount, int* months, size_t& monthCount) {
+  yearCount = 0;
+  monthCount = 0;
+  if (nowYear >= 2024) {
+    pushInt(years, yearCount, 48, nowYear);
+  }
+  if (year == nowYear && nowMonth >= 1 && nowMonth <= 12) {
+    pushInt(months, monthCount, 12, nowMonth);
+  }
+  for (size_t i = 0; i < count; ++i) {
+    const int periodY = periodYear(periods[i]);
+    const int periodM = periodMonth(periods[i]);
+    if (periodY >= 2024) {
+      pushInt(years, yearCount, 48, periodY);
     }
-    const int month = periodMonth(periods[i]);
-    bool seen = false;
-    for (size_t j = 0; j < monthCount; ++j) {
-      seen = seen || months[j] == month;
-    }
-    if (!seen && month >= 1 && month <= 12) {
-      months[monthCount++] = month;
+    if (periodY == year && periodM >= 1 && periodM <= 12) {
+      pushInt(months, monthCount, 12, periodM);
     }
   }
-  for (size_t i = 1; i < monthCount; ++i) {
-    const int key = months[i];
-    size_t slot = i;
-    while (slot > 0 && months[slot - 1] < key) {
-      months[slot] = months[slot - 1];
-      --slot;
-    }
-    months[slot] = key;
-  }
-  pos = appendText(json, cap, pos, "\"months\":[");
-  for (size_t i = 0; i < monthCount && pos + 6 < cap; ++i) {
+}
+
+size_t appendInts(char* json, size_t cap, size_t pos, const char* key, const int* values,
+                  size_t count) {
+  pos = appendText(json, cap, pos, key);
+  for (size_t i = 0; i < count && pos + 8 < cap; ++i) {
     pos += static_cast<size_t>(
-        std::snprintf(json + pos, cap - pos, "%s%d", i == 0 ? "" : ",", months[i]));
+        std::snprintf(json + pos, cap - pos, "%s%d", i == 0 ? "" : ",", values[i]));
   }
   return appendText(json, cap, pos, "]");
 }
@@ -182,20 +169,24 @@ void EspWebGateway::handleHistoryDays() {
   const size_t periodCount = sd ? historyStore_.listPeriods(periods, 48) : 0;
   int year = server_->hasArg("year") ? server_->arg("year").toInt() : 0;
   int month = server_->hasArg("month") ? server_->arg("month").toInt() : 0;
-  choosePeriod(periods, periodCount, year, month);
-  const size_t dayCount =
-      sd && year >= 2024 ? historyStore_.listMonthDays(year, month, days, 31) : 0;
   int nowYear = 0;
   int nowMonth = 0;
   currentUtc(nowYear, nowMonth);
+  choosePeriod(periods, periodCount, nowYear, nowMonth, year, month);
+  const size_t dayCount =
+      sd && year >= 2024 ? historyStore_.listMonthDays(year, month, days, 31) : 0;
+  int years[48] = {};
+  int months[12] = {};
+  size_t yearCount = 0;
+  size_t monthCount = 0;
+  collectLists(periods, periodCount, nowYear, nowMonth, year, years, yearCount, months, monthCount);
   const bool ntp = store_.status().ntpSynced;
   size_t pos = static_cast<size_t>(std::snprintf(
       json, sizeof(json), "{\"ntp\":%s,\"sd\":%s,\"year\":%d,\"month\":%d,",
       ntp ? "true" : "false", sd ? "true" : "false", year, month));
-  pos = appendYears(json, sizeof(json), pos, periods, periodCount, nowYear);
+  pos = appendInts(json, sizeof(json), pos, "\"years\":[", years, yearCount);
   pos = appendText(json, sizeof(json), pos, ",");
-  pos = appendMonths(json, sizeof(json), pos, periods, periodCount, year,
-                     year == nowYear ? nowMonth : 0);
+  pos = appendInts(json, sizeof(json), pos, "\"months\":[", months, monthCount);
   pos = appendText(json, sizeof(json), pos, ",");
   pos = appendDays(json, sizeof(json), pos, days, dayCount);
   pos = appendText(json, sizeof(json), pos, "}");
@@ -235,11 +226,11 @@ void EspWebGateway::handleDeviceInfo() {
   const auto status = store_.status();
   char json[512] = {};
   std::snprintf(json, sizeof(json),
-                "{\"role\":\"%s\",\"ntp\":%s,\"sd\":%s,\"c6HeapKb\":%d,"
+                "{\"role\":\"%s\",\"ntp\":%s,\"sd\":%s,"
                 "\"hubStaMac\":\"%s\",\"bmsBridgeMac\":\"%s\",\"xtBridgeMac\":\"%s\","
                 "\"ecoflowBridgeMac\":\"%s\"}",
                 role, status.ntpSynced ? "true" : "false",
-                historyStore_.isReady() ? "true" : "false", status.coprocessorHeapKb, hubStaMac_,
+                historyStore_.isReady() ? "true" : "false", hubStaMac_,
                 bmsBridgeMac_, xtBridgeMac_, ecoflowBridgeMac_);
   sendJson(200, json);
 }

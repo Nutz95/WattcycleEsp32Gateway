@@ -62,6 +62,7 @@ Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.h") $Stage
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4StaRadio.cpp") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4StaRadio.h") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4HostedNow.cpp") (Join-Path $Stage "src")
+Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4HostedNow.h") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4C6Update.cpp") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4C6Update.h") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AuthTap.cpp") (Join-Path $Stage "src")
@@ -95,6 +96,7 @@ $HubSources = @(
     "src\hub_common\HttpApi\EspWebGateway.cpp",
     "src\hub_common\HttpApi\EspWebGatewayHistory.cpp",
     "src\hub_common\Storage\HistoryCatalog.cpp",
+    "src\hub_common\Storage\HistoryDayFile.cpp",
     "src\hub_common\HttpApi\JsonField.cpp",
     "src\hub_common\Auth\AuthService.cpp",
     "src\hub_common\Auth\PasswordHasher.cpp",

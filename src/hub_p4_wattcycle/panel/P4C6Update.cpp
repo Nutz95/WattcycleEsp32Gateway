@@ -1,14 +1,13 @@
 #include "P4C6Update.h"
 
 #include <Arduino.h>
-
-#include <cstdio>
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_heap_caps.h>
-
 #include <esp_hosted_ota.h>
+
+#include <cstdio>
 
 namespace wattcycle::panel {
 namespace {
@@ -20,13 +19,11 @@ void imageUrl(char* out, size_t capacity) {
                 "/esp-hosted-firmware/v2.12.13/network_adapter_esp32c6.bin");
 }
 
-WiFiClientSecure secureClient;
-HTTPClient http;
-uint8_t* image = nullptr;
-size_t imageLen = 0;
-size_t imageCap = 0;
-
-bool downloadImage() {
+bool downloadImage(uint8_t*& image, size_t& imageLen) {
+  image = nullptr;
+  imageLen = 0;
+  WiFiClientSecure secureClient;
+  HTTPClient http;
   secureClient.setInsecure();
   char url[128] = {};
   imageUrl(url, sizeof(url));
@@ -50,7 +47,7 @@ bool downloadImage() {
     http.end();
     return false;
   }
-  imageCap = static_cast<size_t>(size);
+  const size_t imageCap = static_cast<size_t>(size);
   WiFiClient* stream = http.getStreamPtr();
   int stalls = 0;
   while (imageLen < imageCap && http.connected()) {
@@ -73,8 +70,8 @@ bool downloadImage() {
   return imageLen == imageCap;
 }
 
-bool writeImage() {
-  if (esp_hosted_slave_ota_begin() != ESP_OK) {
+bool writeImage(uint8_t* image, size_t imageLen) {
+  if (image == nullptr || esp_hosted_slave_ota_begin() != ESP_OK) {
     Serial.println("c6 ota begin failed");
     return false;
   }
@@ -99,22 +96,15 @@ bool writeImage() {
 
 }  // namespace
 
-void P4C6Update::start() {
-  if (started_) {
-    return;
-  }
-  started_ = true;
+bool installEspNowSlave() {
   Serial.println("c6 ota: installing esp-now slave");
-  failed_ = !downloadImage() || !writeImage();
-  finished_ = !failed_;
-}
-
-bool P4C6Update::loop() {
-  return finished_;
-}
-
-bool P4C6Update::failed() const {
-  return failed_;
+  uint8_t* image = nullptr;
+  size_t imageLen = 0;
+  const bool ok = downloadImage(image, imageLen) && writeImage(image, imageLen);
+  if (image != nullptr) {
+    heap_caps_free(image);
+  }
+  return ok;
 }
 
 }  // namespace wattcycle::panel

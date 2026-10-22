@@ -25,7 +25,6 @@ class InMemoryTelemetryStore : public ITelemetryStore {
   void setBmsLink(bool telemetryFresh, bool bleConnected) override;
   void updateEspHealth(const EspHealth& health) override;
   void updateBmsBridgeHealth(const EspHealth& health, bool valid) override;
-  void setCoprocessorHeapKb(int heapKb) override;
   void setBmsEspNowEncrypted(bool encrypted) override;
 
   bms::BatteryTelemetry battery() const override;

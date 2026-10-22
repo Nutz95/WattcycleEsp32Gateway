@@ -319,7 +319,7 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   writeEcoFlowRuntime(cursor, ecoflow);
   // Optional trailer. Version stays 9 so older pages ignore the extra bytes.
   if (static_cast<size_t>(cursor - buffer) + 3 <= capacity) {
-    writeI16(cursor, static_cast<int16_t>(gateway.coprocessorHeapKb));
+    writeI16(cursor, static_cast<int16_t>(esp.coprocessorHeapKb));
     writeU8(cursor, gateway.bmsEspNowEncrypted ? 1u : 0u);
   }
 

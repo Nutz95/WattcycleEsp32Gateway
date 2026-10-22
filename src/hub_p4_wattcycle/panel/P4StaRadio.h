@@ -6,7 +6,6 @@
 #include "EspNow/EcoFlowEspNowProtocol.h"
 #include "EspNow/WattcycleEspNowProtocol.h"
 #include "EspNow/Xt369pEspNowProtocol.h"
-#include "P4C6Update.h"
 #include "Telemetry/ITelemetryStore.h"
 
 namespace wattcycle::panel {
@@ -20,6 +19,8 @@ class P4StaRadio {
   bool loop(display::P4PanelBoard& board);
   /// Copy one forwarded ESP-NOW frame into the inbox. Runs on the hosted callback.
   void onFrame(const uint8_t* mac, const uint8_t* data, int len);
+  /// Latest C6 free heap in KB. -1 until the coprocessor answers.
+  int coprocessorHeapKb() const;
 
  private:
   bool startEspNow();
@@ -32,7 +33,6 @@ class P4StaRadio {
   void serviceRadio();
   static void serviceTask(void* arg);
 
-  P4C6Update c6_;
   telemetry::ITelemetryStore* store_ = nullptr;
   bool joinStarted_ = false;
   bool haveMac_ = false;

@@ -1,5 +1,8 @@
 #include "P4StaRadio.h"
 
+#include "P4C6Update.h"
+#include "P4HostedNow.h"
+
 #include "Config/TimingConstants.h"
 #include "Display/P4LiveBoard.h"
 #include "Display/P4MacText.h"
@@ -10,7 +13,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_hosted_misc.h>
-#include <esp_now.h>
 #include <esp_wifi.h>
 
 #include <cstdio>
@@ -72,9 +74,6 @@ bool storeC6Mac(display::P4PanelBoard& board) {
 }
 
 bool addPeer(const uint8_t mac[6], bool encrypt, const uint8_t* pmk) {
-  if (esp_now_is_peer_exist(mac)) {
-    return true;
-  }
   esp_now_peer_info_t peer = {};
   std::memcpy(peer.peer_addr, mac, 6);
   peer.channel = 0;
@@ -82,7 +81,7 @@ bool addPeer(const uint8_t mac[6], bool encrypt, const uint8_t* pmk) {
   if (encrypt && pmk != nullptr) {
     std::memcpy(peer.lmk, pmk, 16);
   }
-  return esp_now_add_peer(&peer) == ESP_OK;
+  return hostedNowAddPeer(&peer) == ESP_OK;
 }
 
 void onEspNowFrame(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
@@ -93,6 +92,10 @@ void onEspNowFrame(const esp_now_recv_info_t* info, const uint8_t* data, int len
 }
 
 }  // namespace
+
+int P4StaRadio::coprocessorHeapKb() const {
+  return c6HeapKb_;
+}
 
 void P4StaRadio::onFrame(const uint8_t* mac, const uint8_t* data, int len) {
   espnow_rx::ingestEspNowFrame(mac, data, len, xtPeerMac_, hasXtPeer_, pendingSolar_, pendingEco_,
@@ -131,15 +134,15 @@ void P4StaRadio::begin(display::P4PanelBoard& board, telemetry::ITelemetryStore&
 bool P4StaRadio::startEspNow() {
   encrypt_ = std::strlen(P4_ESPNOW_PMK) >= 16;
   const uint8_t* pmk = reinterpret_cast<const uint8_t*>(P4_ESPNOW_PMK);
-  if (esp_now_register_recv_cb(onEspNowFrame) != ESP_OK) {
+  if (hostedNowOnRecv(onEspNowFrame) != ESP_OK) {
     return false;
   }
-  const esp_err_t init = esp_now_init();
+  const esp_err_t init = hostedNowInit();
   if (init != ESP_OK) {
     Serial.printf("esp-now init status=%d\n", static_cast<int>(init));
     return false;
   }
-  if (encrypt_ && esp_now_set_pmk(pmk) != ESP_OK) {
+  if (encrypt_ && hostedNowSetPmk(pmk) != ESP_OK) {
     Serial.println("esp-now pmk failed");
     return false;
   }
@@ -265,7 +268,7 @@ void P4StaRadio::serviceRadio() {
       espNowReady_ = true;
     } else if (!c6UpdateStarted_) {
       c6UpdateStarted_ = true;
-      c6_.start();
+      installEspNowSlave();
     }
   }
   if (applyPending() || expireLinks()) {
@@ -318,9 +321,6 @@ bool P4StaRadio::loop(display::P4PanelBoard& board) {
   const int c6HeapKb = c6HeapKb_;
   if (c6HeapKb != board.esp.c6HeapKb) {
     board.esp.c6HeapKb = c6HeapKb;
-    if (store_ != nullptr) {
-      store_->setCoprocessorHeapKb(c6HeapKb);
-    }
     dirty = true;
   }
   const uint32_t seen = revision_;

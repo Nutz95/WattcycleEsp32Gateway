@@ -118,12 +118,6 @@ void InMemoryTelemetryStore::updateBmsBridgeHealth(const EspHealth& health, bool
   unlock();
 }
 
-void InMemoryTelemetryStore::setCoprocessorHeapKb(int heapKb) {
-  lock();
-  status_.coprocessorHeapKb = heapKb;
-  unlock();
-}
-
 void InMemoryTelemetryStore::setBmsEspNowEncrypted(bool encrypted) {
   lock();
   status_.bmsEspNowEncrypted = encrypted;

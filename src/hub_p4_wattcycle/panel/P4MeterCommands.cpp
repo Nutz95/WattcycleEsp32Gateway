@@ -2,9 +2,8 @@
 
 #include "EspNow/Xt369pEspNowProtocol.h"
 #include "P4BuildSecrets.h"
+#include "P4HostedNow.h"
 #include "Util/MacAddress.h"
-
-#include <esp_now.h>
 
 namespace wattcycle::panel {
 
@@ -17,7 +16,7 @@ bool P4MeterCommands::sendMeterCommand(uint8_t command) {
   packet.magic = xt369p_bridge::kCmdMagic;
   packet.version = xt369p_bridge::kVersion;
   packet.command = command;
-  return esp_now_send(mac, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet)) == ESP_OK;
+  return hostedNowSend(mac, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet)) == ESP_OK;
 }
 
 }  // namespace wattcycle::panel

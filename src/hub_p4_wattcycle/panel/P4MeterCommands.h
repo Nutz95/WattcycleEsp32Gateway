@@ -4,10 +4,10 @@
 
 namespace wattcycle::panel {
 
-/// Meter commands stay unanswered until the hosted ESP-NOW send path exists.
+/// Sends XT369P reset commands through the hosted coprocessor.
 class P4MeterCommands : public espnow_rx::IEspNowCommandSender {
  public:
-  /// Always refuses. The panel receives frames; it does not transmit meter resets.
+  /// Queue one meter command to the solar peer.
   bool sendMeterCommand(uint8_t command) override;
 };
 

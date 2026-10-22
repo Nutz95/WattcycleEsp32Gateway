@@ -58,7 +58,8 @@ void paintBoard() {
 }
 
 void applyHealth() {
-  const auto snap = health.snapshot();
+  auto snap = health.snapshot();
+  snap.coprocessorHeapKb = radio.coprocessorHeapKb();
   store.updateEspHealth(snap);
   store.setNtpSynced(ntpClock.isSynced());
   board.esp.cpu0 = snap.cpuCore0Percent;
