@@ -2,15 +2,12 @@
 <#
 .SYNOPSIS
   Stage the JC 4.3 panel sketch and compile or flash it with arduino-cli.
-.PARAMETER VendorDemo
-  Path to the vendor lvgl_demo_v8 folder (LCD and touch sources). Not stored in the repo.
+  LCD and touch sources come from third_party/jc4880_panel.
 .PARAMETER DenyUsbSerial
   Optional USB parent id to refuse, so a bridge dongle is not flashed by mistake.
   Empty by default. Can also be set with P4_DENY_USB_SERIAL.
 #>
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$VendorDemo,
     [string]$Port = "",
     [string]$DenyUsbSerial = "",
     [switch]$CompileOnly
@@ -18,6 +15,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Repo = Split-Path $PSScriptRoot -Parent
+$Panel = Join-Path $Repo "third_party\jc4880_panel"
 $Stage = Join-Path $Repo ".pio\hub_p4_panel"
 $Build = Join-Path $Stage "build"
 $Cli = Join-Path $env:LOCALAPPDATA "Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe"
@@ -44,8 +42,8 @@ function Test-DeniedPort([string]$ComPort, [string]$SerialId) {
 if (-not (Test-Path $Cli)) {
     throw "arduino-cli not found at $Cli"
 }
-if (-not (Test-Path (Join-Path $VendorDemo "src\lcd\st7701_lcd.cpp"))) {
-    throw "Vendor panel demo not found at $VendorDemo"
+if (-not (Test-Path (Join-Path $Panel "lcd\st7701_lcd.cpp"))) {
+    throw "Panel driver missing under third_party/jc4880_panel"
 }
 
 Write-Host "Staging panel sketch"
@@ -55,15 +53,29 @@ if (Test-Path $Stage) {
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\Display") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\lcd") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\touch") -Force | Out-Null
-Copy-Item (Join-Path $VendorDemo "pins_config.h") $Stage
-Copy-Item (Join-Path $VendorDemo "src\lcd\*") (Join-Path $Stage "src\lcd")
-Copy-Item (Join-Path $VendorDemo "src\touch\*") (Join-Path $Stage "src\touch")
+Copy-Item (Join-Path $Panel "pins_config.h") $Stage
+Copy-Item (Join-Path $Panel "lcd\*") (Join-Path $Stage "src\lcd")
+Copy-Item (Join-Path $Panel "touch\*") (Join-Path $Stage "src\touch")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\hub_p4_panel.ino") $Stage
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.cpp") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.h") $Stage
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\Display\P4OverviewView.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\Display\P4OverviewView.h") (Join-Path $Stage "src\Display")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\Display\P4OverviewFlow.h") (Join-Path $Stage "src\Display")
+$Display = Join-Path $Repo "src\hub_p4_wattcycle\Display"
+# Hub-only store adapters stay off the panel sketch. Everything else under Display/ is staged.
+$HubOnly = @(
+    "P4FlowBuilder.cpp", "P4FlowBuilder.h",
+    "P4PageBuilder.cpp", "P4PageBuilder.h", "P4PageModel.h",
+    "P4StatusDisplay.cpp", "P4StatusDisplay.h"
+)
+Get-ChildItem -Path $Display -File | ForEach-Object {
+    if ($HubOnly -contains $_.Name) {
+        return
+    }
+    if ($_.Extension -eq ".cpp") {
+        Copy-Item $_.FullName (Join-Path $Stage "src")
+    } elseif ($_.Extension -in @(".h", ".hpp")) {
+        Copy-Item $_.FullName (Join-Path $Stage "src\Display")
+    }
+}
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\lv_conf.h") (Join-Path $Stage "src")
 
 Write-Host "Compiling"

@@ -1,17 +1,11 @@
 #pragma once
 
+#include "Display/P4FlowEdge.h"
+#include "Display/P4Link.h"
+
 #include <cstdint>
 
 namespace wattcycle::display {
-
-/// Radio link painted on a flow node. Up is the live path, down is stale.
-enum class P4Link : uint8_t { Down = 0, Up };
-
-/// One arrow on the overview. `reverse` points back toward the EcoFlow.
-struct P4FlowEdge {
-  bool active = false;
-  bool reverse = false;
-};
 
 /// Overview diagram for the 480×800 panel. Values follow the web flow rules.
 /// EcoFlow battery watts keep the station sign: negative discharges, positive charges.

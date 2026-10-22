@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "Display/P4DemoBoard.h"
+#include "Display/P4DetailPages.h"
 #include "Display/P4OverviewView.h"
 #include "esp_heap_caps.h"
 #include "driver/i2c_master.h"
@@ -20,6 +22,14 @@ lv_disp_draw_buf_t drawBuf;
 lv_color_t* frameA = nullptr;
 lv_color_t* frameB = nullptr;
 wattcycle::display::P4OverviewView overview;
+wattcycle::display::P4DetailPages detailPages;
+
+void onPanelPage(uint8_t index, void* user) {
+  auto* pages = static_cast<display::P4DetailPages*>(user);
+  if (pages != nullptr) {
+    pages->show(static_cast<display::HubPage>(index));
+  }
+}
 
 bool onFlushDone(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t* event, void* user) {
   (void)panel;
@@ -47,29 +57,6 @@ void readTouch(lv_indev_drv_t* driver, lv_indev_data_t* data) {
   data->state = LV_INDEV_STATE_PR;
   data->point.x = x;
   data->point.y = y;
-}
-
-display::P4OverviewFlow demoFlow() {
-  display::P4OverviewFlow flow;
-  flow.packLink = display::P4Link::Up;
-  flow.ecoLink = display::P4Link::Up;
-  flow.solarLink = display::P4Link::Down;
-  flow.packValid = true;
-  flow.packSoc = 80;
-  flow.packWatts = -71;
-  flow.packEdge.active = true;
-  flow.packEdge.reverse = true;
-  flow.ecoValid = true;
-  flow.ecoSoc = 18;
-  flow.showEcoBattery = true;
-  flow.ecoBatteryW = -71;
-  flow.showBalance = true;
-  flow.balanceW = -22;
-  flow.showSelf = true;
-  flow.selfW = 49;
-  flow.acOutOn = true;
-  flow.acOutW = 93;
-  return flow;
 }
 
 bool startPanel() {
@@ -123,12 +110,18 @@ void setupPanel() {
     Serial.println("panel start failed");
     return;
   }
+  detailPages.mount(lv_scr_act());
+  overview.setPageHandler(onPanelPage, &detailPages);
   overview.mount(lv_scr_act(), "demo - bridges stay on the M5");
-  overview.apply(demoFlow());
+  const display::P4PanelBoard board = display::demoBoard();
+  overview.apply(board.overview);
+  overview.setLinks(board.gateway.wifiUp, board.gateway.bmsUp);
+  detailPages.apply(board);
   Serial.println("overview ready");
 }
 
 void loopPanel() {
+  overview.refreshClock();
   lv_timer_handler();
   delay(5);
 }
