@@ -71,6 +71,8 @@ Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MeterCommands.cpp") (Jo
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MeterCommands.h") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4SdHistory.cpp") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4SdHistory.h") (Join-Path $Stage "src")
+Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ScreenSleep.cpp") (Join-Path $Stage "src")
+Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ScreenSleep.h") (Join-Path $Stage "src")
 Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\partitions.csv") $Stage
 $Display = Join-Path $Repo "src\hub_p4_wattcycle\Display"
 # Hub-only store adapters stay off the panel sketch. Everything else under Display/ is staged.

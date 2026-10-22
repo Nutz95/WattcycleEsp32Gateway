@@ -17,6 +17,7 @@
 #include "Time/NtpClock.h"
 #include "esp_heap_caps.h"
 #include "driver/i2c_master.h"
+#include "P4ScreenSleep.h"
 #include "lvgl.h"
 #include "pins_config.h"
 #include "src/lcd/st7701_lcd.h"
@@ -102,30 +103,7 @@ void noteWebIdentity() {
   webNamed = true;
 }
 
-constexpr uint32_t kBlankAfterMs = 60000;
-uint32_t lastActivityMs = 0;
-bool screenOn = true;
-
-void setBacklight(bool on) {
-  lcd.example_bsp_set_lcd_backlight(on ? 1u : 0u);
-  screenOn = on;
-}
-
-void noteActivity() {
-  lastActivityMs = millis();
-  if (!screenOn) {
-    setBacklight(true);
-  }
-}
-
-void blankIfIdle() {
-  if (!screenOn || lastActivityMs == 0) {
-    return;
-  }
-  if (static_cast<int32_t>(millis() - lastActivityMs) >= static_cast<int32_t>(kBlankAfterMs)) {
-    setBacklight(false);
-  }
-}
+P4ScreenSleep screenSleep;
 
 void onMeterCommand(uint8_t command, void* /*user*/) {
   meterCommands.sendMeterCommand(command);
@@ -157,13 +135,8 @@ void readTouch(lv_indev_drv_t* driver, lv_indev_data_t* data) {
   (void)driver;
   uint16_t x = 0;
   uint16_t y = 0;
-  if (!touch.getTouch(&x, &y)) {
-    data->state = LV_INDEV_STATE_REL;
-    return;
-  }
-  const bool wasDark = !screenOn;
-  noteActivity();
-  if (wasDark) {
+  const bool pressed = touch.getTouch(&x, &y);
+  if (screenSleep.suppressTouch(pressed) || !pressed) {
     data->state = LV_INDEV_STATE_REL;
     return;
   }
@@ -223,6 +196,7 @@ void setupPanel() {
     Serial.println("panel start failed");
     return;
   }
+  screenSleep.begin(lcd, touch, lcdPanels.panel);
   detailPages.mount(lv_scr_act());
   detailPages.setMeterCommandHandler(onMeterCommand, nullptr);
   overview.setPageHandler(onPanelPage, &detailPages);
@@ -241,7 +215,7 @@ void setupPanel() {
   store.setWebPort(6789);
   health.begin();
   paintBoard();
-  lastActivityMs = millis();
+  screenSleep.arm();
   Serial.println("overview ready");
 }
 
@@ -281,9 +255,12 @@ void loopPanel() {
   noteWebIdentity();
   webGateway.loop();
   noteStorage();
-  blankIfIdle();
-  overview.refreshClock();
-  lv_timer_handler();
+  const bool woke = screenSleep.pollWake();
+  screenSleep.blankIfIdle();
+  if (screenSleep.screenOn() && !woke) {
+    overview.refreshClock();
+    lv_timer_handler();
+  }
   delay(5);
 }
 
