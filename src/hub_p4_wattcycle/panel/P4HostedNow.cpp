@@ -18,7 +18,8 @@ constexpr uint32_t kRespMsg = 0x6E6F7702u;
 constexpr uint32_t kRecvMsg = 0x6E6F7703u;
 constexpr uint8_t kOpInit = 1;
 constexpr uint8_t kOpAddPeer = 3;
-constexpr uint8_t kOpSend = 5;
+// 5 asks whether a peer exists. A frame leaves the coprocessor on 6.
+constexpr uint8_t kOpSend = 6;
 constexpr uint8_t kOpSetPmk = 8;
 constexpr uint32_t kWaitMs = 2000;
 constexpr size_t kPeerSlots = 20;
@@ -170,13 +171,16 @@ esp_err_t hostedNowAddPeer(const esp_now_peer_info_t* peer) {
 }
 
 esp_err_t hostedNowSend(const uint8_t* peer, const uint8_t* data, size_t len) {
-  if (peer == nullptr || data == nullptr || len == 0 || len > 26) {
+  if (peer == nullptr || data == nullptr || len == 0 || len > 23) {
     return ESP_ERR_INVALID_ARG;
   }
   uint8_t raw[32] = {};
-  std::memcpy(raw, peer, 6);
-  std::memcpy(raw + 6, data, len);
-  return transact(kOpSend, raw, static_cast<uint16_t>(6u + len));
+  raw[0] = 1;
+  std::memcpy(raw + 1, peer, 6);
+  const uint16_t dataLen = static_cast<uint16_t>(len);
+  std::memcpy(raw + 7, &dataLen, sizeof(dataLen));
+  std::memcpy(raw + 9, data, len);
+  return transact(kOpSend, raw, static_cast<uint16_t>(9u + len));
 }
 
 esp_err_t hostedNowOnRecv(esp_now_recv_cb_t cb) {
