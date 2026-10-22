@@ -61,6 +61,12 @@ P4PanelBoard demoBoard() {
   std::snprintf(board.alerts.note, sizeof(board.alerts.note), "none");
   board.gateway.bmsUp = true;
   board.gateway.ecoUp = true;
+  // MAC slots stay empty in the demo. Live fill uses STA + build-time peer env.
+  copyMacText(board.gateway.hubMac, "");
+  copyMacText(board.gateway.bmsMac, "");
+  copyMacText(board.gateway.ecoMac, "");
+  copyMacText(board.gateway.solarMac, "");
+  copyMacText(board.esp.deviceMac, "");
   board.esp.heapKb = 180;
   board.esp.cpu0 = 14;
   board.esp.cpu1 = 9;

@@ -1,6 +1,5 @@
 #include "Display/P4DetailPages.h"
 
-#include "Display/P4CellWidgets.h"
 #include "Display/P4DetailRow.h"
 #include "Display/P4OverviewStyle.h"
 
@@ -108,7 +107,10 @@ void applyEnergyPages(P4DetailWidgets& widgets, const P4PanelBoard& board) {
   setDetailValue(widgets.cells.summary, line, kInk);
   for (int index = 0; index < kP4CellSlots; ++index) {
     const bool live = index < board.cells.count;
-    setCellSlot(widgets.cells, index, board.cells.voltsMv[index], board.cells.balancing[index], live);
+    const int volts = board.cells.voltsMv[index];
+    const bool spread = hi > lo;
+    setCellSlot(widgets.cells, index, volts, board.cells.balancing[index], spread && volts == lo,
+                spread && volts == hi, live);
   }
 }
 

@@ -1,4 +1,6 @@
 #pragma once
+#ifndef P4_PANEL_BOARD_H
+#define P4_PANEL_BOARD_H
 
 #include "Display/P4AlertsFields.h"
 #include "Display/P4CellsFields.h"
@@ -26,3 +28,5 @@ struct P4PanelBoard {
 };
 
 }  // namespace wattcycle::display
+
+#endif

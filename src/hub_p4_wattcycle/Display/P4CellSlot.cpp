@@ -51,17 +51,52 @@ void makeCellSlot(P4CellWidgets& cells, int index, int y) {
   lv_label_set_text(value, "--");
   lv_obj_set_style_text_font(value, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(value, lv_color_hex(kInk), 0);
-  lv_obj_set_pos(value, 310, 16);
+  lv_obj_set_pos(value, 300, 16);
+  lv_obj_t* mark = lv_obj_create(row);
+  lv_obj_set_pos(mark, 414, 16);
+  lv_obj_set_size(mark, 18, 18);
+  lv_obj_set_style_radius(mark, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_border_width(mark, 0, 0);
+  lv_obj_set_style_bg_color(mark, lv_color_hex(kIdleEdge), 0);
+  lv_obj_add_flag(mark, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_clear_flag(mark, LV_OBJ_FLAG_SCROLLABLE);
   cells.rows[index] = row;
   cells.fills[index] = fill;
   cells.labels[index] = value;
+  cells.marks[index] = mark;
 }
 
-void setCellSlot(P4CellWidgets& cells, int index, int voltsMv, bool balancing, bool visible) {
+void paintCellMark(lv_obj_t* mark, bool balancing, bool isMin, bool isMax) {
+  if (mark == nullptr) {
+    return;
+  }
+  uint32_t color = kIdleEdge;
+  bool show = false;
+  if (balancing) {
+    color = 0xF0B429;
+    show = true;
+  } else if (isMin) {
+    color = kDanger;
+    show = true;
+  } else if (isMax) {
+    color = kAccent;
+    show = true;
+  }
+  if (!show) {
+    lv_obj_add_flag(mark, LV_OBJ_FLAG_HIDDEN);
+    return;
+  }
+  lv_obj_set_style_bg_color(mark, lv_color_hex(color), 0);
+  lv_obj_clear_flag(mark, LV_OBJ_FLAG_HIDDEN);
+}
+
+void setCellSlot(P4CellWidgets& cells, int index, int voltsMv, bool balancing, bool isMin,
+                 bool isMax, bool visible) {
   showObject(cells.rows[index], visible);
   if (!visible || cells.fills[index] == nullptr) {
     return;
   }
+  paintCellMark(cells.marks[index], balancing, isMin, isMax);
   int span = voltsMv - 3000;
   if (span < 0) {
     span = 0;
@@ -71,8 +106,7 @@ void setCellSlot(P4CellWidgets& cells, int index, int voltsMv, bool balancing, b
   }
   const int width = 24 + (span * 196) / 600;
   lv_obj_set_width(cells.fills[index], width);
-  const uint32_t color = balancing ? kSelf : kAccent;
-  lv_obj_set_style_bg_color(cells.fills[index], lv_color_hex(color), 0);
+  lv_obj_set_style_bg_color(cells.fills[index], lv_color_hex(kAccent), 0);
   lv_label_set_text_fmt(cells.labels[index], "%d.%03d V", voltsMv / 1000, voltsMv % 1000);
 }
 

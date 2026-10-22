@@ -89,6 +89,9 @@ void test_demo_board_matches_locked_fixture() {
   TEST_ASSERT_FALSE(board.gateway.wifiUp);
   TEST_ASSERT_TRUE(board.gateway.bmsUp);
   TEST_ASSERT_TRUE(board.gateway.ecoUp);
+  TEST_ASSERT_EQUAL_STRING("", board.gateway.hubMac);
+  TEST_ASSERT_EQUAL_STRING("", board.gateway.bmsMac);
+  TEST_ASSERT_EQUAL_STRING("", board.esp.deviceMac);
   TEST_ASSERT_EQUAL_INT(4, board.cells.count);
   TEST_ASSERT_TRUE(board.cells.balancing[1]);
   TEST_ASSERT_EQUAL_INT(30, board.cells.voltsMv[1] - board.cells.voltsMv[0]);

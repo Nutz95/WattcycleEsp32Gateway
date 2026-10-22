@@ -20,14 +20,20 @@ lv_obj_t* makeFlowRoot(lv_obj_t* parent) {
   return root;
 }
 
-void setWatts(lv_obj_t* label, bool active, int watts) {
-  char line[24];
-  if (active) {
-    std::snprintf(line, sizeof(line), "%d W", watts);
-  } else {
-    std::snprintf(line, sizeof(line), "off");
+void setWatts(lv_obj_t* label, bool active, int watts, uint32_t color) {
+  if (label == nullptr) {
+    return;
   }
+  if (!active) {
+    lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+    return;
+  }
+  char line[16];
+  std::snprintf(line, sizeof(line), "%d W", watts);
   lv_label_set_text(label, line);
+  lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
+  lv_obj_clear_flag(label, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_move_foreground(label);
 }
 
 }  // namespace
@@ -56,7 +62,7 @@ void P4OverviewView::mount(lv_obj_t* parent, const char* footer) {
 }
 
 void P4OverviewView::applyGrid(const P4OverviewFlow& flow) {
-  setWatts(acIn_, flow.acInActive, flow.acInW);
+  setWatts(acIn_, flow.acInActive, flow.acInW, kAccent);
   paintFlowNode(gridCard_, flow.acInActive);
   runLane(kLaneGrid, kSpineX, kGridY + kGridH + kLineGap, kSpineX, kEcoY - kLineGap, flow.acInActive);
 }
@@ -98,9 +104,9 @@ void P4OverviewView::applyEco(const P4OverviewFlow& flow) {
 }
 
 void P4OverviewView::applyPorts(const P4OverviewFlow& flow) {
-  setWatts(acOut_, flow.acOutOn, flow.acOutW);
-  setWatts(dcOut_, flow.dcOutOn, flow.dcOutW);
-  setWatts(usbOut_, flow.usbOutOn, flow.usbOutW);
+  setWatts(acOut_, flow.acOutOn, flow.acOutW, kAccent);
+  setWatts(dcOut_, flow.dcOutOn, flow.dcOutW, kAccent);
+  setWatts(usbOut_, flow.usbOutOn, flow.usbOutW, kAccent);
   paintFlowNode(acCard_, flow.acOutOn);
   paintFlowNode(dcCard_, flow.dcOutOn);
   paintFlowNode(usbCard_, flow.usbOutOn);
@@ -121,16 +127,9 @@ void P4OverviewView::applyPack(const P4OverviewFlow& flow) {
     std::snprintf(line, sizeof(line), "--%%  %s", linkName(flow.packLink));
   }
   lv_label_set_text(packSoc_, line);
-  if (flow.packEdge.active) {
-    std::snprintf(line, sizeof(line), "%d W", flow.packWatts);
-    lv_label_set_text(packEdge_, flow.packEdge.reverse ? "to Eco" : "to pack");
-  } else {
-    std::snprintf(line, sizeof(line), "idle");
-    lv_label_set_text(packEdge_, "");
-  }
-  lv_label_set_text(packWatts_, line);
+  lv_label_set_text(packEdge_, "");
   const uint32_t color = flow.packWatts < 0 ? kDanger : kAccent;
-  lv_obj_set_style_text_color(packWatts_, lv_color_hex(flow.packEdge.active ? color : kMuted), 0);
+  setWatts(packWatts_, flow.packEdge.active, flow.packWatts, color);
   const int top = kEcoY + kEcoH + kLineGap;
   const int bottom = kPackY - kLineGap;
   if (flow.packEdge.reverse) {
@@ -142,21 +141,10 @@ void P4OverviewView::applyPack(const P4OverviewFlow& flow) {
 
 void P4OverviewView::applySolar(const P4OverviewFlow& flow) {
   paintRadio(solarCard_, flow.solarLink);
-  char line[48];
   const P4SolarRoute route = solarRoute(flow);
-  if (flow.solarActive) {
-    std::snprintf(line, sizeof(line), "%d W  %s", flow.solarW, linkName(flow.solarLink));
-  } else {
-    std::snprintf(line, sizeof(line), "idle  %s", linkName(flow.solarLink));
-  }
-  lv_label_set_text(solarWatts_, line);
-  if (route.toEco) {
-    lv_label_set_text(solarEdge_, "solar to Eco");
-  } else if (route.toPack) {
-    lv_label_set_text(solarEdge_, "to pack");
-  } else {
-    lv_label_set_text(solarEdge_, "");
-  }
+  lv_label_set_text(solarEdge_, "");
+  placeSolarWatts(route.toEco);
+  setWatts(solarWatts_, flow.solarActive && (route.toEco || route.toPack), flow.solarW, kAccent);
   const int top = kPackY + kPackH + kLineGap;
   const int bottom = kSolarY - kLineGap;
   runLane(kLaneSolar, kSpineX, bottom, kSpineX, top, route.toPack);

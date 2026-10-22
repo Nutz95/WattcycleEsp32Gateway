@@ -11,6 +11,19 @@ void setVisible(lv_obj_t* obj, bool visible) {
   }
 }
 
+lv_obj_t* makeTransit(lv_obj_t* parent, int x, int y) {
+  lv_obj_t* label = makeValueLabel(parent);
+  lv_obj_set_width(label, 84);
+  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_LEFT, 0);
+  lv_obj_set_pos(label, x, y);
+  lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+  return label;
+}
+
+int gapMidY(int top, int bottom) {
+  return ((top + bottom) / 2) - 8;
+}
+
 }  // namespace
 
 void P4OverviewView::mountLane(int lane, int x1, int y1, int x2, int y2) {
@@ -65,8 +78,38 @@ void P4OverviewView::mountEdges(lv_obj_t* parent) {
   setVisible(bypassOut_, false);
   packEdge_ = makeValueLabel(flowRoot_);
   solarEdge_ = makeValueLabel(flowRoot_);
-  lv_obj_set_pos(packEdge_, kSpineX + 14, kEcoY + kEcoH + 8);
-  lv_obj_set_pos(solarEdge_, kColX + kColW + 12, kPackY + 8);
+  lv_obj_add_flag(packEdge_, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(solarEdge_, LV_OBJ_FLAG_HIDDEN);
+  mountTransitLabels();
+}
+
+void P4OverviewView::mountTransitLabels() {
+  const int beside = kSpineX + 14;
+  const int gridTop = kGridY + kGridH + kLineGap;
+  const int gridBottom = kEcoY - kLineGap;
+  acIn_ = makeTransit(flowRoot_, beside, gapMidY(gridTop, gridBottom));
+  const int portLeft = kColX + kColW + kLineGap;
+  const int portRight = kPortX - kLineGap;
+  const int portX = ((portLeft + portRight) / 2) - 28;
+  acOut_ = makeTransit(flowRoot_, portX, kEcoY + (kPortH / 2) - 16);
+  dcOut_ = makeTransit(flowRoot_, portX, kEcoY + kPortPitch + (kPortH / 2) - 16);
+  usbOut_ = makeTransit(flowRoot_, portX, kEcoY + (2 * kPortPitch) + (kPortH / 2) - 16);
+  const int packTop = kEcoY + kEcoH + kLineGap;
+  const int packBottom = kPackY - kLineGap;
+  packWatts_ = makeTransit(flowRoot_, beside, gapMidY(packTop, packBottom));
+  solarWatts_ = makeTransit(flowRoot_, beside, gapMidY(kPackY + kPackH + kLineGap, kSolarY - kLineGap));
+}
+
+void P4OverviewView::placeSolarWatts(bool alongBypass) {
+  if (solarWatts_ == nullptr) {
+    return;
+  }
+  if (alongBypass) {
+    lv_obj_set_pos(solarWatts_, kRailX + 16, kEcoMidY - 18);
+    return;
+  }
+  const int y = gapMidY(kPackY + kPackH + kLineGap, kSolarY - kLineGap);
+  lv_obj_set_pos(solarWatts_, kSpineX + 14, y);
 }
 
 }  // namespace wattcycle::display

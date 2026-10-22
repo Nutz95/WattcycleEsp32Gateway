@@ -32,8 +32,10 @@ class P4OverviewView {
   void mountStatus(lv_obj_t* parent);
   void mountMenu(lv_obj_t* parent);
   void mountLane(int lane, int x1, int y1, int x2, int y2);
+  void mountTransitLabels();
   void runLane(int lane, int x1, int y1, int x2, int y2, bool active);
   void showBypass(bool active);
+  void placeSolarWatts(bool alongBypass);
   void applyGrid(const P4OverviewFlow& flow);
   void applyEco(const P4OverviewFlow& flow);
   void applyPorts(const P4OverviewFlow& flow);

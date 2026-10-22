@@ -4,9 +4,9 @@
 
 namespace wattcycle::display {
 
-constexpr int kDetailRows = 6;
+constexpr int kDetailRows = 8;
 
-/// One text page: a root plus up to six value labels.
+/// One text page: a root plus up to eight value labels.
 struct P4TextPage {
   lv_obj_t* root = nullptr;
   lv_obj_t* values[kDetailRows] = {};

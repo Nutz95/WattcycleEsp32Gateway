@@ -43,20 +43,45 @@ void applyAlerts(P4TextPage& page, const P4AlertsFields& fields) {
 }
 
 void applyGateway(P4TextPage& page, const P4GatewayFields& fields) {
-  setDetailValue(page.values[0], fields.wifiUp ? "up" : "down", fields.wifiUp ? kAccent : kDanger);
-  setDetailValue(page.values[1], fields.bmsUp ? "live" : "no link", fields.bmsUp ? kAccent : kDanger);
-  setDetailValue(page.values[2], fields.ecoUp ? "live" : "no link", fields.ecoUp ? kAccent : kDanger);
-  setDetailValue(page.values[3], fields.solarUp ? "live" : "no link", fields.solarUp ? kAccent : kDanger);
+  setDetailValue(page.values[0], macOrDash(fields.hubMac), kInk);
+  setDetailValue(page.values[1], macOrDash(fields.bmsMac), fields.bmsUp ? kAccent : kDanger);
+  setDetailValue(page.values[2], macOrDash(fields.ecoMac), fields.ecoUp ? kAccent : kDanger);
+  setDetailValue(page.values[3], macOrDash(fields.solarMac), fields.solarUp ? kAccent : kDanger);
+  setDetailValue(page.values[4], fields.wifiUp ? "up" : "down", fields.wifiUp ? kAccent : kDanger);
+}
+
+void formatUptime(char* line, size_t capacity, int seconds) {
+  if (seconds < 0) {
+    seconds = 0;
+  }
+  const int minutes = seconds / 60;
+  if (minutes < 60) {
+    std::snprintf(line, capacity, "%d min", minutes);
+    return;
+  }
+  std::snprintf(line, capacity, "%dh %02d", minutes / 60, minutes % 60);
 }
 
 void applyEsp(P4TextPage& page, const P4EspFields& fields) {
   char line[16];
+  setDetailValue(page.values[0], macOrDash(fields.deviceMac), kInk);
+  setDetailValue(page.values[1], fields.staIp[0] != '\0' ? fields.staIp : "--", kInk);
   std::snprintf(line, sizeof(line), "%d kB", fields.heapKb);
-  setDetailValue(page.values[0], line, kInk);
-  std::snprintf(line, sizeof(line), "%d%%", fields.cpu0);
-  setDetailValue(page.values[1], line, kInk);
-  std::snprintf(line, sizeof(line), "%d%%", fields.cpu1);
   setDetailValue(page.values[2], line, kInk);
+  std::snprintf(line, sizeof(line), "%d%%", fields.cpu0);
+  setDetailValue(page.values[3], line, kInk);
+  std::snprintf(line, sizeof(line), "%d%%", fields.cpu1);
+  setDetailValue(page.values[4], line, kInk);
+  std::snprintf(line, sizeof(line), "%d C", fields.tempC);
+  setDetailValue(page.values[5], line, kInk);
+  formatUptime(line, sizeof(line), fields.uptimeSec);
+  setDetailValue(page.values[6], line, kInk);
+  if (fields.c6HeapKb < 0) {
+    setDetailValue(page.values[7], "--", kMuted);
+    return;
+  }
+  std::snprintf(line, sizeof(line), "%d kB", fields.c6HeapKb);
+  setDetailValue(page.values[7], line, kInk);
 }
 
 }  // namespace
