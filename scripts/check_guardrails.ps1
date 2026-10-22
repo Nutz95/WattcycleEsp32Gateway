@@ -80,7 +80,8 @@ $domainLeakRules = @(
   -FunctionBodyPathRegex '[\\/]bridge_ecoflow_delta3[\\/]' `
   -OneTypePerHeaderRoots @(
     (Join-Path $srcRoot "bridge_ecoflow_delta3"),
-    (Join-Path $srcRoot "boards")
+    (Join-Path $srcRoot "boards"),
+    (Join-Path $srcRoot "hub_p4_wattcycle")
   ) `
   -ConcreteAdapterHeaders $concreteAdapterHeaders `
   -TargetPrefixes $targetPrefixes `
