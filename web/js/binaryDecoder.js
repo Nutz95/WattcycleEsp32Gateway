@@ -56,7 +56,8 @@
         ble: (flags & 0x04) !== 0,
         telemetryFresh: (flags & 0x20) !== 0,
         solarLink: (flags & 0x40) !== 0,
-        spp: (flags & 0x80) !== 0
+        spp: (flags & 0x80) !== 0,
+        bmsEncrypted: false
       },
       warnings: {
         protection: (flags & 0x08) !== 0,
@@ -285,6 +286,10 @@
     if (offset + 2 <= bytes.length) {
       const c6HeapKb = i16(view, offset);
       data.esp.c6HeapKb = c6HeapKb < 0 ? null : c6HeapKb;
+      offset += 2;
+    }
+    if (offset + 1 <= bytes.length) {
+      data.gateway.bmsEncrypted = (u8(view, offset) & 1) !== 0;
     }
 
     return data;

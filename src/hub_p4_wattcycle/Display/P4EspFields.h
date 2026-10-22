@@ -16,6 +16,9 @@ struct P4EspFields {
   char deviceMac[kP4MacText] = {};
   /// STA address of the C6 once Wi-Fi has a lease. Empty until then.
   char staIp[16] = {};
+  bool sdReady = false;
+  int sdUsedMb = 0;
+  int sdTotalMb = 0;
 };
 
 }  // namespace wattcycle::display

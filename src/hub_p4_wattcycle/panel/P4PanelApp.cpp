@@ -201,9 +201,31 @@ void setupPanel() {
   if (!webGateway.begin(6789)) {
     Serial.println("web fs failed");
   }
+  store.setWebPort(6789);
   health.begin();
   paintBoard();
   Serial.println("overview ready");
+}
+
+void noteStorage() {
+  static uint32_t nextMs = 0;
+  const uint32_t now = millis();
+  if (nextMs != 0 && static_cast<int32_t>(now - nextMs) < 0) {
+    return;
+  }
+  nextMs = now + 5000;
+  uint32_t usedMb = 0;
+  uint32_t totalMb = 0;
+  const bool ready = history.storage(usedMb, totalMb);
+  const bool changed = ready != board.esp.sdReady || static_cast<int>(usedMb) != board.esp.sdUsedMb ||
+                       static_cast<int>(totalMb) != board.esp.sdTotalMb;
+  board.esp.sdReady = ready;
+  board.esp.sdUsedMb = static_cast<int>(usedMb);
+  board.esp.sdTotalMb = static_cast<int>(totalMb);
+  overview.setStorage(ready, board.esp.sdUsedMb, board.esp.sdTotalMb);
+  if (changed) {
+    paintBoard();
+  }
 }
 
 void loopPanel() {
@@ -220,6 +242,7 @@ void loopPanel() {
   authTap.apply(authService.prompt().kind);
   noteWebIdentity();
   webGateway.loop();
+  noteStorage();
   overview.refreshClock();
   lv_timer_handler();
   delay(5);

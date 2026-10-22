@@ -15,21 +15,27 @@ void mountRows(P4TextPage& page, lv_obj_t* parent, const char* const* names, int
 }  // namespace
 
 void P4DetailPages::mount(lv_obj_t* parent) {
-  static const char* packNames[] = {"SOC", "Voltage", "Current", "Power", "Capacity", "Health"};
-  static const char* solarNames[] = {"Power", "Voltage", "Link"};
-  static const char* ecoNames[] = {"SOC", "Battery", "AC out", "DC out", "USB", "Link"};
+  static const char* packNames[] = {"SOC", "Voltage", "Current", "Power", "Capacity", "Health",
+                                    "Link", "Security"};
+  static const char* solarNames[] = {"Power", "Voltage", "Link", "Security"};
+  static const char* ecoNames[] = {"SOC", "Battery", "AC out", "DC out", "USB", "Link", "Security"};
   static const char* tempNames[] = {"MOS", "PCB", "Probe 1", "Probe 2"};
   static const char* alertNames[] = {"Protection", "Fault", "Note"};
   static const char* gateNames[] = {"Hub MAC", "BMS peer", "Eco peer", "Solar peer", "Wi-Fi"};
   static const char* espNames[] = {"This MAC", "IP", "P4 heap", "P4 core 0", "P4 core 1",
-                                  "P4 temp", "Uptime", "C6 heap"};
-  mountRows(widgets_.wattcycle, parent, packNames, 6);
-  mountRows(widgets_.solar, parent, solarNames, 3);
-  mountRows(widgets_.eco, parent, ecoNames, 6);
+                                  "P4 temp", "Uptime", "C6 heap", "SD card", "SD space"};
+  static const char* linkNames[] = {"Wi-Fi", "Address", "BMS link", "BMS security", "Solar link",
+                                    "Solar security", "EcoFlow link", "EcoFlow security"};
+  mountRows(widgets_.wattcycle, parent, packNames, 8);
+  mountRows(widgets_.solar, parent, solarNames, 4);
+  mountRows(widgets_.eco, parent, ecoNames, 7);
   mountRows(widgets_.temps, parent, tempNames, 4);
   mountRows(widgets_.alerts, parent, alertNames, 3);
   mountRows(widgets_.gateway, parent, gateNames, 5);
-  mountRows(widgets_.esp, parent, espNames, 8);
+  mountRows(widgets_.esp, parent, espNames, 10);
+  mountRows(widgets_.link, parent, linkNames, 8);
+  lv_obj_add_flag(widgets_.esp.root, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scroll_dir(widgets_.esp.root, LV_DIR_VER);
   widgets_.cells.root = makeDetailRoot(parent);
   widgets_.cells.summary = makeLabeledRow(widgets_.cells.root, 12, "Span");
   for (int index = 0; index < kP4CellSlots; ++index) {

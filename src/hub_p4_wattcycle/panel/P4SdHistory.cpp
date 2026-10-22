@@ -157,4 +157,19 @@ bool P4SdHistory::streamDay(const char* yyyymmdd, storage::HistoryStreamBegin be
   return true;
 }
 
+bool P4SdHistory::storage(uint32_t& usedMb, uint32_t& totalMb) const {
+  usedMb = 0;
+  totalMb = 0;
+  if (!ready_) {
+    return false;
+  }
+  const uint64_t total = SD_MMC.totalBytes();
+  if (total == 0) {
+    return false;
+  }
+  totalMb = static_cast<uint32_t>(total / (1024ull * 1024ull));
+  usedMb = static_cast<uint32_t>(SD_MMC.usedBytes() / (1024ull * 1024ull));
+  return true;
+}
+
 }  // namespace wattcycle::panel

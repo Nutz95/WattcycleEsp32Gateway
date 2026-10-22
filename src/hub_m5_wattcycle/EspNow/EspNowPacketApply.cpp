@@ -164,6 +164,7 @@ void applyBmsTelemetryPacket(telemetry::ITelemetryStore& store,
   store.updateBattery(battery);
   store.setBmsLink(battery.valid,
                    (packet.flags & wattcycle_bridge::kFlagBleConnected) != 0);
+  store.setBmsEspNowEncrypted((packet.flags & wattcycle_bridge::kFlagEncrypted) != 0);
 
   if ((packet.flags & wattcycle_bridge::kFlagBridgeEspValid) != 0) {
     telemetry::EspHealth bridgeEsp = {};

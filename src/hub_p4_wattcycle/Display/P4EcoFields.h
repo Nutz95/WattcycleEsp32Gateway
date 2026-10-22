@@ -5,6 +5,7 @@ namespace wattcycle::display {
 /// EcoFlow detail page. Battery watts keep the station sign.
 struct P4EcoFields {
   bool linkUp = false;
+  bool secured = false;
   bool valid = false;
   int soc = 0;
   int batteryW = 0;

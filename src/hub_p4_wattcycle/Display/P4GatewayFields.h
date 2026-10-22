@@ -11,6 +11,8 @@ struct P4GatewayFields {
   bool bmsUp = false;
   bool ecoUp = false;
   bool solarUp = false;
+  /// Short reason painted on the connectivity page: up, joining, no address, down.
+  char wifiNote[16] = {};
   char hubMac[kP4MacText] = {};
   char bmsMac[kP4MacText] = {};
   char ecoMac[kP4MacText] = {};

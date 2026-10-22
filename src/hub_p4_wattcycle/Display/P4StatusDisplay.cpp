@@ -9,7 +9,7 @@ namespace wattcycle::display {
 namespace {
 
 HubPage stepPage(HubPage page, int delta) {
-  const int count = static_cast<int>(kHubPageCount);
+  const int count = static_cast<int>(kHubMenuCount);
   int next = static_cast<int>(page) + delta;
   if (next < 0) {
     next = count - 1;

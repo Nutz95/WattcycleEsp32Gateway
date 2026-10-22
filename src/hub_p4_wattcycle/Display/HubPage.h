@@ -14,9 +14,12 @@ enum class HubPage : uint8_t {
   Temps,
   Alerts,
   Gateway,
-  Esp
+  Esp,
+  Link
 };
 
-constexpr uint8_t kHubPageCount = static_cast<uint8_t>(HubPage::Esp) + 1u;
+/// Bottom menu stops at Esp. Link opens from the status icons.
+constexpr uint8_t kHubMenuCount = static_cast<uint8_t>(HubPage::Esp) + 1u;
+constexpr uint8_t kHubPageCount = static_cast<uint8_t>(HubPage::Link) + 1u;
 
 }  // namespace wattcycle::display

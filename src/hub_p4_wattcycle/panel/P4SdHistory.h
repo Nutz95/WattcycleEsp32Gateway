@@ -20,6 +20,8 @@ class P4SdHistory : public storage::IDailyHistoryStore {
   size_t listMonthDays(int year, int month, char out[][11], size_t maxDays) const override;
   bool streamDay(const char* yyyymmdd, storage::HistoryStreamBegin begin,
                  storage::HistoryChunkSink sink, void* user) const override;
+  /// FAT used and total, in megabytes. False when the card is absent.
+  bool storage(uint32_t& usedMb, uint32_t& totalMb) const;
 
  private:
   bool ready_ = false;

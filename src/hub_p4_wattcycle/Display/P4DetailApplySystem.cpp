@@ -63,7 +63,7 @@ void formatUptime(char* line, size_t capacity, int seconds) {
 }
 
 void applyEsp(P4TextPage& page, const P4EspFields& fields) {
-  char line[16];
+  char line[24];
   setDetailValue(page.values[0], macOrDash(fields.deviceMac), kInk);
   setDetailValue(page.values[1], fields.staIp[0] != '\0' ? fields.staIp : "--", kInk);
   std::snprintf(line, sizeof(line), "%d kB", fields.heapKb);
@@ -78,10 +78,32 @@ void applyEsp(P4TextPage& page, const P4EspFields& fields) {
   setDetailValue(page.values[6], line, kInk);
   if (fields.c6HeapKb < 0) {
     setDetailValue(page.values[7], "--", kMuted);
+  } else {
+    std::snprintf(line, sizeof(line), "%d kB", fields.c6HeapKb);
+    setDetailValue(page.values[7], line, kInk);
+  }
+  setDetailValue(page.values[8], fields.sdReady ? "ready" : "not seen",
+                 fields.sdReady ? kAccent : kDanger);
+  if (!fields.sdReady || fields.sdTotalMb <= 0) {
+    setDetailValue(page.values[9], "--", kMuted);
     return;
   }
-  std::snprintf(line, sizeof(line), "%d kB", fields.c6HeapKb);
-  setDetailValue(page.values[7], line, kInk);
+  std::snprintf(line, sizeof(line), "%d / %d MB", fields.sdUsedMb, fields.sdTotalMb);
+  setDetailValue(page.values[9], line, kInk);
+}
+
+void applyLink(P4TextPage& page, const P4PanelBoard& board) {
+  const P4GatewayFields& fields = board.gateway;
+  const bool wifiUp = fields.wifiUp;
+  const char* note = fields.wifiNote[0] != '\0' ? fields.wifiNote : (wifiUp ? "up" : "down");
+  setDetailValue(page.values[0], note, wifiUp ? kAccent : kDanger);
+  setDetailValue(page.values[1], board.esp.staIp[0] != '\0' ? board.esp.staIp : "--", kInk);
+  setDetailValue(page.values[2], fields.bmsUp ? "live" : "no link", fields.bmsUp ? kAccent : kDanger);
+  setSecurityValue(page.values[3], board.wattcycle.linkUp, board.wattcycle.secured);
+  setDetailValue(page.values[4], fields.solarUp ? "live" : "no link", fields.solarUp ? kAccent : kDanger);
+  setSecurityValue(page.values[5], board.solar.linkUp, board.solar.secured);
+  setDetailValue(page.values[6], fields.ecoUp ? "live" : "no link", fields.ecoUp ? kAccent : kDanger);
+  setSecurityValue(page.values[7], board.eco.linkUp, board.eco.secured);
 }
 
 }  // namespace
@@ -91,6 +113,7 @@ void applySystemPages(P4DetailWidgets& widgets, const P4PanelBoard& board) {
   applyAlerts(widgets.alerts, board.alerts);
   applyGateway(widgets.gateway, board.gateway);
   applyEsp(widgets.esp, board.esp);
+  applyLink(widgets.link, board);
 }
 
 }  // namespace wattcycle::display

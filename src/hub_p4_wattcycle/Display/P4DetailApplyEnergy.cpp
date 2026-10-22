@@ -35,6 +35,8 @@ void applyWattcycle(P4TextPage& page, const P4WattcycleFields& fields) {
   setDetailValue(page.values[4], fields.valid ? line : "--", kInk);
   std::snprintf(line, sizeof(line), "%d%%  %d cyc", fields.soh, fields.cycles);
   setDetailValue(page.values[5], fields.valid ? line : "--", kInk);
+  setDetailValue(page.values[6], fields.linkUp ? "live" : "no link", link);
+  setSecurityValue(page.values[7], fields.linkUp, fields.secured);
 }
 
 void applySolar(P4TextPage& page, const P4SolarFields& fields) {
@@ -44,6 +46,7 @@ void applySolar(P4TextPage& page, const P4SolarFields& fields) {
   formatMilli(line, sizeof(line), fields.voltsMv, "V");
   setDetailValue(page.values[1], fields.linkUp ? line : "--", kInk);
   setDetailValue(page.values[2], fields.linkUp ? "live" : "no link", fields.linkUp ? kAccent : kDanger);
+  setSecurityValue(page.values[3], fields.linkUp, fields.secured);
 }
 
 void applyEco(P4TextPage& page, const P4EcoFields& fields) {
@@ -76,6 +79,7 @@ void applyEco(P4TextPage& page, const P4EcoFields& fields) {
   }
   setDetailValue(page.values[4], line, fields.usbOn ? kAccent : kMuted);
   setDetailValue(page.values[5], fields.linkUp ? "live" : "no link", link);
+  setSecurityValue(page.values[6], fields.linkUp, fields.secured);
 }
 
 }  // namespace

@@ -9,19 +9,19 @@ namespace wattcycle::display {
 namespace {
 
 const char* menuCaption(uint8_t index) {
-  static const char* captions[kHubPageCount] = {
+  static const char* captions[kHubMenuCount] = {
       "Overview", "Wattcycle", "Solar", "EcoFlow", "Cells", "Temps", "Alerts", "Gateway", "Esp"};
-  if (index >= kHubPageCount) {
+  if (index >= kHubMenuCount) {
     return "";
   }
   return captions[index];
 }
 
 const char* menuSymbol(uint8_t index) {
-  static const char* symbols[kHubPageCount] = {
+  static const char* symbols[kHubMenuCount] = {
       LV_SYMBOL_HOME, LV_SYMBOL_BATTERY_FULL, LV_SYMBOL_CHARGE, LV_SYMBOL_POWER, LV_SYMBOL_BATTERY_3,
       LV_SYMBOL_TINT, LV_SYMBOL_BELL,         LV_SYMBOL_SETTINGS, LV_SYMBOL_USB};
-  if (index >= kHubPageCount) {
+  if (index >= kHubMenuCount) {
     return "";
   }
   return symbols[index];
@@ -72,7 +72,7 @@ void P4OverviewView::mountMenu(lv_obj_t* parent) {
   lv_obj_set_style_pad_all(menu_, 0, 0);
   lv_obj_set_scroll_dir(menu_, LV_DIR_HOR);
   lv_obj_set_scrollbar_mode(menu_, LV_SCROLLBAR_MODE_OFF);
-  for (uint8_t index = 0; index < kHubPageCount; ++index) {
+  for (uint8_t index = 0; index < kHubMenuCount; ++index) {
     lv_obj_t* button = lv_btn_create(menu_);
     lv_obj_set_pos(button, 8 + (static_cast<int>(index) * 104), 6);
     lv_obj_set_size(button, 96, 68);
@@ -92,7 +92,7 @@ void P4OverviewView::mountMenu(lv_obj_t* parent) {
 }
 
 void P4OverviewView::styleMenu(uint8_t selected) {
-  for (uint8_t index = 0; index < kHubPageCount; ++index) {
+  for (uint8_t index = 0; index < kHubMenuCount; ++index) {
     const bool on = index == selected;
     lv_obj_set_style_bg_color(menuBtn_[index], lv_color_hex(on ? 0x243044 : kBg), 0);
     lv_obj_set_style_border_width(menuBtn_[index], 2, 0);

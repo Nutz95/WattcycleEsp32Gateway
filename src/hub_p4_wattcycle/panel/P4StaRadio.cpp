@@ -23,6 +23,19 @@ constexpr uint32_t kJoinTimeoutMs = 20000;
 
 P4StaRadio* radioInstance = nullptr;
 
+const char* wifiNote(bool wifiUp, bool joining, const char* ip) {
+  if (wifiUp && ip != nullptr && ip[0] != '\0') {
+    return "up";
+  }
+  if (wifiUp) {
+    return "no address";
+  }
+  if (joining) {
+    return "joining";
+  }
+  return "down";
+}
+
 bool macIsZero(const uint8_t mac[6]) {
   return mac[0] == 0 && mac[1] == 0 && mac[2] == 0 && mac[3] == 0 && mac[4] == 0 && mac[5] == 0;
 }
@@ -276,7 +289,8 @@ bool P4StaRadio::loop(display::P4PanelBoard& board) {
   }
   const bool wifiUp = WiFi.status() == WL_CONNECTED;
   wifiUpFlag_ = wifiUp;
-  if (wifiUp != board.gateway.wifiUp) {
+  const bool wifiChanged = wifiUp != board.gateway.wifiUp;
+  if (wifiChanged) {
     board.gateway.wifiUp = wifiUp;
     dirty = true;
   }
@@ -289,7 +303,16 @@ bool P4StaRadio::loop(display::P4PanelBoard& board) {
     WiFi.begin(P4_WIFI_SSID, P4_WIFI_PASS);
     joinStartedMs_ = millis();
   }
-  if (rememberStaIp(board)) {
+  const bool ipChanged = rememberStaIp(board);
+  if (ipChanged) {
+    dirty = true;
+  }
+  if (store_ != nullptr && (wifiChanged || ipChanged)) {
+    store_->setWifiState(wifiUp, board.esp.staIp);
+  }
+  const char* note = wifiNote(wifiUp, joinStarted_, board.esp.staIp);
+  if (std::strcmp(board.gateway.wifiNote, note) != 0) {
+    std::snprintf(board.gateway.wifiNote, sizeof(board.gateway.wifiNote), "%s", note);
     dirty = true;
   }
   const int c6HeapKb = c6HeapKb_;

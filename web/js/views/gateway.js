@@ -86,6 +86,12 @@
       lastBleAddress = bleAddress;
     }
     document.getElementById("bleAddress").textContent = bleAddress || lastBleAddress || "--";
+    const bmsEncrypted = !!gateway.bmsEncrypted;
+    setLink(
+      "bmsEnc",
+      bleLive && bmsEncrypted,
+      bleLive ? (bmsEncrypted ? "secured (PMK)" : "plaintext") : "--"
+    );
     document.getElementById("fw").textContent = product.fw || "--";
     document.getElementById("mfr").textContent = product.mfr || "--";
     document.getElementById("sn").textContent = product.sn || "--";

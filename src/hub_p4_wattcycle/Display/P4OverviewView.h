@@ -15,6 +15,8 @@ class P4OverviewView {
   void apply(const P4OverviewFlow& flow);
   /// Paint Wi-Fi and the ESP link. Both stay down until those radios exist here.
   void setLinks(bool wifiUp, bool espUp);
+  /// Color the SD icon from free space. A missing card is red with a mark.
+  void setStorage(bool ready, int usedMb, int totalMb);
   /// Clock and date. A year before 2024 stays blank.
   void refreshClock();
   /// Highlight one menu icon and show that page.
@@ -48,6 +50,8 @@ class P4OverviewView {
   lv_obj_t* footer_ = nullptr;
   lv_obj_t* wifiIcon_ = nullptr;
   lv_obj_t* espIcon_ = nullptr;
+  lv_obj_t* sdIcon_ = nullptr;
+  lv_obj_t* sdWarn_ = nullptr;
   lv_obj_t* clock_ = nullptr;
   lv_obj_t* date_ = nullptr;
   lv_obj_t* menu_ = nullptr;

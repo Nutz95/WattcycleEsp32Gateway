@@ -1,5 +1,6 @@
 #include "Display/P4OverviewView.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <ctime>
 
@@ -8,6 +9,20 @@ namespace {
 
 void paintIcon(lv_obj_t* icon, bool up) {
   lv_obj_set_style_text_color(icon, lv_color_hex(up ? kAccent : kDanger), 0);
+}
+
+void onStatusTap(lv_event_t* event) {
+  auto* view = static_cast<P4OverviewView*>(lv_event_get_user_data(event));
+  const auto page = reinterpret_cast<uintptr_t>(lv_obj_get_user_data(lv_event_get_target(event)));
+  if (view != nullptr) {
+    view->showPage(static_cast<uint8_t>(page));
+  }
+}
+
+void armStatusIcon(P4OverviewView* view, lv_obj_t* icon, HubPage page) {
+  lv_obj_add_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_user_data(icon, reinterpret_cast<void*>(static_cast<uintptr_t>(page)));
+  lv_obj_add_event_cb(icon, onStatusTap, LV_EVENT_CLICKED, view);
 }
 
 lv_obj_t* makeBar(lv_obj_t* parent, int y, int height) {
@@ -32,10 +47,23 @@ void P4OverviewView::mountStatus(lv_obj_t* parent) {
   lv_label_set_text(wifiIcon_, LV_SYMBOL_WIFI);
   lv_obj_set_style_text_font(wifiIcon_, &lv_font_montserrat_20, 0);
   lv_obj_align(wifiIcon_, LV_ALIGN_LEFT_MID, 16, 0);
+  armStatusIcon(this, wifiIcon_, HubPage::Link);
   espIcon_ = lv_label_create(bar);
   lv_label_set_text(espIcon_, LV_SYMBOL_BLUETOOTH);
   lv_obj_set_style_text_font(espIcon_, &lv_font_montserrat_20, 0);
   lv_obj_align(espIcon_, LV_ALIGN_LEFT_MID, 52, 0);
+  armStatusIcon(this, espIcon_, HubPage::Link);
+  sdIcon_ = lv_label_create(bar);
+  lv_label_set_text(sdIcon_, LV_SYMBOL_SD_CARD);
+  lv_obj_set_style_text_font(sdIcon_, &lv_font_montserrat_20, 0);
+  lv_obj_align(sdIcon_, LV_ALIGN_LEFT_MID, 88, 0);
+  armStatusIcon(this, sdIcon_, HubPage::Esp);
+  sdWarn_ = lv_label_create(bar);
+  lv_label_set_text(sdWarn_, LV_SYMBOL_WARNING);
+  lv_obj_set_style_text_font(sdWarn_, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(sdWarn_, lv_color_hex(kDanger), 0);
+  lv_obj_align(sdWarn_, LV_ALIGN_LEFT_MID, 112, -8);
+  lv_obj_add_flag(sdWarn_, LV_OBJ_FLAG_HIDDEN);
   clock_ = lv_label_create(bar);
   lv_obj_set_style_text_font(clock_, &lv_font_montserrat_20, 0);
   lv_obj_set_style_text_color(clock_, lv_color_hex(kInk), 0);
@@ -54,6 +82,7 @@ void P4OverviewView::mountStatus(lv_obj_t* parent) {
   lv_obj_set_style_text_color(placeholder_, lv_color_hex(kInk), 0);
   lv_obj_align(placeholder_, LV_ALIGN_CENTER, 0, -20);
   lv_obj_add_flag(placeholder_, LV_OBJ_FLAG_HIDDEN);
+  setStorage(false, 0, 0);
 }
 
 void P4OverviewView::setLinks(bool wifiUp, bool espUp) {
@@ -61,6 +90,27 @@ void P4OverviewView::setLinks(bool wifiUp, bool espUp) {
   espUp_ = espUp;
   paintIcon(wifiIcon_, wifiUp_);
   paintIcon(espIcon_, espUp_);
+}
+
+void P4OverviewView::setStorage(bool ready, int usedMb, int totalMb) {
+  if (sdIcon_ == nullptr) {
+    return;
+  }
+  uint32_t color = kDanger;
+  if (ready && totalMb > usedMb) {
+    const int freeMb = totalMb - usedMb;
+    const int freePct = (freeMb * 100) / totalMb;
+    color = freePct < 10 ? kDanger : (freePct < 25 ? 0xF0B429 : kAccent);
+  }
+  lv_obj_set_style_text_color(sdIcon_, lv_color_hex(color), 0);
+  if (sdWarn_ == nullptr) {
+    return;
+  }
+  if (ready) {
+    lv_obj_add_flag(sdWarn_, LV_OBJ_FLAG_HIDDEN);
+  } else {
+    lv_obj_clear_flag(sdWarn_, LV_OBJ_FLAG_HIDDEN);
+  }
 }
 
 void P4OverviewView::refreshClock() {

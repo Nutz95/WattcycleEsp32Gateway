@@ -30,6 +30,8 @@ class ITelemetryStore {
   virtual void updateBmsBridgeHealth(const EspHealth& health, bool valid) = 0;
   /// C6 free internal heap in KB. Pass -1 when the coprocessor has not answered.
   virtual void setCoprocessorHeapKb(int heapKb) = 0;
+  /// Latest BMS frame was sealed with the ESP-NOW key.
+  virtual void setBmsEspNowEncrypted(bool encrypted) = 0;
 
   virtual bms::BatteryTelemetry battery() const = 0;
   virtual bms::ProductInfo product() const = 0;

@@ -19,6 +19,7 @@ void fillPack(P4PanelBoard& board, const telemetry::ITelemetryStore& store) {
   const auto warnings = store.warnings();
   const auto status = store.status();
   board.wattcycle.linkUp = status.telemetryFresh && status.bleConnected;
+  board.wattcycle.secured = status.bmsEspNowEncrypted;
   board.wattcycle.valid = battery.valid;
   board.wattcycle.soc = battery.stateOfChargePercent;
   board.wattcycle.voltsMv = roundToInt(battery.moduleVoltage * 1000.0f);
@@ -58,9 +59,11 @@ void fillStations(P4PanelBoard& board, const telemetry::ITelemetryStore& store) 
   const auto solar = store.solar();
   const auto eco = store.ecoflow();
   board.solar.linkUp = solar.linkFresh && solar.sppConnected;
+  board.solar.secured = solar.espNowEncrypted;
   board.solar.watts = roundToInt(solar.powerW);
   board.solar.voltsMv = roundToInt(solar.voltageV * 1000.0f);
   board.eco.linkUp = eco.linkFresh && eco.bleConnected;
+  board.eco.secured = eco.espNowEncrypted;
   board.eco.valid = eco.meterValid;
   board.eco.soc = eco.socPercent;
   board.eco.batteryW = eco.bmsPowerW;

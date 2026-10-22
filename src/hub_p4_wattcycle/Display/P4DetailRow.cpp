@@ -49,4 +49,8 @@ void setDetailValue(lv_obj_t* label, const char* text, uint32_t color) {
   lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
 }
 
+void setSecurityValue(lv_obj_t* label, bool linkUp, bool secured) {
+  setDetailValue(label, secured ? "secured" : "plaintext", linkUp && secured ? kAccent : kDanger);
+}
+
 }  // namespace wattcycle::display

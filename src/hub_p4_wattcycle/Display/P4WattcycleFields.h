@@ -5,6 +5,7 @@ namespace wattcycle::display {
 /// Pack page. Later code copies the BMS snapshot into these fields.
 struct P4WattcycleFields {
   bool linkUp = false;
+  bool secured = false;
   bool valid = false;
   int soc = 0;
   int voltsMv = 0;

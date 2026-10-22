@@ -124,6 +124,12 @@ void InMemoryTelemetryStore::setCoprocessorHeapKb(int heapKb) {
   unlock();
 }
 
+void InMemoryTelemetryStore::setBmsEspNowEncrypted(bool encrypted) {
+  lock();
+  status_.bmsEspNowEncrypted = encrypted;
+  unlock();
+}
+
 bms::BatteryTelemetry InMemoryTelemetryStore::battery() const {
   lock();
   const bms::BatteryTelemetry copy = battery_;

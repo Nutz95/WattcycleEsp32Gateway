@@ -18,6 +18,8 @@ struct GatewayStatus {
   char localTime[6] = {};
   /// C6 internal heap in KB. -1 until the coprocessor answers, and on hubs without one.
   int coprocessorHeapKb = -1;
+  /// True when the latest BMS ESP-NOW frame was encrypted.
+  bool bmsEspNowEncrypted = false;
 };
 
 }  // namespace wattcycle::telemetry
