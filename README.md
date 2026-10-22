@@ -125,7 +125,7 @@ src/
   common/                 # Util + ESP-NOW protocols (+ shared Bms models)
   hub_common/             # Auth, HttpApi, Ota, Telemetry store, hub IStatusDisplay
   hub_m5_wattcycle/       # M5 web hub (COM23): ESP-NOW RX, SD, M5GFX pages
-  hub_p4_wattcycle/       # P4 page shell and overview flow model. LVGL and ESP-NOW come later
+  hub_p4_wattcycle/       # P4 pages, overview flow, LVGL painter (ESP-NOW comes last)
   boards/                 # Shared board HAL (TTGO / T-Dongle pins + buttons)
   bridge_ttgo_wattcycle/  # BMS BLE → ESP-NOW TX (COM19 TTGO / COM7 T-Dongle)
   bridge_xt369p/          # XT369P SPP → ESP-NOW TX (COM22)
@@ -201,6 +201,17 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"   # on BMS bridge — BLE MAC only
 # Hub + BMS + XT + EcoFlow (distinct COM ports)
 .\scripts\flash.ps1 -Target All -HubPort COM23 -BmsBridgePort COM19 -XtBridgePort COM22 -EcoflowBridgePort COM8
 ```
+
+The JC 4.3″ panel is a separate Arduino-ESP32 P4 sketch. It paints the overview
+from the flow model. Pass the panel's COM port. The script refuses the EcoFlow
+dongle.
+
+```powershell
+.\scripts\flash_p4_panel.ps1 -CompileOnly -VendorDemo path\to\lvgl_demo_v8
+.\scripts\flash_p4_panel.ps1 -VendorDemo path\to\lvgl_demo_v8 -Port COM25
+```
+
+This panel's ROM is `esp32p4-eco2` (before v3). The script builds that variant. A v3 bootloader resets in a loop and the panel stays black.
 
 ### 2b. Pair ESP-NOW peers
 
