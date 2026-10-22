@@ -35,6 +35,7 @@ Big-endian Modbus-like frames:
 
 | DP | Hex | Name | Use here |
 |----|-----|------|----------|
+| 130 | `0x0082` | Charge/Discharge Switch | Write (`0x06`). Address is published; DATA bytes are not |
 | 140 | `0x8C` | Analog Quantity | SoC, V, I, cells, temps, Ah |
 | 141 | `0x8D` | Warning Info | Protection / fault / balance bits |
 | 146 | `0x92` | Product Info | FW / manufacturer / serial (60 B ASCII) |
@@ -46,7 +47,7 @@ Big-endian Modbus-like frames:
 3. Signed current (custom 2-byte Watt encoding) + module voltage + Ah + cycles + SoC  
 4. Optional extension: SoH, cumulative Ah, balance current  
 
-This firmware is **monitoring only** — charge/discharge control DPs are out of scope.
+`FrameBuilder::buildWriteFrame` can emit DP 130 once a captured DATA payload is supplied. The bridge does not send that write: the upstream notes name the data point and FUNC `0x06`, and they do not publish the bytes that open or close the MOSFETs.
 
 ## Connection sequence (gateway)
 

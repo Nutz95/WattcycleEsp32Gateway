@@ -17,10 +17,13 @@ constexpr uint8_t kFrameHead = 0x7E;
 constexpr uint8_t kFrameHeadAlt = 0x1E;
 constexpr uint8_t kFrameTail = 0x0D;
 constexpr uint8_t kFuncRead = 0x03;
+constexpr uint8_t kFuncWrite = 0x06;
 constexpr uint8_t kFuncError = 0x86;
 constexpr uint8_t kDeviceAddr = 0x01;
 constexpr size_t kMinFrameSize = 11;
 
+/// Write-only in the published protocol. The DATA bytes are not specified there.
+constexpr uint16_t kDpChargeDischargeSwitch = 130;
 constexpr uint16_t kDpAnalogQuantity = 140;
 constexpr uint16_t kDpWarningInfo = 141;
 constexpr uint16_t kDpProductInfo = 146;
