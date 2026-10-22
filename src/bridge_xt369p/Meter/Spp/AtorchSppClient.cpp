@@ -36,6 +36,21 @@ bool AtorchSppClient::looksLikeBogusAddress(const uint8_t addr[6]) {
   return addr[0] == 0 && addr[1] == 0 && addr[2] == 0;
 }
 
+bool AtorchSppClient::recycleRadio() {
+  Serial.println("SPP recycling controller");
+  serialBt_.disconnect();
+  serialBt_.end();
+  started_ = false;
+  connected_ = false;
+  needsRecycle_ = false;
+  delay(300);
+  const bool started = beginAsMaster("XT369P_GW");
+  if (!started) {
+    needsRecycle_ = true;
+  }
+  return started;
+}
+
 bool AtorchSppClient::beginAsMaster(const char* localName) {
   if (started_) {
     return true;
@@ -50,10 +65,33 @@ bool AtorchSppClient::beginAsMaster(const char* localName) {
   return true;
 }
 
-bool AtorchSppClient::connectAddress(const char* btAddress) {
+template <typename Attempt>
+bool AtorchSppClient::connectReliable(Attempt attempt, const char* failToken) {
+  if (needsRecycle_ && !recycleRadio()) {
+    return false;
+  }
   if (!started_ && !beginAsMaster("XT369P_GW")) {
     return false;
   }
+  bool linked = attempt();
+  if (!linked) {
+    needsRecycle_ = true;
+    linked = recycleRadio() && attempt();
+  }
+  if (!linked) {
+    needsRecycle_ = true;
+    connected_ = false;
+    util::copyCString(lastError_, sizeof(lastError_), failToken);
+    return false;
+  }
+  needsRecycle_ = false;
+  connected_ = true;
+  parser_.reset();
+  util::copyCString(lastError_, sizeof(lastError_), "");
+  return true;
+}
+
+bool AtorchSppClient::connectAddress(const char* btAddress) {
   uint8_t addr[6] = {};
   if (!parseBtAddress(btAddress, addr)) {
     util::copyCString(lastError_, sizeof(lastError_), "bad_bt_address");
@@ -67,36 +105,33 @@ bool AtorchSppClient::connectAddress(const char* btAddress) {
   }
   Serial.printf("SPP connect address %02X:%02X:%02X:%02X:%02X:%02X\n", addr[0], addr[1], addr[2],
                 addr[3], addr[4], addr[5]);
-  connected_ = serialBt_.connect(addr);
-  if (!connected_) {
-    util::copyCString(lastError_, sizeof(lastError_), "spp_connect_failed");
-    return false;
+  const bool ok = connectReliable(
+      [&]() {
+        serialBt_.disconnect();
+        return serialBt_.connect(addr);
+      },
+      "spp_connect_failed");
+  if (ok) {
+    std::snprintf(peerAddress_, sizeof(peerAddress_), "%02X:%02X:%02X:%02X:%02X:%02X", addr[0],
+                  addr[1], addr[2], addr[3], addr[4], addr[5]);
   }
-  std::snprintf(peerAddress_, sizeof(peerAddress_), "%02X:%02X:%02X:%02X:%02X:%02X", addr[0],
-                addr[1], addr[2], addr[3], addr[4], addr[5]);
-  parser_.reset();
-  util::copyCString(lastError_, sizeof(lastError_), "");
-  return true;
+  return ok;
 }
 
 bool AtorchSppClient::connectName(const char* remoteName) {
-  if (!started_ && !beginAsMaster("XT369P_GW")) {
-    return false;
-  }
   const char* name = (remoteName && remoteName[0]) ? remoteName : "XT369P_SPP";
   Serial.printf("SPP connect by name '%s' (inquiry)\n", name);
-  connected_ = serialBt_.connect(String(name));
-  if (!connected_) {
-    util::copyCString(lastError_, sizeof(lastError_), "spp_connect_name_failed");
-    return false;
+  const bool ok = connectReliable([&]() { return serialBt_.connect(String(name)); }, "spp_connect_name_failed");
+  if (ok) {
+    util::copyCString(peerAddress_, sizeof(peerAddress_), name);
   }
-  util::copyCString(peerAddress_, sizeof(peerAddress_), name);
-  parser_.reset();
-  util::copyCString(lastError_, sizeof(lastError_), "");
-  return true;
+  return ok;
 }
 
 bool AtorchSppClient::discoverAndConnect(const char* remoteName, uint32_t timeoutMs) {
+  if (needsRecycle_ && !recycleRadio()) {
+    return false;
+  }
   if (!started_ && !beginAsMaster("XT369P_GW")) {
     return false;
   }
@@ -139,18 +174,11 @@ bool AtorchSppClient::discoverAndConnect(const char* remoteName, uint32_t timeou
   Serial.printf("SPP connecting to discovered %s (%s)\n", peerAddress_, name);
   // Connect by address only — connect(String name) triggers another inquiry and
   // often fails on weak USB hubs right after a long discover().
-  connected_ = serialBt_.connect(address);
-  if (!connected_) {
-    util::copyCString(lastError_, sizeof(lastError_), "spp_connect_failed");
-    return false;
-  }
-  parser_.reset();
-  util::copyCString(lastError_, sizeof(lastError_), "");
-  return true;
+  return connectReliable([&]() { return serialBt_.connect(address); }, "spp_connect_failed");
 }
 
 void AtorchSppClient::disconnect() {
-  if (connected_) {
+  if (started_) {
     serialBt_.disconnect();
   }
   connected_ = false;
@@ -163,6 +191,10 @@ bool AtorchSppClient::isConnected() const {
 
 bool AtorchSppClient::poll(WattmeterTelemetry& out) {
   if (!connected_ || !serialBt_.connected()) {
+    if (connected_) {
+      needsRecycle_ = true;
+      Serial.println("SPP link dropped");
+    }
     connected_ = false;
     return false;
   }
@@ -182,6 +214,9 @@ bool AtorchSppClient::poll(WattmeterTelemetry& out) {
 
 bool AtorchSppClient::sendCommand(MeterCommand command) {
   if (!connected_ || !serialBt_.connected()) {
+    if (connected_) {
+      needsRecycle_ = true;
+    }
     connected_ = false;
     util::copyCString(lastError_, sizeof(lastError_), "spp_not_connected");
     return false;

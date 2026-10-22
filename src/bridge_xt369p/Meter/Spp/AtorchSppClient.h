@@ -23,11 +23,16 @@ class AtorchSppClient : public ISppMeterClient {
  private:
   static bool parseBtAddress(const char* text, uint8_t out[6]);
   static bool looksLikeBogusAddress(const uint8_t addr[6]);
+  /// Drop a dead ACL and start the controller again. A plain connect() never recovers it.
+  bool recycleRadio();
+  template <typename Attempt>
+  bool connectReliable(Attempt attempt, const char* failToken);
 
   BluetoothSerial serialBt_;
   AtorchFrameParser parser_{};
   bool started_ = false;
   bool connected_ = false;
+  bool needsRecycle_ = false;
   char lastError_[64] = {};
   char peerAddress_[18] = {};
 };
