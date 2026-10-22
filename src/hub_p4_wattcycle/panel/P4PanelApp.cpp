@@ -2,9 +2,19 @@
 
 #include <Arduino.h>
 
-#include "Display/P4DemoBoard.h"
+#include "Auth/AuthService.h"
+#include "Auth/NvsCredentialStore.h"
 #include "Display/P4DetailPages.h"
 #include "Display/P4OverviewView.h"
+#include "Esp/EspHealthSampler.h"
+#include "HttpApi/EspWebGateway.h"
+#include "P4AuthTap.h"
+#include "P4BuildSecrets.h"
+#include "P4MeterCommands.h"
+#include "P4SdHistory.h"
+#include "P4StaRadio.h"
+#include "Telemetry/InMemoryTelemetryStore.h"
+#include "Time/NtpClock.h"
 #include "esp_heap_caps.h"
 #include "driver/i2c_master.h"
 #include "lvgl.h"
@@ -23,6 +33,73 @@ lv_color_t* frameA = nullptr;
 lv_color_t* frameB = nullptr;
 wattcycle::display::P4OverviewView overview;
 wattcycle::display::P4DetailPages detailPages;
+wattcycle::display::P4PanelBoard board;
+wattcycle::telemetry::InMemoryTelemetryStore store;
+wattcycle::time_sync::NtpClock ntpClock;
+wattcycle::auth::NvsCredentialStore credentials;
+wattcycle::auth::AuthService authService(credentials);
+P4SdHistory history;
+P4MeterCommands meterCommands;
+wattcycle::web::EspWebGateway webGateway(store, authService, meterCommands, history);
+wattcycle::esp_sys::EspHealthSampler health;
+P4AuthTap authTap;
+P4StaRadio radio;
+bool webNamed = false;
+
+void onAuthTap(void* /*user*/) {
+  authService.onConfirmPressed();
+}
+
+void paintBoard() {
+  overview.apply(board.overview);
+  overview.setLinks(board.gateway.wifiUp,
+                    board.gateway.bmsUp || board.gateway.ecoUp || board.gateway.solarUp);
+  detailPages.apply(board);
+}
+
+void applyHealth() {
+  const auto snap = health.snapshot();
+  store.updateEspHealth(snap);
+  store.setNtpSynced(ntpClock.isSynced());
+  board.esp.cpu0 = snap.cpuCore0Percent;
+  board.esp.cpu1 = snap.cpuCore1Percent;
+  board.esp.tempC = static_cast<int>(snap.chipTemperatureC + 0.5f);
+  board.esp.uptimeSec = static_cast<int>(snap.uptimeSeconds);
+  board.esp.heapKb = static_cast<int>(snap.freeHeapBytes / 1024u);
+}
+
+void recordHistory() {
+  if (!history.isReady() || !ntpClock.isSynced()) {
+    return;
+  }
+  storage::HistorySample sample = {};
+  sample.epochUtc = ntpClock.nowEpoch();
+  const auto battery = store.battery();
+  const auto solar = store.solar();
+  sample.socPercent = static_cast<uint8_t>(battery.stateOfChargePercent);
+  sample.packVoltageV = battery.moduleVoltage;
+  sample.packCurrentA = battery.currentAmps;
+  sample.packPowerW = battery.powerWatts;
+  sample.packValid = battery.valid;
+  sample.packRemainingAh = battery.remainingCapacityAh;
+  sample.packMosTempC = battery.mosTemperatureC;
+  sample.packPcbTempC = battery.pcbTemperatureC;
+  sample.solarVoltageV = solar.voltageV;
+  sample.solarCurrentA = solar.currentA;
+  sample.solarPowerW = solar.powerW;
+  sample.solarValid = solar.meterValid;
+  sample.solarEnergyWh = solar.energyWh;
+  sample.solarCapacityAh = solar.capacityAh;
+  history.append(sample);
+}
+
+void noteWebIdentity() {
+  if (webNamed || board.esp.deviceMac[0] == '\0') {
+    return;
+  }
+  webGateway.setDeviceIdentity("p4_hub", board.esp.deviceMac, P4_BMS_MAC, P4_SOLAR_MAC, P4_ECO_MAC);
+  webNamed = true;
+}
 
 void onPanelPage(uint8_t index, void* user) {
   auto* pages = static_cast<display::P4DetailPages*>(user);
@@ -112,15 +189,37 @@ void setupPanel() {
   }
   detailPages.mount(lv_scr_act());
   overview.setPageHandler(onPanelPage, &detailPages);
-  overview.mount(lv_scr_act(), "demo - bridges stay on the M5");
-  const display::P4PanelBoard board = display::demoBoard();
-  overview.apply(board.overview);
-  overview.setLinks(board.gateway.wifiUp, board.gateway.bmsUp);
-  detailPages.apply(board);
+  overview.mount(lv_scr_act(), "waiting for bridges");
+  board = {};
+  radio.begin(board, store);
+  ntpClock.begin();
+  authService.begin();
+  history.begin();
+  authTap.mount(lv_scr_act());
+  authTap.setHandler(onAuthTap, nullptr);
+  webGateway.setDeviceIdentity("p4_hub", "", P4_BMS_MAC, P4_SOLAR_MAC, P4_ECO_MAC);
+  if (!webGateway.begin(6789)) {
+    Serial.println("web fs failed");
+  }
+  health.begin();
+  paintBoard();
   Serial.println("overview ready");
 }
 
 void loopPanel() {
+  const bool dirty = radio.loop(board);
+  ntpClock.loop(board.gateway.wifiUp);
+  if (dirty) {
+    paintBoard();
+  }
+  if (health.sample()) {
+    applyHealth();
+    paintBoard();
+  }
+  recordHistory();
+  authTap.apply(authService.prompt().kind);
+  noteWebIdentity();
+  webGateway.loop();
   overview.refreshClock();
   lv_timer_handler();
   delay(5);

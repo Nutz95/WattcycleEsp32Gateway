@@ -43,6 +43,7 @@ $concreteAdapterHeaders = @(
   "AtorchSppClient.h",
   "NtpClock.h",
   "SdDailyHistory.h",
+  "P4SdHistory.h",
   "NullDailyHistoryStore.h"
 )
 
@@ -85,7 +86,7 @@ $domainLeakRules = @(
   ) `
   -ConcreteAdapterHeaders $concreteAdapterHeaders `
   -TargetPrefixes $targetPrefixes `
-  -CompositionRootNamePatterns @("main.cpp", "main_tdongle.cpp", "main_headless.cpp", "CompositionRoot*") `
+  -CompositionRootNamePatterns @("main.cpp", "main_tdongle.cpp", "main_headless.cpp", "P4PanelApp.cpp", "CompositionRoot*") `
   -ForbidUnitTestInHeaders $true `
   -ForbidUnitTestInCpp $true `
   -PublicCommentRoots @(

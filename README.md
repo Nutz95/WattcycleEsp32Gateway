@@ -44,7 +44,7 @@ Prefer `.\scripts\pair_espnow_link.ps1` for first-time MAC + PMK setup, then
 `.\scripts\flash.ps1 -Target All` (includes EcoFlow S3 when `EcoflowBridgePort` is set).
 
 The SPA (`data/`) is flashed into hub **LittleFS**. Optional **SD** on the M5 holds
-daily CSV history (`/history/YYYY-MM-DD.csv`, UTC dates; v2 adds pack Ah/MOS/PCB and solar Wh/Ah).
+daily CSV history (`/history/YYYY/MM/YYYY-MM-DD.csv`, UTC dates; older flat files stay readable; v2 adds pack Ah/MOS/PCB and solar Wh/Ah).
 
 ---
 
@@ -212,6 +212,8 @@ drivers live in `third_party/jc4880_panel`. Pass the panel COM port.
 
 This panel's ROM is `esp32p4-eco2` (before v3). The script builds that variant. A v3 bootloader resets in a loop and the panel stays black.
 
+The same flash writes the dashboard onto the panel. Open the IP shown on the Esp page, port **6789**. The P4 serves the site; the C6 is only the Wi-Fi radio. First account setup asks for a tap on the panel. Day history is written to a FAT32 card in the TF slot (`/history/YYYY/MM/YYYY-MM-DD.csv`, UTC). Older flat files stay readable. Leave the card as FAT32.
+
 ### 2b. Pair ESP-NOW peers
 
 Plug the hub and bridges (including EcoFlow S3), then run the pairing script
@@ -238,7 +240,7 @@ ESPNOW_PMK                    on ALL         = same secret
 
 ### 3. Open the dashboard
 
-1. Read the IP on the M5 screen (or Serial @ 115200 baud).
+1. Read the IP on the hub screen (M5, or the P4 Esp page).
 2. Browse to:
 
 ```text
@@ -253,7 +255,7 @@ http://<esp-ip>:6789/api/telemetry.bin
 
 ### Web authentication
 
-- First visit with empty NVS: browser asks for username/password → M5 screen asks for **physical confirm** (**Btn B = OK**, **Btn A / C = Cancel** depending on prompt).
+- First visit with empty NVS: browser asks for username/password → the hub asks for a **physical confirm** (M5: **Btn B = OK**, **Btn A / C = Cancel**; P4: tap the confirm bar).
 - Username ≤32 `[A-Za-z0-9._-]`; password 8–64 printable ASCII. Auth JSON bodies capped at 512 bytes (overflow / injection hardening).
 - After credentials are stored (salted SHA-256 in NVS `wg_auth`), the SPA stays on the login screen until `/api/auth/login` succeeds. Telemetry is rejected with **401** without a valid `wg_session` cookie (`HttpOnly; SameSite=Strict`).
 - Forgot password / Account tab: follow the on-device reset prompt, then recreate credentials. Use **Account** to sign out.
