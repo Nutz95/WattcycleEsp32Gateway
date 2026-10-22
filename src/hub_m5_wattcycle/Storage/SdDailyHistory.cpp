@@ -1,9 +1,9 @@
 #include "Storage/SdDailyHistory.h"
 
 #include "Bus/SharedSpiLock.h"
+#include "Storage/HistoryCatalog.h"
 
 #include <cstdio>
-#include <cstring>
 
 #include <Arduino.h>
 #include <FS.h>
@@ -17,24 +17,7 @@ constexpr int kSdSck = 18;
 constexpr int kSdMiso = 19;
 constexpr int kSdMosi = 23;
 constexpr uint32_t kMinAppendIntervalMs = 10000;
-constexpr const char* kHistoryDir = "/history";
 constexpr size_t kStreamChunkBytes = 512;
-
-bool isYmd(const char* name) {
-  if (name == nullptr || std::strlen(name) != 10) {
-    return false;
-  }
-  for (int i = 0; i < 10; ++i) {
-    if (i == 4 || i == 7) {
-      if (name[i] != '-') {
-        return false;
-      }
-    } else if (name[i] < '0' || name[i] > '9') {
-      return false;
-    }
-  }
-  return true;
-}
 }  // namespace
 
 bool SdDailyHistory::begin() {
@@ -46,13 +29,13 @@ bool SdDailyHistory::begin() {
     ready_ = false;
     return false;
   }
-  if (!SD.exists(kHistoryDir) && !SD.mkdir(kHistoryDir)) {
+  if (!SD.exists("/history") && !SD.mkdir("/history")) {
     Serial.println(F("SD mkdir /history failed"));
     ready_ = false;
     return false;
   }
   ready_ = true;
-  Serial.println(F("SD daily history ready (/history/YYYY-MM-DD.csv)"));
+  Serial.println(F("SD daily history ready (/history/YYYY/MM/YYYY-MM-DD.csv)"));
   return true;
 }
 
@@ -74,13 +57,17 @@ void SdDailyHistory::append(const HistorySample& sample) {
   if (gmtime_r(&sample.epochUtc, &info) == nullptr) {
     return;
   }
+  const int year = info.tm_year + 1900;
+  const int month = info.tm_mon + 1;
   char date[11] = {};
-  std::snprintf(date, sizeof(date), "%04d-%02d-%02d", info.tm_year + 1900, info.tm_mon + 1,
-                info.tm_mday);
-  char path[32] = {};
-  std::snprintf(path, sizeof(path), "%s/%s.csv", kHistoryDir, date);
+  std::snprintf(date, sizeof(date), "%04d-%02d-%02d", year, month, info.tm_mday);
+  char path[40] = {};
+  HistoryCatalog::formatDayPath(path, sizeof(path), date);
 
   bus::SpiGuard guard;
+  if (!HistoryCatalog::ensureMonth(SD, year, month)) {
+    return;
+  }
   const bool exists = SD.exists(path);
   File file = SD.open(path, FILE_APPEND);
   if (!file) {
@@ -104,43 +91,44 @@ size_t SdDailyHistory::listDays(char out[][11], size_t maxDays) const {
     return 0;
   }
   bus::SpiGuard guard;
-  File dir = SD.open(kHistoryDir);
-  if (!dir || !dir.isDirectory()) {
+  char periods[48][8] = {};
+  const size_t periodCount = HistoryCatalog::listPeriods(SD, periods, 48);
+  size_t count = 0;
+  for (size_t i = 0; i < periodCount && count < maxDays; ++i) {
+    int year = 0;
+    int month = 0;
+    if (std::sscanf(periods[i], "%d-%d", &year, &month) != 2) {
+      continue;
+    }
+    count += HistoryCatalog::listMonthDays(SD, year, month, out + count, maxDays - count);
+  }
+  return count;
+}
+
+size_t SdDailyHistory::listPeriods(char out[][8], size_t maxPeriods) const {
+  if (!ready_) {
     return 0;
   }
-  size_t count = 0;
-  for (File entry = dir.openNextFile(); entry && count < maxDays; entry = dir.openNextFile()) {
-    const char* name = entry.name();
-    const char* base = name;
-    if (const char* slash = std::strrchr(name, '/')) {
-      base = slash + 1;
-    }
-    char ymd[11] = {};
-    if (std::strlen(base) >= 10) {
-      std::memcpy(ymd, base, 10);
-      ymd[10] = '\0';
-    }
-    if (isYmd(ymd)) {
-      std::memcpy(out[count], ymd, 11);
-      ++count;
-    }
-    entry.close();
+  bus::SpiGuard guard;
+  return HistoryCatalog::listPeriods(SD, out, maxPeriods);
+}
+
+size_t SdDailyHistory::listMonthDays(int year, int month, char out[][11], size_t maxDays) const {
+  if (!ready_) {
+    return 0;
   }
-  dir.close();
-  return count;
+  bus::SpiGuard guard;
+  return HistoryCatalog::listMonthDays(SD, year, month, out, maxDays);
 }
 
 bool SdDailyHistory::streamDay(const char* yyyymmdd, HistoryStreamBegin begin,
                                HistoryChunkSink sink, void* user) const {
-  if (!ready_ || yyyymmdd == nullptr || begin == nullptr || sink == nullptr || !isYmd(yyyymmdd)) {
+  if (!ready_ || yyyymmdd == nullptr || begin == nullptr || sink == nullptr) {
     return false;
   }
-  char path[32] = {};
-  std::snprintf(path, sizeof(path), "%s/%s.csv", kHistoryDir, yyyymmdd);
-
   bus::SpiGuard guard;
-  File file = SD.open(path, FILE_READ);
-  if (!file) {
+  File file;
+  if (!HistoryCatalog::openDay(SD, yyyymmdd, file)) {
     return false;
   }
   if (!begin(static_cast<size_t>(file.size()), user)) {

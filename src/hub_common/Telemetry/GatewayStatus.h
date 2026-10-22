@@ -16,6 +16,8 @@ struct GatewayStatus {
   /// Local wall clock for M5 tiles (empty until NTP). "DD/MM/YYYY" + "HH:MM".
   char localDate[11] = {};
   char localTime[6] = {};
+  /// C6 internal heap in KB. -1 until the coprocessor answers, and on hubs without one.
+  int coprocessorHeapKb = -1;
 };
 
 }  // namespace wattcycle::telemetry

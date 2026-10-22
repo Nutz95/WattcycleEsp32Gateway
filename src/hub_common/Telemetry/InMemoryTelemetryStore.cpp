@@ -118,6 +118,12 @@ void InMemoryTelemetryStore::updateBmsBridgeHealth(const EspHealth& health, bool
   unlock();
 }
 
+void InMemoryTelemetryStore::setCoprocessorHeapKb(int heapKb) {
+  lock();
+  status_.coprocessorHeapKb = heapKb;
+  unlock();
+}
+
 bms::BatteryTelemetry InMemoryTelemetryStore::battery() const {
   lock();
   const bms::BatteryTelemetry copy = battery_;

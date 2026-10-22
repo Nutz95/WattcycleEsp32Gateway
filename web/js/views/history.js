@@ -6,6 +6,9 @@
   let dayOverlayPack = null;
   let dayOverlaySolar = null;
   let loadingDay = false;
+  let catalogGeneration = 0;
+  let monthFollowsYear = false;
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   function activateHistoryTab(name) {
     document.querySelectorAll(".subtab").forEach(function (tab) {
@@ -85,37 +88,100 @@
     return { pack: pack, solar: solar };
   }
 
+  function fillSelect(select, values, selected, textOf) {
+    select.innerHTML = "";
+    values.forEach(function (value) {
+      const opt = document.createElement("option");
+      opt.value = String(value);
+      opt.textContent = textOf(value);
+      select.appendChild(opt);
+    });
+    select.value = String(selected);
+  }
+
+  function catalogOf(body) {
+    const now = new Date();
+    const fallbackYear = now.getUTCFullYear();
+    const fallbackMonth = now.getUTCMonth() + 1;
+    if (Array.isArray(body.years)) {
+      const years = body.years.length ? body.years.slice() : [fallbackYear];
+      const months = body.months && body.months.length ? body.months.slice() : [fallbackMonth];
+      return {
+        year: body.year || fallbackYear,
+        month: body.month || fallbackMonth,
+        years: years,
+        months: months,
+        days: body.days || []
+      };
+    }
+    const years = [];
+    const months = [];
+    (body.days || []).forEach(function (day) {
+      const year = Number(String(day).slice(0, 4));
+      const month = Number(String(day).slice(5, 7));
+      if (years.indexOf(year) < 0) years.push(year);
+      if (months.indexOf(month) < 0) months.push(month);
+    });
+    return {
+      year: fallbackYear,
+      month: fallbackMonth,
+      years: years.length ? years : [fallbackYear],
+      months: months.length ? months : [fallbackMonth],
+      days: body.days || []
+    };
+  }
+
   async function refreshSdDays() {
     const statusEl = document.getElementById("historySdStatus");
+    const yearEl = document.getElementById("historyYearSelect");
+    const monthEl = document.getElementById("historyMonthSelect");
     const select = document.getElementById("historyDaySelect");
     if (!statusEl || !select) return;
+    const generation = catalogGeneration + 1;
+    catalogGeneration = generation;
+    const params = [];
+    if (yearEl && yearEl.value) params.push("year=" + encodeURIComponent(yearEl.value));
+    if (!monthFollowsYear && monthEl && monthEl.value) {
+      params.push("month=" + encodeURIComponent(monthEl.value));
+    }
+    monthFollowsYear = false;
+    const query = params.length ? "?" + params.join("&") : "";
     try {
-      const res = await fetch("/api/history/days", { credentials: "same-origin" });
+      const res = await fetch("/api/history/days" + query, { credentials: "same-origin" });
+      if (generation !== catalogGeneration) return;
       if (!res.ok) {
         statusEl.textContent = "SD history unavailable (login / hub offline).";
         return;
       }
       const body = await res.json();
+      if (generation !== catalogGeneration) return;
       global.WattcycleDevice = Object.assign({}, global.WattcycleDevice || {}, body);
+      const catalog = catalogOf(body);
+      if (yearEl) fillSelect(yearEl, catalog.years, catalog.year, function (year) { return String(year); });
+      if (monthEl) {
+        fillSelect(monthEl, catalog.months, catalog.month, function (month) {
+          return MONTHS[month - 1] || String(month);
+        });
+      }
       statusEl.textContent =
         "NTP " + (body.ntp ? "synced" : "pending") + " · SD " + (body.sd ? "ready" : "missing");
       const current = select.value;
       select.innerHTML = '<option value="">Live + today (localStorage)</option>';
-      (body.days || []).forEach(function (day) {
+      catalog.days.forEach(function (day) {
         const opt = document.createElement("option");
         opt.value = day;
         opt.textContent = day;
         select.appendChild(opt);
       });
-      if (current) select.value = current;
+      if (current && catalog.days.indexOf(current) >= 0) select.value = current;
 
       const today = utcDayString(Date.now());
-      if (!todayMerged && body.sd && (body.days || []).indexOf(today) >= 0) {
+      if (!todayMerged && body.sd && catalog.days.indexOf(today) >= 0) {
         todayMerged = true;
         await loadDayIntoCharts(today, { mergeIntoLive: true, selectDay: false });
       }
     } catch (err) {
-      statusEl.textContent = "SD history unreachable.";
+      if (generation === catalogGeneration) statusEl.textContent = "SD history unreachable.";
     }
   }
 
@@ -245,6 +311,19 @@
     if (clearEcoflow) {
       clearEcoflow.addEventListener("click", function () {
         global.WattcycleEcoflowHistory.clear();
+      });
+    }
+    const yearEl = document.getElementById("historyYearSelect");
+    const monthEl = document.getElementById("historyMonthSelect");
+    if (yearEl) {
+      yearEl.addEventListener("change", function () {
+        monthFollowsYear = true;
+        refreshSdDays();
+      });
+    }
+    if (monthEl) {
+      monthEl.addEventListener("change", function () {
+        refreshSdDays();
       });
     }
     const select = document.getElementById("historyDaySelect");

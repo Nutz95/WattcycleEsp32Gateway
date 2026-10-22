@@ -30,7 +30,7 @@ using HistoryStreamBegin = bool (*)(size_t totalBytes, void* user);
 /// Chunk sink for day CSV streaming. Return false to abort.
 using HistoryChunkSink = bool (*)(const uint8_t* data, size_t length, void* user);
 
-/// Day files on SD: /history/YYYY-MM-DD.csv (UTC date).
+/// Day files: /history/YYYY/MM/YYYY-MM-DD.csv. Legacy flat files stay readable.
 class IDailyHistoryStore {
  public:
   virtual ~IDailyHistoryStore() = default;
@@ -39,6 +39,10 @@ class IDailyHistoryStore {
   virtual void append(const HistorySample& sample) = 0;
   /// Fills out[i] with "YYYY-MM-DD"; returns count written.
   virtual size_t listDays(char out[][11], size_t maxDays) const = 0;
+  /// Fills out[i] with "YYYY-MM", newest first.
+  virtual size_t listPeriods(char out[][8], size_t maxPeriods) const = 0;
+  /// Fills out[i] with "YYYY-MM-DD" for one UTC month, newest first.
+  virtual size_t listMonthDays(int year, int month, char out[][11], size_t maxDays) const = 0;
   /// Stream day CSV via begin+sink (no Arduino File in the contract). False = missing/error.
   virtual bool streamDay(const char* yyyymmdd, HistoryStreamBegin begin, HistoryChunkSink sink,
                          void* user) const = 0;

@@ -15,6 +15,18 @@ class NullDailyHistoryStore : public IDailyHistoryStore {
     (void)maxDays;
     return 0;
   }
+  size_t listPeriods(char out[][8], size_t maxPeriods) const override {
+    (void)out;
+    (void)maxPeriods;
+    return 0;
+  }
+  size_t listMonthDays(int year, int month, char out[][11], size_t maxDays) const override {
+    (void)year;
+    (void)month;
+    (void)out;
+    (void)maxDays;
+    return 0;
+  }
   bool streamDay(const char* /*yyyymmdd*/, HistoryStreamBegin /*begin*/,
                  HistoryChunkSink /*sink*/, void* /*user*/) const override {
     return false;
