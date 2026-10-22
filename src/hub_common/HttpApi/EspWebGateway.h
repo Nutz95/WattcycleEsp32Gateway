@@ -6,6 +6,7 @@
 #include "Telemetry/ITelemetryStore.h"
 #include "HttpApi/IWebGateway.h"
 
+#include <FS.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <memory>
@@ -23,6 +24,8 @@ class EspWebGateway : public IWebGateway {
   /// role e.g. "m5_hub" / "ttgo_hub"; MACs may be empty until Wi-Fi is up.
   void setDeviceIdentity(const char* role, const char* hubStaMac, const char* bmsBridgeMac,
                          const char* xtBridgeMac, const char* ecoflowBridgeMac = "");
+  /// Serve the site from this volume and leave LittleFS unmounted. Call before begin().
+  void useFiles(fs::FS& volume);
 
  private:
   void handleRoot();
@@ -46,6 +49,7 @@ class EspWebGateway : public IWebGateway {
   void sendJson(int code, const char* json);
   void sendUnauthorized();
   bool requireAuth();
+  fs::FS& files();
 
   telemetry::ITelemetryStore& store_;
   auth::IAuthSessionService& authSessions_;
@@ -57,6 +61,7 @@ class EspWebGateway : public IWebGateway {
   char xtBridgeMac_[18] = {};
   char ecoflowBridgeMac_[18] = {};
   std::unique_ptr<WebServer> server_;
+  fs::FS* files_ = nullptr;
   bool started_ = false;
   char indexEtag_[17] = {};
   char cssEtag_[17] = {};

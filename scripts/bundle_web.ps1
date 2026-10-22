@@ -33,7 +33,7 @@ function Minify-Js([string]$text) {
 
 # HTML: inject view fragments
 $html = Get-Content (Join-Path $webRoot "index.html") -Raw
-$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "cells", "temperatures", "warnings", "gateway", "esp", "account")
+$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "cells", "temperatures", "warnings", "gateway", "esp", "camera", "account")
 foreach ($view in $views) {
   $fragment = Get-Content (Join-Path $webRoot "views\$view.html") -Raw
   $html = $html.Replace("<!--VIEW:$view-->", $fragment.Trim())
@@ -63,6 +63,7 @@ $jsParts = @(
   "js\views\warnings.js",
   "js\views\gateway.js",
   "js\views\esp.js",
+  "js\views\camera.js",
   "js\views\account.js",
   "js\app.js"
 ) | ForEach-Object {
@@ -70,6 +71,10 @@ $jsParts = @(
 }
 $bundle = ($jsParts -join "`n")
 Set-Content -Path (Join-Path $dataRoot "app.js") -Value $bundle -NoNewline
+$stamp = (Get-FileHash (Join-Path $dataRoot "index.html")).Hash.Substring(0, 16) +
+    (Get-FileHash (Join-Path $dataRoot "app.css")).Hash.Substring(0, 16) +
+    (Get-FileHash (Join-Path $dataRoot "app.js")).Hash.Substring(0, 16)
+Set-Content -Path (Join-Path $dataRoot "bundle.txt") -Value $stamp -NoNewline -Encoding ascii
 
 # Remove legacy assets if present
 @(

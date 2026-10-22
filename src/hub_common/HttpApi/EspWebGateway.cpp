@@ -27,12 +27,12 @@ void formatEtag(uint32_t hash, char* out, size_t capacity) {
   std::snprintf(out, capacity, "\"%08x\"", static_cast<unsigned>(hash));
 }
 
-bool computeFileEtag(const char* path, char* out, size_t capacity) {
-  if (!LittleFS.exists(path)) {
+bool computeFileEtag(fs::FS& volume, const char* path, char* out, size_t capacity) {
+  if (!volume.exists(path)) {
     out[0] = '\0';
     return false;
   }
-  File file = LittleFS.open(path, "r");
+  File file = volume.open(path, "r");
   if (!file) {
     out[0] = '\0';
     return false;
@@ -63,14 +63,25 @@ void EspWebGateway::setDeviceIdentity(const char* role, const char* hubStaMac,
   wattcycle::util::copyCString(ecoflowBridgeMac_, sizeof(ecoflowBridgeMac_), ecoflowBridgeMac);
 }
 
+void EspWebGateway::useFiles(fs::FS& volume) {
+  files_ = &volume;
+}
+
+fs::FS& EspWebGateway::files() {
+  return *files_;
+}
+
 bool EspWebGateway::begin(uint16_t port) {
-  if (!LittleFS.begin(true)) {
-    return false;
+  if (files_ == nullptr) {
+    if (!LittleFS.begin(true)) {
+      return false;
+    }
+    files_ = &LittleFS;
   }
 
-  computeFileEtag("/index.html", indexEtag_, sizeof(indexEtag_));
-  computeFileEtag("/app.css", cssEtag_, sizeof(cssEtag_));
-  computeFileEtag("/app.js", jsEtag_, sizeof(jsEtag_));
+  computeFileEtag(files(), "/index.html", indexEtag_, sizeof(indexEtag_));
+  computeFileEtag(files(), "/app.css", cssEtag_, sizeof(cssEtag_));
+  computeFileEtag(files(), "/app.js", jsEtag_, sizeof(jsEtag_));
 
   server_ = std::unique_ptr<WebServer>(new WebServer(port));
   const char* collectHeaders[] = {"If-None-Match", "Cookie"};
@@ -177,7 +188,7 @@ bool EspWebGateway::trySendCached(const char* path, const char* contentType) {
     return true;
   }
 
-  File file = LittleFS.open(path, "r");
+  File file = files().open(path, "r");
   if (!file) {
     return false;
   }
@@ -192,11 +203,11 @@ void EspWebGateway::sendWithEtag(const char* path, const char* contentType) {
   if (trySendCached(path, contentType)) {
     return;
   }
-  if (!LittleFS.exists(path)) {
+  if (!files().exists(path)) {
     server_->send(404, "text/plain", "Not found");
     return;
   }
-  File file = LittleFS.open(path, "r");
+  File file = files().open(path, "r");
   server_->streamFile(file, contentType);
   file.close();
 }
@@ -347,7 +358,7 @@ void EspWebGateway::handleNotFound() {
     sendWithEtag("/app.js", "application/javascript");
     return;
   }
-  if (LittleFS.exists(path)) {
+  if (files().exists(path)) {
     String contentType = "text/plain";
     if (path.endsWith(".css")) {
       contentType = "text/css";
@@ -356,7 +367,7 @@ void EspWebGateway::handleNotFound() {
     } else if (path.endsWith(".html")) {
       contentType = "text/html";
     }
-    File file = LittleFS.open(path, "r");
+    File file = files().open(path, "r");
     server_->streamFile(file, contentType);
     file.close();
     return;
