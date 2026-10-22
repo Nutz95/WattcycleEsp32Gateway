@@ -90,3 +90,4 @@ docs/local/
 .cursor/
 tools/python_guardrails/
 tools/esp_cpp_guardrails/
+third_party/esp_ipa_tools/isp/__pycache__/
