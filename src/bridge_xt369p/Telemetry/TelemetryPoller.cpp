@@ -55,6 +55,7 @@ void TelemetryPoller::ensureConnected(uint32_t nowMs) {
     return;
   }
   if (client_.isConnected()) {
+    addressFailures_ = 0;
     const char* peer = client_.peerAddress();
     store_.setSppState(true, (peer && peer[0]) ? peer : targetLabel_, "");
     return;
@@ -65,15 +66,25 @@ void TelemetryPoller::ensureConnected(uint32_t nowMs) {
     return;
   }
   lastConnectAttemptMs_ = nowMs;
+  store_.setSppState(false, targetLabel_, "reconnecting");
 
   bool ok = false;
-  if (addressLooksUsable(config_.xt369pBtAddress)) {
+  const bool haveConfig = addressLooksUsable(config_.xt369pBtAddress);
+  const char* remembered = client_.peerAddress();
+  const bool haveRemembered = addressLooksUsable(remembered);
+  if (haveConfig) {
     ok = client_.connectAddress(config_.xt369pBtAddress);
+  } else if (haveRemembered) {
+    ok = client_.connectAddress(remembered);
   }
-  if (!ok) {
-    // One inquiry + connect. Do not chain connectName() after this — that runs a
-    // second inquiry and brownouts thin USB hubs (shows as spp_connect_name_failed).
-    ok = client_.discoverAndConnect(config_.sppDeviceName, 10000);
+  // SDP already blocks ~10s. A name inquiry on every miss adds another scan and
+  // can brown out a thin USB hub, so the dongle looks stuck on reconnect.
+  const bool needScan = !haveConfig && !haveRemembered;
+  if (!ok && (needScan || addressFailures_ >= 2)) {
+    ok = client_.discoverAndConnect(config_.sppDeviceName, 8000);
+    addressFailures_ = 0;
+  } else if (!ok) {
+    addressFailures_++;
   }
 
   const char* peer = client_.peerAddress();

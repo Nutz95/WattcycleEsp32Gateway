@@ -26,6 +26,7 @@ class TelemetryPoller {
   ITelemetryStore& store_;
   config::AppConfig config_;
   uint32_t lastConnectAttemptMs_ = 0;
+  uint8_t addressFailures_ = 0;
   bool started_ = false;
   char targetLabel_[32] = {};
 };
