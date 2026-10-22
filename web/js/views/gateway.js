@@ -24,8 +24,29 @@
     }
   }
 
+  function applyHubIdentity(esp) {
+    const role = deviceInfo && deviceInfo.role;
+    const p4 = role === "p4_hub";
+    const title = document.getElementById("hubGatewayTitle");
+    if (title) {
+      title.textContent = p4 ? "ESP32-P4 + C6 hub" : role === "m5_hub" ? "M5Stack hub" : "This hub";
+    }
+    const mcu = document.getElementById("hubMcu");
+    if (mcu) {
+      mcu.textContent = p4 ? "ESP32-P4" : role === "m5_hub" ? "ESP32 (M5Stack)" : "--";
+    }
+    const row = document.getElementById("c6HeapGatewayRow");
+    if (row) row.hidden = !p4;
+    const heap = document.getElementById("c6HeapGateway");
+    if (heap) {
+      const kb = esp && esp.c6HeapKb;
+      heap.textContent = kb == null ? "--" : kb + " KB";
+    }
+  }
+
   function renderGateway(data) {
     ensureDeviceInfo();
+    applyHubIdentity(data.esp || {});
     const gateway = data.gateway || {};
     const product = data.product || {};
     const solar = data.solar || {};

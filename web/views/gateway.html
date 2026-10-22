@@ -5,8 +5,10 @@
     <p class="page-title">Gateway</p>
   </header>
 
-  <h3 class="section-title">Hub M5Stack (COM23)</h3>
+  <h3 class="section-title" id="hubGatewayTitle">This hub</h3>
   <ul class="status-list">
+    <li>MCU: <span id="hubMcu">--</span></li>
+    <li id="c6HeapGatewayRow" hidden>C6 free heap: <span id="c6HeapGateway">--</span></li>
     <li>Wi-Fi: <span id="wifi">--</span></li>
     <li>Hub STA MAC: <span id="hubStaMac">--</span></li>
     <li>Web port: <span id="webPort">6789</span></li>
@@ -14,7 +16,7 @@
     <li>Last hub error: <span id="hubError">none</span></li>
   </ul>
 
-  <h3 class="section-title">Wattcycle BMS bridge (TTGO COM19)</h3>
+  <h3 class="section-title">Wattcycle BMS bridge</h3>
   <ul class="status-list">
     <li>ESP-NOW peer MAC: <span id="bmsBridgeMac">--</span></li>
     <li>BMS BLE link: <span id="ble">--</span></li>
@@ -24,7 +26,7 @@
     <li>Serial: <span id="sn">--</span></li>
   </ul>
 
-  <h3 class="section-title">XT369P bridge (TTGO COM22)</h3>
+  <h3 class="section-title">XT369P bridge</h3>
   <ul class="status-list">
     <li>ESP-NOW peer MAC: <span id="xtBridgeMac">--</span></li>
     <li>ESP-NOW link: <span id="solarLink">--</span></li>
@@ -34,7 +36,7 @@
     <li>Bridge error: <span id="solarError">none</span></li>
   </ul>
 
-  <h3 class="section-title">EcoFlow bridge (ESP32-S3 COM8)</h3>
+  <h3 class="section-title">EcoFlow bridge</h3>
   <ul class="status-list">
     <li>ESP-NOW peer MAC: <span id="ecoflowBridgeMac">--</span></li>
     <li>ESP-NOW link: <span id="ecoflowLinkGw">--</span></li>

@@ -26,7 +26,53 @@
     ids.uptime.textContent = formatUptime(esp.uptimeSec);
   }
 
+  function setLabel(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function ensureHubRole() {
+    if ((global.WattcycleDevice && global.WattcycleDevice.role) || global.WattcycleDeviceFetch) {
+      return;
+    }
+    global.WattcycleDeviceFetch = true;
+    fetch("/api/device", { credentials: "same-origin" })
+      .then(function (res) {
+        if (!res.ok) {
+          global.WattcycleDeviceFetch = false;
+          return null;
+        }
+        return res.json();
+      })
+      .then(function (body) {
+        if (body) global.WattcycleDevice = body;
+      })
+      .catch(function () {
+        global.WattcycleDeviceFetch = false;
+      });
+  }
+
+  function applyHubEsp(esp) {
+    ensureHubRole();
+    const role = global.WattcycleDevice && global.WattcycleDevice.role;
+    const p4 = role === "p4_hub";
+    setLabel("hubEspTitle", p4 ? "ESP32-P4 hub" : role === "m5_hub" ? "M5Stack hub" : "This hub");
+    setLabel("cpu0Label", p4 ? "P4 core 0" : "CPU core 0");
+    setLabel("cpu1Label", p4 ? "P4 core 1" : "CPU core 1");
+    setLabel("chipTempLabel", p4 ? "P4 temp" : "Chip temp");
+    setLabel("heapLabel", p4 ? "P4 heap" : "Free heap");
+    setLabel("uptimeLabel", p4 ? "P4 uptime" : "Uptime");
+    const row = document.getElementById("c6HeapRow");
+    if (row) row.hidden = !p4;
+    const c6 = document.getElementById("c6Heap");
+    if (c6) {
+      const kb = esp && esp.c6HeapKb;
+      c6.textContent = kb == null ? "-- KB" : kb + " KB";
+    }
+  }
+
   function renderEsp(data) {
+    applyHubEsp(data.esp || {});
     fillEsp(
       {
         cpu0: document.getElementById("cpu0"),

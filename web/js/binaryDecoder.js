@@ -131,6 +131,7 @@
     data.esp.chipTemp = i16(view, offset) / 10; offset += 2;
     data.esp.heapKb = u16(view, offset); offset += 2;
     data.esp.uptimeSec = u32(view, offset); offset += 4;
+    data.esp.c6HeapKb = null;
 
     // v4 fixed solar block + bridge ESP health trailer (fail closed).
     const SOLAR_BLOCK_BYTES = 73;
@@ -280,6 +281,11 @@
     data.ecoflow.remainCapMah = data.ecoflow.haveCapacity ? u16(view, offset) : null; offset += 2;
     data.ecoflow.pcsDcTempC = data.ecoflow.havePcsTemp ? i16(view, offset) : null; offset += 2;
     data.ecoflow.pcsAcTempC = data.ecoflow.havePcsTemp ? i16(view, offset) : null; offset += 2;
+
+    if (offset + 2 <= bytes.length) {
+      const c6HeapKb = i16(view, offset);
+      data.esp.c6HeapKb = c6HeapKb < 0 ? null : c6HeapKb;
+    }
 
     return data;
   }

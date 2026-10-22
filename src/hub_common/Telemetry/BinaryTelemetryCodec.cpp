@@ -317,6 +317,10 @@ size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffe
   // v9: station detail (25 bytes) then runtime. Flag bits are EcoFlowEspNowProtocol.
   writeEcoFlowDetail(cursor, ecoflow);
   writeEcoFlowRuntime(cursor, ecoflow);
+  // Optional trailer. Version stays 9 so older pages ignore these two bytes.
+  if (static_cast<size_t>(cursor - buffer) + 2 <= capacity) {
+    writeI16(cursor, static_cast<int16_t>(gateway.coprocessorHeapKb));
+  }
 
   const size_t written = static_cast<size_t>(cursor - buffer);
   if (written > capacity) {
