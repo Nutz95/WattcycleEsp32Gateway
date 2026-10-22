@@ -25,6 +25,17 @@ void P4DetailPages::apply(const P4PanelBoard& board) {
   applySystemPages(widgets_, board);
 }
 
+void P4DetailPages::setMeterCommandHandler(void (*handler)(uint8_t command, void* user), void* user) {
+  meterCommand_ = handler;
+  meterUser_ = user;
+}
+
+void P4DetailPages::dispatchMeterCommand(uint8_t command) {
+  if (meterCommand_ != nullptr) {
+    meterCommand_(command, meterUser_);
+  }
+}
+
 void P4DetailPages::show(HubPage page) {
   reveal(widgets_.wattcycle.root, page == HubPage::Wattcycle);
   reveal(widgets_.solar.root, page == HubPage::Solar);

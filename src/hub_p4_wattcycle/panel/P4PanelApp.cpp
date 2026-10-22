@@ -102,6 +102,35 @@ void noteWebIdentity() {
   webNamed = true;
 }
 
+constexpr uint32_t kBlankAfterMs = 60000;
+uint32_t lastActivityMs = 0;
+bool screenOn = true;
+
+void setBacklight(bool on) {
+  lcd.example_bsp_set_lcd_backlight(on ? 1u : 0u);
+  screenOn = on;
+}
+
+void noteActivity() {
+  lastActivityMs = millis();
+  if (!screenOn) {
+    setBacklight(true);
+  }
+}
+
+void blankIfIdle() {
+  if (!screenOn || lastActivityMs == 0) {
+    return;
+  }
+  if (static_cast<int32_t>(millis() - lastActivityMs) >= static_cast<int32_t>(kBlankAfterMs)) {
+    setBacklight(false);
+  }
+}
+
+void onMeterCommand(uint8_t command, void* /*user*/) {
+  meterCommands.sendMeterCommand(command);
+}
+
 void onPanelPage(uint8_t index, void* user) {
   auto* pages = static_cast<display::P4DetailPages*>(user);
   if (pages != nullptr) {
@@ -129,6 +158,12 @@ void readTouch(lv_indev_drv_t* driver, lv_indev_data_t* data) {
   uint16_t x = 0;
   uint16_t y = 0;
   if (!touch.getTouch(&x, &y)) {
+    data->state = LV_INDEV_STATE_REL;
+    return;
+  }
+  const bool wasDark = !screenOn;
+  noteActivity();
+  if (wasDark) {
     data->state = LV_INDEV_STATE_REL;
     return;
   }
@@ -189,6 +224,7 @@ void setupPanel() {
     return;
   }
   detailPages.mount(lv_scr_act());
+  detailPages.setMeterCommandHandler(onMeterCommand, nullptr);
   overview.setPageHandler(onPanelPage, &detailPages);
   overview.mount(lv_scr_act(), "waiting for bridges");
   board = {};
@@ -205,6 +241,7 @@ void setupPanel() {
   store.setWebPort(6789);
   health.begin();
   paintBoard();
+  lastActivityMs = millis();
   Serial.println("overview ready");
 }
 
@@ -244,6 +281,7 @@ void loopPanel() {
   noteWebIdentity();
   webGateway.loop();
   noteStorage();
+  blankIfIdle();
   overview.refreshClock();
   lv_timer_handler();
   delay(5);

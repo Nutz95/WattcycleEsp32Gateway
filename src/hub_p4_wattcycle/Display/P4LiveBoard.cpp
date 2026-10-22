@@ -62,6 +62,10 @@ void fillStations(P4PanelBoard& board, const telemetry::ITelemetryStore& store) 
   board.solar.secured = solar.espNowEncrypted;
   board.solar.watts = roundToInt(solar.powerW);
   board.solar.voltsMv = roundToInt(solar.voltageV * 1000.0f);
+  board.solar.ampsMa = roundToInt(solar.currentA * 1000.0f);
+  board.solar.energyCWh = roundToInt(solar.energyWh * 100.0f);
+  board.solar.capacityCAh = roundToInt(solar.capacityAh * 100.0f);
+  board.solar.tempDc = roundToInt(solar.temperatureC * 10.0f);
   board.eco.linkUp = eco.linkFresh && eco.bleConnected;
   board.eco.secured = eco.espNowEncrypted;
   board.eco.valid = eco.meterValid;

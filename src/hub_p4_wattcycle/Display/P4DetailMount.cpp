@@ -1,9 +1,36 @@
 #include "Display/P4DetailPages.h"
 
 #include "Display/P4DetailRow.h"
+#include "Display/P4OverviewStyle.h"
+
+#include <cstdint>
 
 namespace wattcycle::display {
 namespace {
+
+void onResetTap(lv_event_t* event) {
+  auto* pages = static_cast<P4DetailPages*>(lv_event_get_user_data(event));
+  const auto command = static_cast<uint8_t>(
+      reinterpret_cast<uintptr_t>(lv_obj_get_user_data(lv_event_get_target(event))));
+  if (pages != nullptr) {
+    pages->dispatchMeterCommand(command);
+  }
+}
+
+void mountCommandButton(lv_obj_t* parent, int x, int y, const char* caption, uint8_t command,
+                        P4DetailPages* pages) {
+  lv_obj_t* button = lv_btn_create(parent);
+  lv_obj_set_pos(button, x, y);
+  lv_obj_set_size(button, 210, 52);
+  lv_obj_set_style_bg_color(button, lv_color_hex(kCard), 0);
+  lv_obj_set_user_data(button, reinterpret_cast<void*>(static_cast<uintptr_t>(command)));
+  lv_obj_add_event_cb(button, onResetTap, LV_EVENT_CLICKED, pages);
+  lv_obj_t* label = lv_label_create(button);
+  lv_label_set_text(label, caption);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+  lv_obj_clear_flag(label, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_center(label);
+}
 
 void mountRows(P4TextPage& page, lv_obj_t* parent, const char* const* names, int count) {
   page.root = makeDetailRoot(parent);
@@ -17,7 +44,8 @@ void mountRows(P4TextPage& page, lv_obj_t* parent, const char* const* names, int
 void P4DetailPages::mount(lv_obj_t* parent) {
   static const char* packNames[] = {"SOC", "Voltage", "Current", "Power", "Capacity", "Health",
                                     "Link", "Security"};
-  static const char* solarNames[] = {"Power", "Voltage", "Link", "Security"};
+  static const char* solarNames[] = {"Power", "Voltage", "Current", "Energy", "Capacity", "Temp",
+                                    "Link", "Security"};
   static const char* ecoNames[] = {"SOC", "Battery", "AC out", "DC out", "USB", "Link", "Security"};
   static const char* tempNames[] = {"MOS", "PCB", "Probe 1", "Probe 2"};
   static const char* alertNames[] = {"Protection", "Fault", "Note"};
@@ -27,7 +55,11 @@ void P4DetailPages::mount(lv_obj_t* parent) {
   static const char* linkNames[] = {"Wi-Fi", "Address", "BMS link", "BMS security", "Solar link",
                                     "Solar security", "EcoFlow link", "EcoFlow security"};
   mountRows(widgets_.wattcycle, parent, packNames, 8);
-  mountRows(widgets_.solar, parent, solarNames, 4);
+  mountRows(widgets_.solar, parent, solarNames, 8);
+  mountCommandButton(widgets_.solar.root, 16, 620, "Reset Wh", 0x01, this);
+  mountCommandButton(widgets_.solar.root, 242, 620, "Reset Ah", 0x02, this);
+  lv_obj_add_flag(widgets_.solar.root, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scroll_dir(widgets_.solar.root, LV_DIR_VER);
   mountRows(widgets_.eco, parent, ecoNames, 7);
   mountRows(widgets_.temps, parent, tempNames, 4);
   mountRows(widgets_.alerts, parent, alertNames, 3);

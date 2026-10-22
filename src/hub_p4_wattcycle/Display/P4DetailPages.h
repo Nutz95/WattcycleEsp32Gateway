@@ -15,9 +15,15 @@ class P4DetailPages {
   void apply(const P4PanelBoard& board);
   /// Show one page. Overview hides them all.
   void show(HubPage page);
+  /// Solar reset buttons call this with the XT command byte.
+  void setMeterCommandHandler(void (*handler)(uint8_t command, void* user), void* user);
+  /// Forward one reset button to the handler set above.
+  void dispatchMeterCommand(uint8_t command);
 
  private:
   P4DetailWidgets widgets_;
+  void (*meterCommand_)(uint8_t command, void* user) = nullptr;
+  void* meterUser_ = nullptr;
 };
 
 }  // namespace wattcycle::display

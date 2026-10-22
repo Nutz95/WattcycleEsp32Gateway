@@ -39,14 +39,31 @@ void applyWattcycle(P4TextPage& page, const P4WattcycleFields& fields) {
   setSecurityValue(page.values[7], fields.linkUp, fields.secured);
 }
 
+void formatCenti(char* line, int size, int centi, const char* unit) {
+  const int absCenti = centi < 0 ? -centi : centi;
+  const char* sign = centi < 0 ? "-" : "";
+  std::snprintf(line, static_cast<size_t>(size), "%s%d.%02d %s", sign, absCenti / 100, absCenti % 100,
+                unit);
+}
+
 void applySolar(P4TextPage& page, const P4SolarFields& fields) {
   char line[32];
+  const bool live = fields.linkUp;
   std::snprintf(line, sizeof(line), "%d W", fields.watts);
-  setDetailValue(page.values[0], fields.linkUp ? line : "--", fields.watts > 0 ? kAccent : kMuted);
+  setDetailValue(page.values[0], live ? line : "--", fields.watts > 0 ? kAccent : kMuted);
   formatMilli(line, sizeof(line), fields.voltsMv, "V");
-  setDetailValue(page.values[1], fields.linkUp ? line : "--", kInk);
-  setDetailValue(page.values[2], fields.linkUp ? "live" : "no link", fields.linkUp ? kAccent : kDanger);
-  setSecurityValue(page.values[3], fields.linkUp, fields.secured);
+  setDetailValue(page.values[1], live ? line : "--", kInk);
+  formatMilli(line, sizeof(line), fields.ampsMa, "A");
+  setDetailValue(page.values[2], live ? line : "--", kInk);
+  formatCenti(line, sizeof(line), fields.energyCWh, "Wh");
+  setDetailValue(page.values[3], live ? line : "--", kInk);
+  formatCenti(line, sizeof(line), fields.capacityCAh, "Ah");
+  setDetailValue(page.values[4], live ? line : "--", kInk);
+  const int absDeci = fields.tempDc < 0 ? -fields.tempDc : fields.tempDc;
+  std::snprintf(line, sizeof(line), "%s%d.%d C", fields.tempDc < 0 ? "-" : "", absDeci / 10, absDeci % 10);
+  setDetailValue(page.values[5], live ? line : "--", kInk);
+  setDetailValue(page.values[6], live ? "live" : "no link", live ? kAccent : kDanger);
+  setSecurityValue(page.values[7], live, fields.secured);
 }
 
 void applyEco(P4TextPage& page, const P4EcoFields& fields) {

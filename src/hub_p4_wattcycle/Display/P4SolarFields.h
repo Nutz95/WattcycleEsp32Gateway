@@ -8,6 +8,10 @@ struct P4SolarFields {
   bool secured = false;
   int watts = 0;
   int voltsMv = 0;
+  int ampsMa = 0;
+  int energyCWh = 0;
+  int capacityCAh = 0;
+  int tempDc = 0;
 };
 
 }  // namespace wattcycle::display

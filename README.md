@@ -212,7 +212,7 @@ drivers live in `third_party/jc4880_panel`. Pass the panel COM port.
 
 This panel's ROM is `esp32p4-eco2` (before v3). The script builds that variant. A v3 bootloader resets in a loop and the panel stays black.
 
-The same flash writes the dashboard onto the panel. Open the IP shown on the Esp page, port **6789**. The P4 serves the site; the C6 is only the Wi-Fi radio. First account setup asks for a tap on the panel. Day history is written to a FAT32 card in the TF slot (`/history/YYYY/MM/YYYY-MM-DD.csv`, UTC). Older flat files stay readable. Leave the card as FAT32. The status-bar Wi-Fi and Bluetooth icons open the link page. The SD icon opens the Esp page and turns yellow under 25% free, red under 10% free, and red with a mark when the card is missing.
+The same flash writes the dashboard onto the panel. Open the IP shown on the Esp page, port **6789**. The P4 serves the site; the C6 is only the Wi-Fi radio. First account setup asks for a tap on the panel. Day history is written to a FAT32 card in the TF slot (`/history/YYYY/MM/YYYY-MM-DD.csv`, UTC). Older flat files stay readable. Leave the card as FAT32. The status-bar Wi-Fi and Bluetooth icons open the link page. The SD icon opens the Esp page and turns yellow under 25% free, red under 10% free, and red with a mark when the card is missing. The backlight turns off after one minute without a touch and comes back on the next touch. The radios and the history writer keep running.
 
 ### 2b. Pair ESP-NOW peers
 
