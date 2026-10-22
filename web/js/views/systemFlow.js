@@ -203,11 +203,16 @@
     setText("lblXtState", solarLink ? (sppOk ? "SPP up" : "SPP down") : "no link");
     setLinkNode("nodeXt", solarLink && sppOk);
     const solarActive = solarLink && solar.valid && solarP > SOLAR_EPS_W;
+    const packCharging = packP != null && packP > FLOW_EPS_W;
+    const solarToPack = solarActive && packCharging;
+    const solarToEco = solarActive && !packCharging;
     setEdge("edgeSolarPanel", solarActive, false);
     setEdge("edgeXt369p", solarActive, false);
-    setEdge("edgeGenasun", solarActive, false);
-    setEdge("edgeSolarPack", solarActive, false);
-    setText("lblSolarToPack", solarActive ? fmtW(solarP) : "idle");
+    setEdge("edgeGenasun", solarToPack, false);
+    setEdge("edgeSolarPack", solarToPack, false);
+    setEdge("edgeGenasunEco", solarToEco, false);
+    setText("lblSolarToPack", solarToPack ? fmtW(solarP) : (solarToEco ? "" : "idle"));
+    setText("lblSolarToEco", solarToEco ? fmtW(solarP) : "");
   }
 
   global.WattcycleViews = global.WattcycleViews || {};
