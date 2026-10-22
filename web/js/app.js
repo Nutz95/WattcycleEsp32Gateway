@@ -8,6 +8,19 @@
     document.querySelectorAll(".view").forEach(function (view) {
       view.hidden = view.getAttribute("data-view") !== name;
     });
+    if (window.WattcycleCamera) {
+      window.WattcycleCamera.setActive(name === "camera");
+    }
+    if (name === "camera") {
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+    } else if (!refreshTimer && document.getElementById("appShell") &&
+               !document.getElementById("appShell").hidden) {
+      refresh();
+      refreshTimer = setInterval(refresh, 2000);
+    }
   }
 
   document.querySelectorAll(".tab").forEach(function (tab) {

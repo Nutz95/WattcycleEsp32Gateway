@@ -35,6 +35,9 @@ bool mountFat() {
 }  // namespace
 
 bool P4SdHistory::begin() {
+  if (ready_) {
+    return true;
+  }
   if (!mountFat()) {
     Serial.println("SD card not detected");
     ready_ = false;

@@ -212,7 +212,7 @@ drivers live in `third_party/jc4880_panel`. Pass the panel COM port.
 
 This panel's ROM is `esp32p4-eco2` (before v3). The script builds that variant. A v3 bootloader resets in a loop and the panel stays black.
 
-The same flash writes the dashboard onto the panel. Open the IP shown on the Esp page, port **6789**. The P4 serves the site; the C6 is only the Wi-Fi radio. First account setup asks for a tap on the panel. Day history is written to a FAT32 card in the TF slot (`/history/YYYY/MM/YYYY-MM-DD.csv`, UTC). Older flat files stay readable. Leave the card as FAT32. The status-bar Wi-Fi and Bluetooth icons open the link page. The SD icon opens the Esp page and turns yellow under 25% free, red under 10% free, and red with a mark when the card is missing. The backlight and the panel scan turn off after one minute without a touch or the side boot button, and come back on the next touch or that button. The radios and the history writer keep running.
+The same flash writes the dashboard onto the panel. Open the IP shown on the Esp page, port **6789**. The P4 serves the site; the C6 is only the Wi-Fi radio. First account setup asks for a tap on the panel. Day history is written to a FAT32 card in the TF slot (`/history/YYYY/MM/YYYY-MM-DD.csv`, UTC). Older flat files stay readable. Leave the card as FAT32. The status-bar Wi-Fi and Bluetooth icons open the link page. The SD icon opens the Esp page and turns yellow under 25% free, red under 10% free, and red with a mark when the card is missing. The backlight and the panel scan turn off after one minute without a touch or the side boot button, and come back on the next touch or that button. The Camera tab keeps the panel dark while a browser holds the picture, and drops the picture and microphone when that tab closes. The front OV02C10 feeds RGB565 through the ISP, then the hub encodes JPEG for the browser. The ES8311 is opened for the microphone only, with the speaker amp kept off. The radios and the history writer keep running.
 
 ### 2b. Pair ESP-NOW peers
 
@@ -262,7 +262,7 @@ http://<esp-ip>:6789/api/telemetry.bin
 - Threat model: HTTP on LAN + local password. Sessions are RAM-only (re-login after reboot). Do **not** expose port 6789 to the public internet.
 - **HTTPS note:** on this classic ESP32 + NimBLE stack, in-process TLS freezes the device under load — HTTP is intentional until a lighter TLS path exists.
 
-Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets). The `data/` folder is gitignored — regenerate with the bundle script / PlatformIO pre-script.
+Web sources live in `web/` (HTML views + CSS + JS modules). `scripts/bundle_web.ps1` packs them into `data/` before LittleFS upload (ETag caching on static assets). The `data/` folder is gitignored — regenerate with the bundle script / PlatformIO pre-script. On the P4 hub, the first boot copies that image onto the SD card and then unmounts LittleFS. The card stays mounted while the camera runs. The web picture is a 640×360 frame from the chip JPEG encoder; the sensor itself stays at 1288×728.
 
 M5 face buttons: **A** = previous page, **B** = confirm / center, **C** = next page (labeled in the on-screen footer tiles). Backlight sleeps after idle input; the display UI task suspends while asleep and resumes on the next button press (wake only, no page change).
 

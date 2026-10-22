@@ -1,6 +1,9 @@
 #include "P4PanelApp.h"
 
 #include <Arduino.h>
+#include <SD_MMC.h>
+
+#include <cstring>
 
 #include "Auth/AuthService.h"
 #include "Auth/NvsCredentialStore.h"
@@ -13,10 +16,13 @@
 #include "P4MeterCommands.h"
 #include "P4SdHistory.h"
 #include "P4StaRadio.h"
+#include "P4WebPublish.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
 #include "Time/NtpClock.h"
 #include "esp_heap_caps.h"
 #include "driver/i2c_master.h"
+#include "P4CameraPage.h"
+#include "P4LiveView.h"
 #include "P4ScreenSleep.h"
 #include "lvgl.h"
 #include "pins_config.h"
@@ -104,16 +110,18 @@ void noteWebIdentity() {
 }
 
 P4ScreenSleep screenSleep;
+P4LiveView liveView;
+P4CameraPage cameraPage;
+i2c_master_bus_handle_t panelBus = nullptr;
 
 void onMeterCommand(uint8_t command, void* /*user*/) {
   meterCommands.sendMeterCommand(command);
 }
 
-void onPanelPage(uint8_t index, void* user) {
-  auto* pages = static_cast<display::P4DetailPages*>(user);
-  if (pages != nullptr) {
-    pages->show(static_cast<display::HubPage>(index));
-  }
+void onPanelPage(uint8_t index, void* /*user*/) {
+  const auto page = static_cast<display::HubPage>(index);
+  detailPages.show(page);
+  cameraPage.show(page == display::HubPage::Camera);
 }
 
 bool onFlushDone(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t* event, void* user) {
@@ -153,8 +161,8 @@ bool startPanel() {
   busConfig.clk_source = I2C_CLK_SRC_DEFAULT;
   busConfig.glitch_ignore_cnt = 7;
   busConfig.flags.enable_internal_pullup = 1;
-  i2c_master_bus_handle_t bus = nullptr;
-  i2c_new_master_bus(&busConfig, &bus);
+  panelBus = nullptr;
+  i2c_new_master_bus(&busConfig, &panelBus);
   lcd.begin();
   touch.begin();
   lcd.get_handle(&lcdPanels);
@@ -199,13 +207,19 @@ void setupPanel() {
   screenSleep.begin(lcd, touch, lcdPanels.panel);
   detailPages.mount(lv_scr_act());
   detailPages.setMeterCommandHandler(onMeterCommand, nullptr);
-  overview.setPageHandler(onPanelPage, &detailPages);
+  cameraPage.mount(lv_scr_act(), liveView);
+  cameraPage.show(false);
+  overview.setPageHandler(onPanelPage, nullptr);
   overview.mount(lv_scr_act(), "waiting for bridges");
   board = {};
   radio.begin(board, store);
   ntpClock.begin();
   authService.begin();
   history.begin();
+  P4WebPublish webFiles;
+  if (webFiles.install()) {
+    webGateway.useFiles(SD_MMC);
+  }
   authTap.mount(lv_scr_act());
   authTap.setHandler(onAuthTap, nullptr);
   webGateway.setDeviceIdentity("p4_hub", "", P4_BMS_MAC, P4_SOLAR_MAC, P4_ECO_MAC);
@@ -213,6 +227,7 @@ void setupPanel() {
     Serial.println("web fs failed");
   }
   store.setWebPort(6789);
+  liveView.begin(panelBus, authService);
   health.begin();
   paintBoard();
   screenSleep.arm();
@@ -255,6 +270,8 @@ void loopPanel() {
   noteWebIdentity();
   webGateway.loop();
   noteStorage();
+  cameraPage.tick();
+  screenSleep.holdDark(liveView.wantsBlank());
   const bool woke = screenSleep.pollWake();
   screenSleep.blankIfIdle();
   if (screenSleep.screenOn() && !woke) {

@@ -118,6 +118,8 @@ const char* hubPageTitle(HubPage page) {
       return "Gateway";
     case HubPage::Esp:
       return "ESP";
+    case HubPage::Camera:
+      return "Camera";
     case HubPage::Link:
       return "Link";
   }
@@ -154,6 +156,7 @@ P4PageModel buildP4Page(HubPage page, const telemetry::ITelemetryStore& store) {
       fillEsp(model, store);
       break;
     case HubPage::Overview:
+    case HubPage::Camera:
     case HubPage::Link:
       break;
   }

@@ -44,13 +44,28 @@ void P4ScreenSleep::setScreen(bool on) {
 
 void P4ScreenSleep::noteActivity() {
   lastActivityMs_ = millis();
-  if (!screenOn_) {
-    setScreen(true);
+  if (holdDark_ || screenOn_) {
+    return;
+  }
+  setScreen(true);
+}
+
+void P4ScreenSleep::holdDark(bool hold) {
+  if (hold == holdDark_) {
+    return;
+  }
+  holdDark_ = hold;
+  if (hold) {
+    setScreen(false);
   }
 }
 
+void P4ScreenSleep::blank() {
+  setScreen(false);
+}
+
 void P4ScreenSleep::blankIfIdle() {
-  if (!screenOn_ || lastActivityMs_ == 0) {
+  if (holdDark_ || !screenOn_ || lastActivityMs_ == 0) {
     return;
   }
   if (static_cast<int32_t>(millis() - lastActivityMs_) >= static_cast<int32_t>(kBlankAfterMs)) {
@@ -69,6 +84,9 @@ void P4ScreenSleep::startButton() {
 }
 
 bool P4ScreenSleep::pollWake() {
+  if (holdDark_) {
+    return false;
+  }
   const bool wasDark = !screenOn_;
   if (gpio_get_level(kSideBootButton) == 0) {
     noteActivity();

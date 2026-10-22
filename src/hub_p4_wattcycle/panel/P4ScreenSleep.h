@@ -17,6 +17,10 @@ class P4ScreenSleep {
   /// Wake from the boot button or a touch while the scan is stopped. True when this call woke the panel.
   bool pollWake();
   void blankIfIdle();
+  /// Force the backlight and the panel scan off. Touch or the boot button can still wake it.
+  void blank();
+  /// Keep the panel dark while a browser holds the camera. Wakes are ignored until released.
+  void holdDark(bool hold);
   /// True while a wake press must not activate the control under the finger.
   bool suppressTouch(bool pressed);
   bool screenOn() const;
@@ -32,6 +36,7 @@ class P4ScreenSleep {
   uint32_t lastActivityMs_ = 0;
   bool screenOn_ = true;
   bool swallow_ = false;
+  bool holdDark_ = false;
 };
 
 }  // namespace wattcycle::panel

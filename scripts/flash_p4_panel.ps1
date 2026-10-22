@@ -46,34 +46,75 @@ if (-not (Test-Path (Join-Path $Panel "lcd\st7701_lcd.cpp"))) {
     throw "Panel driver missing under third_party/jc4880_panel"
 }
 
-Write-Host "Staging panel sketch"
-if (Test-Path $Stage) {
-    Remove-Item $Stage -Recurse -Force
+function Copy-IfChanged {
+    param([Parameter(Mandatory)][string]$Source, [Parameter(Mandatory)][string]$Destination)
+    $items = @(Get-Item -Path $Source -ErrorAction SilentlyContinue)
+    if ($items.Count -eq 0) {
+        throw "Missing staged source: $Source"
+    }
+    foreach ($item in $items) {
+        if ($item.PSIsContainer) {
+            Get-ChildItem $item.FullName -File | ForEach-Object { Copy-IfChanged $_.FullName $Destination }
+            continue
+        }
+        $destFile = $Destination
+        if ((Test-Path $Destination) -and (Get-Item $Destination).PSIsContainer) {
+            $destFile = Join-Path $Destination $item.Name
+        }
+        if (Test-Path $destFile) {
+            $same = (Get-FileHash -Path $item.FullName).Hash -eq (Get-FileHash -Path $destFile).Hash
+            if ($same) { continue }
+        }
+        Microsoft.PowerShell.Management\Copy-Item -Path $item.FullName -Destination $destFile -Force
+    }
 }
+
+Write-Host "Staging panel sketch (keeping the previous build)"
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\Display") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\lcd") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\touch") -Force | Out-Null
-Copy-Item (Join-Path $Panel "pins_config.h") $Stage
-Copy-Item (Join-Path $Panel "lcd\*") (Join-Path $Stage "src\lcd")
-Copy-Item (Join-Path $Panel "touch\*") (Join-Path $Stage "src\touch")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\hub_p4_panel.ino") $Stage
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.h") $Stage
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4StaRadio.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4StaRadio.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4HostedNow.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4HostedNow.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4C6Update.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4C6Update.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AuthTap.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AuthTap.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MeterCommands.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MeterCommands.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4SdHistory.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4SdHistory.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ScreenSleep.cpp") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ScreenSleep.h") (Join-Path $Stage "src")
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\partitions.csv") $Stage
+Copy-IfChanged (Join-Path $Panel "pins_config.h") $Stage
+Copy-IfChanged (Join-Path $Panel "lcd\*") (Join-Path $Stage "src\lcd")
+Copy-IfChanged (Join-Path $Panel "touch\*") (Join-Path $Stage "src\touch")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\hub_p4_panel.ino") $Stage
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4PanelApp.h") $Stage
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4StaRadio.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4StaRadio.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4HostedNow.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4HostedNow.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4C6Update.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4C6Update.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AuthTap.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AuthTap.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MeterCommands.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MeterCommands.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4SdHistory.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4SdHistory.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4WebPublish.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4WebPublish.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ScreenSleep.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ScreenSleep.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveView.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveView.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveCapture.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveJpeg.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveClaim.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4CameraPage.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4CameraPage.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4Es8311.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4Es8311.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveHttp.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveHttp.h") (Join-Path $Stage "src")
+$Cam = Join-Path $Repo "third_party\jc4880_cam"
+New-Item -ItemType Directory -Path (Join-Path $Stage "src\ov02c10") -Force | Out-Null
+Copy-IfChanged (Join-Path $Cam "ov02c10\ov02c10.c") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Cam "ov02c10\include\*") (Join-Path $Stage "src\ov02c10")
+Copy-IfChanged (Join-Path $Cam "ov02c10\private_include\*") (Join-Path $Stage "src\ov02c10")
+Copy-IfChanged (Join-Path $Cam "ov02c10_force_config.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Cam "ov02c10_ipa_config.c") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Cam "P4CamSensorHooks.c") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\partitions.csv") $Stage
 $Display = Join-Path $Repo "src\hub_p4_wattcycle\Display"
 # Hub-only store adapters stay off the panel sketch. Everything else under Display/ is staged.
 $HubOnly = @(
@@ -85,12 +126,12 @@ Get-ChildItem -Path $Display -File | ForEach-Object {
         return
     }
     if ($_.Extension -eq ".cpp") {
-        Copy-Item $_.FullName (Join-Path $Stage "src")
+        Copy-IfChanged $_.FullName (Join-Path $Stage "src")
     } elseif ($_.Extension -in @(".h", ".hpp")) {
-        Copy-Item $_.FullName (Join-Path $Stage "src\Display")
+        Copy-IfChanged $_.FullName (Join-Path $Stage "src\Display")
     }
 }
-Copy-Item (Join-Path $Repo "src\hub_p4_wattcycle\panel\lv_conf.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\lv_conf.h") (Join-Path $Stage "src")
 $HubSources = @(
     "src\hub_common\Telemetry\InMemoryTelemetryStore.cpp",
     "src\hub_common\Telemetry\BinaryTelemetryCodec.cpp",
@@ -111,7 +152,7 @@ $HubSources = @(
     "src\hub_m5_wattcycle\EspNow\EspNowPacketApply.cpp"
 )
 foreach ($rel in $HubSources) {
-    Copy-Item (Join-Path $Repo $rel) (Join-Path $Stage "src")
+    Copy-IfChanged (Join-Path $Repo $rel) (Join-Path $Stage "src")
 }
 
 function ConvertTo-CStringLiteral([string]$Value) {
@@ -138,7 +179,15 @@ $secretHeader = @"
 #define P4_ECO_MAC "$eco"
 #define P4_SOLAR_MAC "$solar"
 "@
-Set-Content -Path (Join-Path $Stage "src\P4BuildSecrets.h") -Value $secretHeader -Encoding ascii
+$secretPath = Join-Path $Stage "src\P4BuildSecrets.h"
+$secretPending = "$secretPath.new"
+Set-Content -Path $secretPending -Value $secretHeader -Encoding ascii
+$secretChanged = -not (Test-Path $secretPath) -or ((Get-FileHash $secretPending).Hash -ne (Get-FileHash $secretPath).Hash)
+if ($secretChanged) {
+    Move-Item -Path $secretPending -Destination $secretPath -Force
+} else {
+    Remove-Item $secretPending -Force
+}
 Write-Host ("Radio secrets: ssidLen={0} passLen={1} pmkLen={2} peers={3}" -f $ssid.Length, $pass.Length, $pmk.Length, (@($bms, $eco, $solar) | Where-Object { $_ -ne "" }).Count)
 
 Write-Host "Compiling"
@@ -146,10 +195,13 @@ $StageInclude = (($Stage -replace '\\', '/') + "/src")
 $CommonInclude = (($Repo -replace '\\', '/') + "/src/common")
 $HubInclude = (($Repo -replace '\\', '/') + "/src/hub_common")
 $RxInclude = (($Repo -replace '\\', '/') + "/src/hub_m5_wattcycle")
-$Flags = "-I$StageInclude -I$CommonInclude -I$HubInclude -I$RxInclude -DLV_CONF_INCLUDE_SIMPLE"
+$CamInclude = "$StageInclude/ov02c10"
+$Flags = "-I$StageInclude -I$CamInclude -I$CommonInclude -I$HubInclude -I$RxInclude -DLV_CONF_INCLUDE_SIMPLE"
+$LinkFlags = "-Wl,--wrap=esp_cam_sensor_detect_get_array -Wl,--wrap=esp_ipa_pipeline_get_config"
 & $Cli compile --fqbn $Fqbn --build-path $Build `
     --build-property "compiler.c.extra_flags=$Flags" `
     --build-property "compiler.cpp.extra_flags=$Flags" `
+    --build-property "compiler.c.elf.extra_flags=$LinkFlags" `
     $Stage
 if ($LASTEXITCODE -ne 0) {
     throw "Panel compile failed ($LASTEXITCODE)"

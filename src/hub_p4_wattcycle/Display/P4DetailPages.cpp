@@ -46,6 +46,7 @@ void P4DetailPages::show(HubPage page) {
   reveal(widgets_.gateway.root, page == HubPage::Gateway);
   reveal(widgets_.esp.root, page == HubPage::Esp);
   reveal(widgets_.link.root, page == HubPage::Link);
+  // Camera page is owned by P4CameraPage in the panel composition root.
 }
 
 }  // namespace wattcycle::display
