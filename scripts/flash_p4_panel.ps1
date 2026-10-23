@@ -180,6 +180,8 @@ $HubSources = @(
 foreach ($rel in $HubSources) {
     Copy-IfChanged (Join-Path $Repo $rel) (Join-Path $Stage "src")
 }
+# Drop renamed/removed hub TUs left from a previous stage keep.
+Remove-Item -Force (Join-Path $Stage "src\EspWebGatewayPlugs.cpp") -ErrorAction SilentlyContinue
 
 function ConvertTo-CStringLiteral([string]$Value) {
     if ($null -eq $Value) { return "" }
