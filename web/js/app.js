@@ -2,6 +2,10 @@
   let refreshTimer = null;
 
   function activateTab(name) {
+    const target = document.querySelector('.tab[data-tab="' + name + '"]');
+    if (target && target.hidden) {
+      return;
+    }
     document.querySelectorAll(".tab").forEach(function (tab) {
       tab.classList.toggle("active", tab.getAttribute("data-tab") === name);
     });
@@ -10,6 +14,12 @@
     });
     if (window.WattcycleCamera) {
       window.WattcycleCamera.setActive(name === "camera");
+    }
+    if (name === "account" && window.WattcycleViews && window.WattcycleViews.reloadAccount) {
+      window.WattcycleViews.reloadAccount();
+    }
+    if (name === "plugs" && window.WattcyclePlugs) {
+      window.WattcyclePlugs.bind();
     }
     if (name === "camera") {
       if (refreshTimer) {
@@ -121,10 +131,7 @@
     }
   }
 
-  const guestTabNames = [
-    "overview", "dashboard", "solar", "wattcycle", "ecoflow", "history",
-    "cells", "temperatures", "warnings", "gateway", "esp"
-  ];
+  const guestTabNames = window.WattcycleGuestTabs || [];
 
   function applyGuest(active, mask) {
     const banner = document.getElementById("guestBanner");
@@ -160,7 +167,7 @@
       applyGuest(false, 0);
       return;
     }
-    let mask = (1 << guestTabNames.length) - 1;
+    let mask = 0;
     try {
       const response = await fetch("/api/guest", { cache: "no-store", credentials: "same-origin" });
       if (response.ok) {
@@ -170,7 +177,7 @@
         }
       }
     } catch (error) {
-      mask = (1 << guestTabNames.length) - 1;
+      mask = 0;
     }
     applyGuest(true, mask);
   }

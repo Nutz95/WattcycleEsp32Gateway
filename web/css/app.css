@@ -212,6 +212,71 @@ code { font-family: Consolas, monospace; }
   cursor: pointer;
 }
 .subtab.active { color: var(--ink); border-color: var(--accent); background: rgba(62,207,142,0.14); }
+.plug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin: 0.75rem 0 1.25rem;
+}
+.plug-bubble {
+  background: linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 0.95rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 11rem;
+}
+.plug-bubble.is-on { border-color: rgba(62,207,142,0.55); box-shadow: 0 0 0 1px rgba(62,207,142,0.18); }
+.plug-bubble.is-offline { opacity: 0.7; }
+.plug-bubble-title { margin: 0; font-size: 1.08rem; font-weight: 650; color: var(--ink); }
+.plug-bubble-id { margin: 0.2rem 0 0; word-break: break-all; font-size: 0.75rem; }
+.plug-bubble-power {
+  margin: 0.15rem 0 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+  line-height: 1.1;
+}
+.plug-bubble.is-offline .plug-bubble-power { color: var(--muted); font-size: 1.1rem; font-weight: 600; }
+.plug-bubble-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.plug-bubble-metrics span {
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.plug-bubble-edit input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.25);
+  color: var(--ink);
+  padding: 0.45rem 0.6rem;
+}
+.plug-bubble-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+}
+.plugs-listen { margin: 0.75rem 0 1rem; }
+.plug-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.5rem 0 0.75rem;
+}
 .solar-hero { margin-top: 1.5rem; }
 figure {
   margin: 0;

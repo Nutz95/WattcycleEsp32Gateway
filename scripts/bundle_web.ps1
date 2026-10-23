@@ -33,7 +33,7 @@ function Minify-Js([string]$text) {
 
 # HTML: inject view fragments
 $html = Get-Content (Join-Path $webRoot "index.html") -Raw
-$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "cells", "temperatures", "warnings", "gateway", "esp", "camera", "account")
+$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "cells", "temperatures", "warnings", "gateway", "esp", "plugs", "camera", "account")
 foreach ($view in $views) {
   $fragment = Get-Content (Join-Path $webRoot "views\$view.html") -Raw
   $html = $html.Replace("<!--VIEW:$view-->", $fragment.Trim())
@@ -50,6 +50,7 @@ Set-Content -Path (Join-Path $dataRoot "app.css") -Value (Minify-Css $css) -NoNe
 $jsParts = @(
   "js\binaryDecoder.js",
   "js\historyStore.js",
+  "js\draftStore.js",
   "js\charts.js",
   "js\auth.js",
   "js\views\systemFlow.js",
@@ -57,13 +58,16 @@ $jsParts = @(
   "js\views\solar.js",
   "js\views\wattcycle.js",
   "js\views\ecoflow.js",
+  "js\views\historyPlugs.js",
   "js\views\history.js",
   "js\views\cells.js",
   "js\views\temperatures.js",
   "js\views\warnings.js",
   "js\views\gateway.js",
   "js\views\esp.js",
+  "js\views\plugs.js",
   "js\views\camera.js",
+  "js\guestTabs.js",
   "js\views\account.js",
   "js\app.js"
 ) | ForEach-Object {

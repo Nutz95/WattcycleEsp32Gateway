@@ -273,6 +273,9 @@
         dayOverlayPack = null;
         dayOverlaySolar = null;
         dayOverlayEco = null;
+        if (global.WattcycleHistoryPlugs) {
+          await global.WattcycleHistoryPlugs.loadDay(date);
+        }
         if (statusEl) {
           statusEl.textContent =
             "Merged " + date + " from SD (" + parsed.pack.length + " pack / " +
@@ -283,6 +286,9 @@
         dayOverlayPack = parsed.pack;
         dayOverlaySolar = parsed.solar;
         dayOverlayEco = parsed.eco;
+        if (global.WattcycleHistoryPlugs) {
+          await global.WattcycleHistoryPlugs.loadDay(date);
+        }
         if (opts.selectDay !== false) {
           const select = document.getElementById("historyDaySelect");
           if (select) select.value = date;
@@ -303,9 +309,16 @@
     bound = true;
     document.querySelectorAll(".subtab").forEach(function (tab) {
       tab.addEventListener("click", function () {
-        activateHistoryTab(tab.getAttribute("data-history-tab"));
+        const name = tab.getAttribute("data-history-tab");
+        activateHistoryTab(name);
+        if (name === "plugs" && global.WattcycleHistoryPlugs) {
+          global.WattcycleHistoryPlugs.render();
+        }
       });
     });
+    if (global.WattcycleHistoryPlugs) {
+      global.WattcycleHistoryPlugs.bindFilter();
+    }
     const clearPack = document.getElementById("clearPackHistoryBtn");
     if (clearPack) {
       clearPack.addEventListener("click", function () {
@@ -349,6 +362,9 @@
           dayOverlayPack = null;
           dayOverlaySolar = null;
           dayOverlayEco = null;
+          if (global.WattcycleHistoryPlugs) {
+            global.WattcycleHistoryPlugs.loadDay(utcDayString(Date.now()));
+          }
           const statusEl = document.getElementById("historySdStatus");
           if (statusEl) statusEl.textContent = "Live charts (localStorage + today SD merge)";
           return;
@@ -466,6 +482,9 @@
       [{ name: "USB", color: "#38bdf8", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "usbOut") }],
       { unit: "W", yDigits: 0 }
     );
+    if (global.WattcycleHistoryPlugs) {
+      global.WattcycleHistoryPlugs.render();
+    }
   }
 
   global.WattcycleViews = global.WattcycleViews || {};
