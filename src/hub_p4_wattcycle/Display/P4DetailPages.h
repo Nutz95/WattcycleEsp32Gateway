@@ -23,6 +23,10 @@ class P4DetailPages {
   void setGuestHandler(void (*handler)(void* user), void* user);
   /// Forward the guest button to the handler set above.
   void dispatchGuestToggle();
+  /// Account page calls this to start a credential reset.
+  void setResetHandler(void (*handler)(void* user), void* user);
+  /// Forward the reset button to the handler set above.
+  void dispatchReset();
 
  private:
   P4DetailWidgets widgets_;
@@ -30,6 +34,8 @@ class P4DetailPages {
   void* meterUser_ = nullptr;
   void (*guestHandler_)(void* user) = nullptr;
   void* guestUser_ = nullptr;
+  void (*resetHandler_)(void* user) = nullptr;
+  void* resetUser_ = nullptr;
 };
 
 }  // namespace wattcycle::display

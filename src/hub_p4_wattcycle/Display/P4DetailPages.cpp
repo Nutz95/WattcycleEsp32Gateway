@@ -47,6 +47,17 @@ void P4DetailPages::dispatchGuestToggle() {
   }
 }
 
+void P4DetailPages::setResetHandler(void (*handler)(void* user), void* user) {
+  resetHandler_ = handler;
+  resetUser_ = user;
+}
+
+void P4DetailPages::dispatchReset() {
+  if (resetHandler_ != nullptr) {
+    resetHandler_(resetUser_);
+  }
+}
+
 void P4DetailPages::show(HubPage page) {
   reveal(widgets_.wattcycle.root, page == HubPage::Wattcycle);
   reveal(widgets_.solar.root, page == HubPage::Solar);
@@ -56,6 +67,8 @@ void P4DetailPages::show(HubPage page) {
   reveal(widgets_.alerts.root, page == HubPage::Alerts);
   reveal(widgets_.gateway.root, page == HubPage::Gateway);
   reveal(widgets_.esp.root, page == HubPage::Esp);
+  reveal(widgets_.account.root, page == HubPage::Account);
+  reveal(widgets_.plugs.root, page == HubPage::Plugs);
   reveal(widgets_.link.root, page == HubPage::Link);
   // Camera page is owned by P4CameraPage in the panel composition root.
 }

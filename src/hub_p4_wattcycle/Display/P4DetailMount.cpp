@@ -39,6 +39,33 @@ void onGuestTap(lv_event_t* event) {
   }
 }
 
+void onResetLogin(lv_event_t* event) {
+  auto* pages = static_cast<P4DetailPages*>(lv_event_get_user_data(event));
+  if (pages != nullptr) {
+    pages->dispatchReset();
+  }
+}
+
+void mountAccountPage(P4TextPage& page, lv_obj_t* parent, P4DetailPages* pages) {
+  page.root = makeDetailRoot(parent);
+  lv_obj_t* hint = lv_label_create(page.root);
+  lv_label_set_text(hint, "Reset login, then create a new one\nin the browser and confirm here.");
+  lv_obj_set_width(hint, 448);
+  lv_obj_set_style_text_font(hint, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(hint, lv_color_hex(kInk), 0);
+  lv_obj_set_pos(hint, 16, 24);
+  lv_obj_t* button = lv_btn_create(page.root);
+  lv_obj_set_pos(button, 16, 140);
+  lv_obj_set_size(button, 448, 52);
+  lv_obj_set_style_bg_color(button, lv_color_hex(kCard), 0);
+  lv_obj_add_event_cb(button, onResetLogin, LV_EVENT_CLICKED, pages);
+  lv_obj_t* label = lv_label_create(button);
+  lv_label_set_text(label, "Reset login");
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+  lv_obj_clear_flag(label, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_center(label);
+}
+
 void mountGuestButton(lv_obj_t* parent, P4DetailPages* pages) {
   lv_obj_t* button = lv_btn_create(parent);
   lv_obj_set_pos(button, 16, 480);
@@ -74,6 +101,8 @@ void P4DetailPages::mount(lv_obj_t* parent) {
                                   "P4 temp", "Uptime", "C6 heap", "SD card", "SD space"};
   static const char* linkNames[] = {"Wi-Fi", "Address", "BMS link", "BMS security", "Solar link",
                                     "Solar security", "EcoFlow link", "EcoFlow security"};
+  static const char* plugNames[] = {"Total W", "Plug 1", "Plug 2", "Plug 3", "Plug 4", "Plug 5",
+                                    "Plug 6", "Plug 7", "Plug 8"};
   mountRows(widgets_.wattcycle, parent, packNames, 8);
   mountRows(widgets_.solar, parent, solarNames, 8);
   mountCommandButton(widgets_.solar.root, 16, 620, "Reset Wh", 0x01, this);
@@ -88,6 +117,10 @@ void P4DetailPages::mount(lv_obj_t* parent) {
   lv_obj_add_flag(widgets_.gateway.root, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(widgets_.gateway.root, LV_DIR_VER);
   mountRows(widgets_.esp, parent, espNames, 10);
+  mountAccountPage(widgets_.account, parent, this);
+  mountRows(widgets_.plugs, parent, plugNames, 9);
+  lv_obj_add_flag(widgets_.plugs.root, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scroll_dir(widgets_.plugs.root, LV_DIR_VER);
   mountRows(widgets_.link, parent, linkNames, 8);
   lv_obj_add_flag(widgets_.esp.root, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(widgets_.esp.root, LV_DIR_VER);

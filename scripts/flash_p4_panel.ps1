@@ -108,12 +108,21 @@ Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveHttp.cpp") (Jo
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveHttp.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4GuestAccess.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4GuestAccess.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyConfigStore.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyConfigStore.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyUdp.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyUdp.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyHistory.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyHistory.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\Display\P4ShellyBoardSync.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\Display\P4ShellyBoardSync.h") (Join-Path $Stage "src\Display")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MicLevel.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MicLevel.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MicPump.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4MicPump.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AdpcmEncoder.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4AdpcmEncoder.h") (Join-Path $Stage "src")
+# Shelly .cpp are listed in $HubSources; headers resolve via -I hub_common (Shelly/...).
 $Cam = Join-Path $Repo "third_party\jc4880_cam"
 New-Item -ItemType Directory -Path (Join-Path $Stage "src\ov02c10") -Force | Out-Null
 Copy-IfChanged (Join-Path $Cam "ov02c10\ov02c10.c") (Join-Path $Stage "src")
@@ -143,14 +152,21 @@ Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\lv_conf.h") (Join-Pa
 $HubSources = @(
     "src\hub_common\Telemetry\InMemoryTelemetryStore.cpp",
     "src\hub_common\Telemetry\BinaryTelemetryCodec.cpp",
+    "src\hub_common\Telemetry\GuestTelemetryView.cpp",
     "src\hub_common\Time\NtpClock.cpp",
     "src\hub_common\HttpApi\EspWebGateway.cpp",
+    "src\hub_common\HttpApi\HttpReadDecision.cpp",
+    "src\hub_common\HttpApi\GuestHistoryCsv.cpp",
     "src\hub_common\HttpApi\EspWebGatewayHistory.cpp",
     "src\hub_common\HttpApi\EspWebGatewayAccess.cpp",
+    "src\hub_common\HttpApi\ShellyPlugsHttp.cpp",
     "src\hub_common\Storage\HistoryCatalog.cpp",
     "src\hub_common\Storage\HistoryDayFile.cpp",
     "src\hub_common\Storage\HistorySampleFill.cpp",
     "src\hub_common\HttpApi\JsonField.cpp",
+    "src\hub_common\Shelly\ShellyNotifyParser.cpp",
+    "src\hub_common\Shelly\ShellyPlugHub.cpp",
+    "src\hub_common\Shelly\ShellyPlugHubAccess.cpp",
     "src\hub_common\Auth\AuthService.cpp",
     "src\hub_common\Auth\PasswordHasher.cpp",
     "src\hub_common\Auth\CredentialPolicy.cpp",

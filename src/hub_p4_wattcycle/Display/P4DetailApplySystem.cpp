@@ -93,6 +93,34 @@ void applyEsp(P4TextPage& page, const P4EspFields& fields) {
   setDetailValue(page.values[9], line, kInk);
 }
 
+void applyPlugs(P4TextPage& page, const P4PlugsFields& fields) {
+  char line[40];
+  if (fields.count == 0) {
+    setDetailValue(page.values[0], "authorize on web", kMuted);
+    for (int index = 1; index < 9; ++index) {
+      setDetailValue(page.values[index], "--", kMuted);
+    }
+    return;
+  }
+  std::snprintf(line, sizeof(line), "%.0f W", fields.totalWatts);
+  setDetailValue(page.values[0], line, kInk);
+  for (int index = 0; index < 8; ++index) {
+    if (index >= fields.count) {
+      setDetailValue(page.values[index + 1], "--", kMuted);
+      continue;
+    }
+    const char* name = fields.names[index][0] != '\0' ? fields.names[index] : "plug";
+    if (!fields.online[index]) {
+      std::snprintf(line, sizeof(line), "%s offline", name);
+      setDetailValue(page.values[index + 1], line, kDanger);
+      continue;
+    }
+    std::snprintf(line, sizeof(line), "%s %.0fW %.0fWh", name, fields.watts[index],
+                  fields.whToday[index]);
+    setDetailValue(page.values[index + 1], line, fields.output[index] ? kAccent : kInk);
+  }
+}
+
 void applyLink(P4TextPage& page, const P4PanelBoard& board) {
   const P4GatewayFields& fields = board.gateway;
   const bool wifiUp = fields.wifiUp;
@@ -114,6 +142,7 @@ void applySystemPages(P4DetailWidgets& widgets, const P4PanelBoard& board) {
   applyAlerts(widgets.alerts, board.alerts);
   applyGateway(widgets.gateway, board.gateway);
   applyEsp(widgets.esp, board.esp);
+  applyPlugs(widgets.plugs, board.plugs);
   applyLink(widgets.link, board);
 }
 

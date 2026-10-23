@@ -27,6 +27,11 @@
 #include "P4LiveView.h"
 #include "P4MicLevel.h"
 #include "P4ScreenSleep.h"
+#include "Display/P4ShellyBoardSync.h"
+#include "P4ShellyConfigStore.h"
+#include "P4ShellyHistory.h"
+#include "P4ShellyUdp.h"
+#include "Shelly/ShellyPlugHub.h"
 #include "lvgl.h"
 #include "pins_config.h"
 #include "src/lcd/st7701_lcd.h"
@@ -52,6 +57,10 @@ P4SdHistory history;
 P4GuestAccess guestAccess;
 P4MicLevel micLevel;
 P4MeterCommands meterCommands;
+P4ShellyConfigStore shellyConfig;
+wattcycle::shelly::ShellyPlugHub shellyHub(&shellyConfig);
+P4ShellyUdp shellyUdp(shellyHub);
+P4ShellyHistory shellyHistory(shellyHub);
 wattcycle::web::EspWebGateway webGateway(store, authService, meterCommands, history);
 wattcycle::esp_sys::EspHealthSampler health;
 P4AuthTap authTap;
@@ -62,8 +71,21 @@ void onAuthTap(void* /*user*/) {
   authService.onConfirmPressed();
 }
 
+void onAuthCancel(void* /*user*/) {
+  authService.onCancelPressed();
+}
+
+void onAccountReset(void* /*user*/) {
+  if (!authService.beginResetRequest()) {
+    Serial.println("reset: no stored login");
+    return;
+  }
+  Serial.println("reset: confirm on the panel");
+}
+
 void paintBoard() {
   board.gateway.guestOn = guestAccess.enabled();
+  display::fillPlugsFields(board.plugs, shellyHub, millis());
   overview.apply(board.overview);
   overview.setLinks(board.gateway.wifiUp,
                     board.gateway.bmsUp || board.gateway.ecoUp || board.gateway.solarUp);
@@ -209,6 +231,7 @@ void setupPanel() {
   detailPages.mount(lv_scr_act());
   detailPages.setMeterCommandHandler(onMeterCommand, nullptr);
   detailPages.setGuestHandler(onGuestToggle, nullptr);
+  detailPages.setResetHandler(onAccountReset, nullptr);
   cameraPage.mount(lv_scr_act(), liveView, micLevel);
   cameraPage.show(false);
   overview.setPageHandler(onPanelPage, nullptr);
@@ -219,14 +242,18 @@ void setupPanel() {
   authService.begin();
   history.begin();
   guestAccess.begin();
+  shellyHub.begin();
+  shellyUdp.begin();
   P4WebPublish webFiles;
   if (webFiles.install()) {
     webGateway.useFiles(SD_MMC);
   }
   authTap.mount(lv_scr_act());
   authTap.setHandler(onAuthTap, nullptr);
+  authTap.setCancelHandler(onAuthCancel, nullptr);
   webGateway.setGuestAccess(guestAccess);
   webGateway.setMicGain(micLevel);
+  webGateway.setShellyPlugs(shellyHub, &shellyHistory);
   webGateway.setDeviceIdentity("p4_hub", "", P4_BMS_MAC, P4_SOLAR_MAC, P4_ECO_MAC);
   if (!webGateway.begin(6789)) {
     Serial.println("web fs failed");
@@ -261,6 +288,9 @@ void noteStorage() {
 }
 
 void loopPanel() {
+  const uint32_t nowMs = millis();
+  const std::time_t epoch = ntpClock.isSynced() ? ntpClock.nowEpoch() : 0;
+  shellyUdp.loop(nowMs, epoch);
   const bool dirty = radio.loop(board);
   ntpClock.loop(board.gateway.wifiUp);
   if (dirty) {
@@ -270,7 +300,11 @@ void loopPanel() {
     applyHealth();
     paintBoard();
   }
+  if (shellyHub.consumeDirty()) {
+    paintBoard();
+  }
   recordHistory();
+  shellyHistory.append(epoch, nowMs);
   authTap.apply(authService.prompt().kind);
   noteWebIdentity();
   webGateway.loop();

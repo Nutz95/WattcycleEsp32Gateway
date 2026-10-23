@@ -15,12 +15,14 @@ enum class HubPage : uint8_t {
   Alerts,
   Gateway,
   Esp,
+  Account,
   Camera,
+  Plugs,
   Link
 };
 
-/// Bottom menu includes Camera. Link opens from the status icons.
-constexpr uint8_t kHubMenuCount = static_cast<uint8_t>(HubPage::Camera) + 1u;
+/// Bottom menu includes Camera and Plugs. Link opens from the status icons.
+constexpr uint8_t kHubMenuCount = static_cast<uint8_t>(HubPage::Plugs) + 1u;
 constexpr uint8_t kHubPageCount = static_cast<uint8_t>(HubPage::Link) + 1u;
 
 }  // namespace wattcycle::display

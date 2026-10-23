@@ -11,7 +11,7 @@ namespace {
 const char* menuCaption(uint8_t index) {
   static const char* captions[kHubMenuCount] = {
       "Overview", "Wattcycle", "Solar", "EcoFlow", "Cells", "Temps", "Alerts", "Gateway", "Esp",
-      "Camera"};
+      "Account", "Camera", "Plugs"};
   if (index >= kHubMenuCount) {
     return "";
   }
@@ -21,7 +21,8 @@ const char* menuCaption(uint8_t index) {
 const char* menuSymbol(uint8_t index) {
   static const char* symbols[kHubMenuCount] = {
       LV_SYMBOL_HOME, LV_SYMBOL_BATTERY_FULL, LV_SYMBOL_CHARGE, LV_SYMBOL_POWER, LV_SYMBOL_BATTERY_3,
-      LV_SYMBOL_TINT, LV_SYMBOL_BELL,         LV_SYMBOL_SETTINGS, LV_SYMBOL_USB, LV_SYMBOL_IMAGE};
+      LV_SYMBOL_TINT, LV_SYMBOL_BELL,         LV_SYMBOL_SETTINGS, LV_SYMBOL_USB, LV_SYMBOL_LIST,
+      LV_SYMBOL_IMAGE, LV_SYMBOL_CHARGE};
   if (index >= kHubMenuCount) {
     return "";
   }

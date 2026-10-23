@@ -15,6 +15,8 @@ struct P4DetailWidgets {
   P4TextPage alerts;
   P4TextPage gateway;
   P4TextPage esp;
+  P4TextPage account;
+  P4TextPage plugs;
   P4TextPage link;
 };
 
