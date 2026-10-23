@@ -1,6 +1,7 @@
 #include "CompositionRoot/GatewayApplication.h"
 
 #include "Config/TimingConstants.h"
+#include "Storage/HistorySampleFill.h"
 
 #include <cstring>
 
@@ -163,22 +164,8 @@ void GatewayApplication::maybeAppendHistory() {
   }
   storage::HistorySample sample = {};
   sample.epochUtc = ntpClock_.nowEpoch();
-  const auto battery = telemetryStore_.battery();
-  const auto solar = telemetryStore_.solar();
-  sample.socPercent = static_cast<uint8_t>(battery.stateOfChargePercent);
-  sample.packVoltageV = battery.moduleVoltage;
-  sample.packCurrentA = battery.currentAmps;
-  sample.packPowerW = battery.powerWatts;
-  sample.packValid = battery.valid;
-  sample.packRemainingAh = battery.remainingCapacityAh;
-  sample.packMosTempC = battery.mosTemperatureC;
-  sample.packPcbTempC = battery.pcbTemperatureC;
-  sample.solarVoltageV = solar.voltageV;
-  sample.solarCurrentA = solar.currentA;
-  sample.solarPowerW = solar.powerW;
-  sample.solarValid = solar.meterValid;
-  sample.solarEnergyWh = solar.energyWh;
-  sample.solarCapacityAh = solar.capacityAh;
+  storage::fillHistorySample(sample, telemetryStore_.battery(), telemetryStore_.solar(),
+                             telemetryStore_.ecoflow());
   historyStore_.append(sample);
 }
 

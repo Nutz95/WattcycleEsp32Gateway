@@ -5,6 +5,7 @@
   let activeDay = "";
   let dayOverlayPack = null;
   let dayOverlaySolar = null;
+  let dayOverlayEco = null;
   let loadingDay = false;
   let catalogGeneration = 0;
   let monthFollowsYear = false;
@@ -38,7 +39,8 @@
     // v2: + pack_ah,mos_c,pcb_c,solar_wh,solar_ah
     const pack = [];
     const solar = [];
-    if (!csv) return { pack: pack, solar: solar };
+    const eco = [];
+    if (!csv) return { pack: pack, solar: solar, eco: eco };
     const lines = csv.split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i].trim();
@@ -84,8 +86,18 @@
         }
         solar.push(row);
       }
+      if (cols.length >= 21 && cols[15] === "1") {
+        eco.push({
+          t: t,
+          soc: Number(cols[16]),
+          acOut: Number(cols[17]),
+          acIn: Number(cols[18]),
+          dcOut: Number(cols[19]),
+          usbOut: Number(cols[20])
+        });
+      }
     }
-    return { pack: pack, solar: solar };
+    return { pack: pack, solar: solar, eco: eco };
   }
 
   function fillSelect(select, values, selected, textOf) {
@@ -256,9 +268,11 @@
       if (opts.mergeIntoLive) {
         global.WattcycleHistory.mergeSamples(parsed.pack);
         global.WattcycleSolarHistory.mergeSamples(parsed.solar);
+        global.WattcycleEcoflowHistory.mergeSamples(parsed.eco);
         activeDay = "";
         dayOverlayPack = null;
         dayOverlaySolar = null;
+        dayOverlayEco = null;
         if (statusEl) {
           statusEl.textContent =
             "Merged " + date + " from SD (" + parsed.pack.length + " pack / " +
@@ -268,6 +282,7 @@
         activeDay = date;
         dayOverlayPack = parsed.pack;
         dayOverlaySolar = parsed.solar;
+        dayOverlayEco = parsed.eco;
         if (opts.selectDay !== false) {
           const select = document.getElementById("historyDaySelect");
           if (select) select.value = date;
@@ -333,6 +348,7 @@
           activeDay = "";
           dayOverlayPack = null;
           dayOverlaySolar = null;
+          dayOverlayEco = null;
           const statusEl = document.getElementById("historySdStatus");
           if (statusEl) statusEl.textContent = "Live charts (localStorage + today SD merge)";
           return;
@@ -424,7 +440,7 @@
       { unit: "Ah", yDigits: 3 }
     );
 
-    const ecoHist = ecoflowHistory || global.WattcycleEcoflowHistory.all();
+    const ecoHist = activeDay && dayOverlayEco ? dayOverlayEco : ecoflowHistory || global.WattcycleEcoflowHistory.all();
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartHistEcoSoc"),
       [{ name: "SoC", color: "#3ecf8e", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "soc") }],

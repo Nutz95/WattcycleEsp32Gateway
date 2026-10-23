@@ -50,14 +50,17 @@ void HistoryDayFile::appendSample(fs::FS& fs, const HistorySample& sample) {
   }
   if (!exists) {
     file.println("epoch,soc,pack_v,pack_a,pack_w,solar_v,solar_a,solar_w,pack_ok,solar_ok,"
-                 "pack_ah,mos_c,pcb_c,solar_wh,solar_ah");
+                 "pack_ah,mos_c,pcb_c,solar_wh,solar_ah,eco_ok,eco_soc,eco_ac_out,eco_ac_in,"
+                 "eco_dc,eco_usb");
   }
-  file.printf("%ld,%u,%.3f,%.3f,%.1f,%.3f,%.3f,%.1f,%u,%u,%.2f,%.1f,%.1f,%.3f,%.3f\n",
+  file.printf("%ld,%u,%.3f,%.3f,%.1f,%.3f,%.3f,%.1f,%u,%u,%.2f,%.1f,%.1f,%.3f,%.3f,%u,%u,%d,%d,%d,%d\n",
               static_cast<long>(sample.epochUtc), sample.socPercent, sample.packVoltageV,
               sample.packCurrentA, sample.packPowerW, sample.solarVoltageV, sample.solarCurrentA,
               sample.solarPowerW, sample.packValid ? 1u : 0u, sample.solarValid ? 1u : 0u,
               sample.packRemainingAh, sample.packMosTempC, sample.packPcbTempC, sample.solarEnergyWh,
-              sample.solarCapacityAh);
+              sample.solarCapacityAh, sample.ecoValid ? 1u : 0u, sample.ecoSocPercent,
+              static_cast<int>(sample.ecoAcOutW), static_cast<int>(sample.ecoAcInW),
+              static_cast<int>(sample.ecoDcOutW), static_cast<int>(sample.ecoUsbOutW));
   file.close();
 }
 

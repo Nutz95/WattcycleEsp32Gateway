@@ -23,6 +23,13 @@ struct HistorySample {
   float packPcbTempC = 0;
   float solarEnergyWh = 0;
   float solarCapacityAh = 0;
+  /// EcoFlow columns (CSV v3+). Older rows omit them. Recorded while the station link is up.
+  bool ecoValid = false;
+  uint8_t ecoSocPercent = 0;
+  int16_t ecoAcOutW = 0;
+  int16_t ecoAcInW = 0;
+  int16_t ecoDcOutW = 0;
+  int16_t ecoUsbOutW = 0;
 };
 
 /// Called once with total byte size before chunks (may be 0 if unknown).
