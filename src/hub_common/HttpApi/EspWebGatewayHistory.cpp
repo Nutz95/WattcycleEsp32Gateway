@@ -1,5 +1,8 @@
 #include "HttpApi/EspWebGateway.h"
 
+#include "HttpApi/GuestHistoryCsv.h"
+#include "HttpApi/HttpReadDecision.h"
+
 #include <ctime>
 #include <cstdio>
 #include <cstring>
@@ -159,7 +162,10 @@ size_t appendDays(char* json, size_t cap, size_t pos, const char days[][11], siz
 }  // namespace
 
 void EspWebGateway::handleHistoryDays() {
-  if (!permitRead()) {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  if (!decideHttpRead(guest_, authSessions_, token).allows(auth::IGuestAccess::kTabHistory)) {
+    sendJson(401, "{\"error\":\"unauthorized\"}");
     return;
   }
   static char periods[48][8];
@@ -198,7 +204,11 @@ void EspWebGateway::handleHistoryDays() {
 }
 
 void EspWebGateway::handleHistoryDay() {
-  if (!permitRead()) {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  const HttpReadDecision access = decideHttpRead(guest_, authSessions_, token);
+  if (!access.allows(auth::IGuestAccess::kTabHistory)) {
+    sendJson(401, "{\"error\":\"unauthorized\"}");
     return;
   }
   if (!historyStore_.isReady()) {
@@ -210,6 +220,16 @@ void EspWebGateway::handleHistoryDay() {
     return;
   }
   const String date = server_->arg("date");
+  if (access.guest) {
+    GuestHistoryCsv filter;
+    filter.server = server_.get();
+    filter.mask = access.mask;
+    historyStore_.streamDay(date.c_str(), &beginGuestHistoryCsv, &writeGuestHistoryChunk, &filter);
+    if (!filter.headerSent) {
+      sendJson(404, "{\"error\":\"day_not_found\"}");
+    }
+    return;
+  }
   DayStreamContext ctx;
   ctx.server = server_.get();
   historyStore_.streamDay(date.c_str(), &beginDayStream, &writeDayChunk, &ctx);
@@ -219,19 +239,30 @@ void EspWebGateway::handleHistoryDay() {
 }
 
 void EspWebGateway::handleDeviceInfo() {
-  if (!permitRead()) {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  const HttpReadDecision access = decideHttpRead(guest_, authSessions_, token);
+  const bool identity = access.allows(auth::IGuestAccess::kTabGateway) ||
+                        access.allows(auth::IGuestAccess::kTabEsp);
+  if (!identity) {
+    sendJson(401, "{\"error\":\"unauthorized\"}");
     return;
   }
+  const bool guest = access.guest;
   const char* role = role_[0] != '\0' ? role_ : "hub";
   const auto status = store_.status();
+  const char* hubMac = guest ? "" : hubStaMac_;
+  const char* bmsMac = guest ? "" : bmsBridgeMac_;
+  const char* xtMac = guest ? "" : xtBridgeMac_;
+  const char* ecoMac = guest ? "" : ecoflowBridgeMac_;
   char json[512] = {};
   std::snprintf(json, sizeof(json),
-                "{\"role\":\"%s\",\"ntp\":%s,\"sd\":%s,"
+                "{\"role\":\"%s\",\"ntp\":%s,\"sd\":%s,\"webPort\":%u,"
                 "\"hubStaMac\":\"%s\",\"bmsBridgeMac\":\"%s\",\"xtBridgeMac\":\"%s\","
                 "\"ecoflowBridgeMac\":\"%s\"}",
                 role, status.ntpSynced ? "true" : "false",
-                historyStore_.isReady() ? "true" : "false", hubStaMac_,
-                bmsBridgeMac_, xtBridgeMac_, ecoflowBridgeMac_);
+                historyStore_.isReady() ? "true" : "false",
+                guest ? 0u : static_cast<unsigned>(status.webPort), hubMac, bmsMac, xtMac, ecoMac);
   sendJson(200, json);
 }
 

@@ -1,8 +1,9 @@
 #include "HttpApi/EspWebGateway.h"
 
-
 #include "Auth/CredentialPolicy.h"
 #include "Telemetry/BinaryTelemetryCodec.h"
+#include "HttpApi/HttpReadDecision.h"
+#include "Telemetry/GuestTelemetryView.h"
 #include "Util/SafeCopy.h"
 #include "HttpApi/JsonField.h"
 
@@ -99,6 +100,12 @@ bool EspWebGateway::begin(uint16_t port) {
   server_->on("/api/device", HTTP_GET, [this]() { handleDeviceInfo(); });
   server_->on("/api/guest", HTTP_ANY, [this]() { handleGuest(); });
   server_->on("/api/mic-gain", HTTP_ANY, [this]() { handleMicGain(); });
+  if (plugsHub_ != nullptr) {
+    plugsHttp_ = std::make_unique<ShellyPlugsHttp>(*server_, authSessions_);
+    plugsHttp_->setHub(plugsHub_);
+    plugsHttp_->setHistory(plugsHistory_);
+    plugsHttp_->registerRoutes();
+  }
   server_->onNotFound([this]() { handleNotFound(); });
   server_->begin();
   started_ = true;
@@ -106,9 +113,7 @@ bool EspWebGateway::begin(uint16_t port) {
 }
 
 void EspWebGateway::loop() {
-  if (started_ && server_) {
-    server_->handleClient();
-  }
+  if (started_ && server_) server_->handleClient();
 }
 
 void EspWebGateway::collectSessionToken(char* out, size_t capacity) const {
@@ -157,15 +162,11 @@ void EspWebGateway::sendJson(int code, const char* json) {
   server_->send(code, "application/json", json);
 }
 
-void EspWebGateway::sendUnauthorized() {
-  sendJson(401, "{\"error\":\"unauthorized\"}");
-}
-
 bool EspWebGateway::requireAuth() {
   char token[auth::kSessionTokenHexLen + 1] = {};
   collectSessionToken(token, sizeof(token));
   if (!authSessions_.isAuthenticated(token)) {
-    sendUnauthorized();
+    sendJson(401, "{\"error\":\"unauthorized\"}");
     return false;
   }
   return true;
@@ -222,14 +223,15 @@ void EspWebGateway::handleAuthStatus() {
   char token[auth::kSessionTokenHexLen + 1] = {};
   collectSessionToken(token, sizeof(token));
   const auto st = authSessions_.status(token);
-  const bool guest = guest_ != nullptr && guest_->enabled();
+  const bool guestEnabled = guest_ != nullptr && guest_->enabled();
+  const bool guest = guestEnabled && !st.authenticated;
   char json[192];
   std::snprintf(json, sizeof(json),
                 "{\"configured\":%s,\"pendingSetup\":%s,\"pendingReset\":%s,\"authenticated\":%s,"
-                "\"guest\":%s}",
+                "\"guest\":%s,\"guestEnabled\":%s}",
                 st.configured ? "true" : "false", st.pendingSetup ? "true" : "false",
                 st.pendingReset ? "true" : "false", st.authenticated ? "true" : "false",
-                guest ? "true" : "false");
+                guest ? "true" : "false", guestEnabled ? "true" : "false");
   sendJson(200, json);
 }
 
@@ -299,12 +301,19 @@ void EspWebGateway::handleAuthLogout() {
 }
 
 void EspWebGateway::handleApiTelemetryBinary() {
-  if (!permitRead()) {
+  char token[auth::kSessionTokenHexLen + 1] = {};
+  collectSessionToken(token, sizeof(token));
+  const HttpReadDecision access = decideHttpRead(guest_, authSessions_, token);
+  if (!access.allowed()) {
+    sendJson(401, "{\"error\":\"unauthorized\"}");
     return;
   }
   uint8_t payload[telemetry::BinaryTelemetryCodec::kMaxEncodedBytes];
   const size_t written =
-      telemetry::BinaryTelemetryCodec::encode(store_, payload, sizeof(payload));
+      access.guest
+          ? telemetry::BinaryTelemetryCodec::encode(telemetry::GuestTelemetryView(store_, access.mask),
+                                                   payload, sizeof(payload))
+          : telemetry::BinaryTelemetryCodec::encode(store_, payload, sizeof(payload));
   if (written == 0) {
     server_->send(500, "text/plain", "encode_failed");
     return;
@@ -355,6 +364,12 @@ void EspWebGateway::handleSolarCommand() {
 
 void EspWebGateway::handleNotFound() {
   const String path = server_->uri();
+  const bool asset = path.indexOf("..") < 0 &&
+                     (path.endsWith(".html") || path.endsWith(".js") || path.endsWith(".css"));
+  if (!asset) {
+    server_->send(404, "text/plain", "Not found");
+    return;
+  }
   if (path == "/app.css") {
     sendWithEtag("/app.css", "text/css");
     return;
@@ -381,4 +396,3 @@ void EspWebGateway::handleNotFound() {
 }
 
 }  // namespace wattcycle::web
-

@@ -91,4 +91,18 @@ bool extractJsonIntField(const char* json, const char* key, int& out) {
   return true;
 }
 
+bool extractJsonFloatField(const char* json, const char* key, float& out) {
+  const char* cursor = valueAfterKey(json, key);
+  if (cursor == nullptr) {
+    return false;
+  }
+  char* end = nullptr;
+  const double parsed = std::strtod(cursor, &end);
+  if (end == cursor) {
+    return false;
+  }
+  out = static_cast<float>(parsed);
+  return true;
+}
+
 }  // namespace wattcycle::web

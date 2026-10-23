@@ -10,5 +10,7 @@ bool extractJsonStringField(const char* json, const char* key, char* out, size_t
 bool extractJsonBoolField(const char* json, const char* key, bool& out);
 /// True when `key` is present as a JSON integer.
 bool extractJsonIntField(const char* json, const char* key, int& out);
+/// True when `key` is present as a JSON number (int or float).
+bool extractJsonFloatField(const char* json, const char* key, float& out);
 
 }  // namespace wattcycle::web

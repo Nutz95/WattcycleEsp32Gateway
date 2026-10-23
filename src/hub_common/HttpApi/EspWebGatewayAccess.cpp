@@ -1,5 +1,6 @@
 #include "HttpApi/EspWebGateway.h"
 
+#include "HttpApi/HttpReadDecision.h"
 #include "HttpApi/JsonField.h"
 
 #include <cstdio>
@@ -31,16 +32,18 @@ void EspWebGateway::setMicGain(audio::IMicGain& gain) {
   micGain_ = &gain;
 }
 
-bool EspWebGateway::permitRead() {
-  if (guest_ != nullptr && guest_->enabled()) {
-    return true;
-  }
-  return requireAuth();
+void EspWebGateway::setShellyPlugs(shelly::IShellyPlugHub& plugs,
+                                   shelly::IShellyPlugHistoryStore* history) {
+  plugsHub_ = &plugs;
+  plugsHistory_ = history;
 }
 
 void EspWebGateway::handleGuest() {
   if (server_->method() == HTTP_GET) {
-    if (!permitRead()) {
+    char token[auth::kSessionTokenHexLen + 1] = {};
+    collectSessionToken(token, sizeof(token));
+    if (!decideHttpRead(guest_, authSessions_, token).allowed()) {
+      sendJson(401, "{\"error\":\"unauthorized\"}");
       return;
     }
     const bool on = guest_ != nullptr && guest_->enabled();
@@ -67,14 +70,12 @@ void EspWebGateway::handleGuest() {
     sendJson(400, "{\"error\":\"invalid_json\"}");
     return;
   }
-  int tabs = 0;
-  if (extractJsonIntField(body, "tabs", tabs)) {
-    if (tabs < 0 || !guest_->setTabs(static_cast<uint32_t>(tabs))) {
-      sendJson(503, "{\"error\":\"sd_unavailable\"}");
-      return;
-    }
+  int tabs = static_cast<int>(guest_->tabs());
+  if (extractJsonIntField(body, "tabs", tabs) && tabs < 0) {
+    sendJson(400, "{\"error\":\"invalid_json\"}");
+    return;
   }
-  if (!guest_->setEnabled(enabled)) {
+  if (!guest_->update(enabled, static_cast<uint32_t>(tabs))) {
     sendJson(503, "{\"error\":\"sd_unavailable\"}");
     return;
   }
@@ -90,7 +91,7 @@ void EspWebGateway::handleMicGain() {
     return;
   }
   if (server_->method() == HTTP_GET) {
-    if (!permitRead()) {
+    if (!requireAuth()) {
       return;
     }
     char json[32] = {};

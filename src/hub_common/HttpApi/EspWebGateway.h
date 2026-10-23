@@ -4,6 +4,9 @@
 #include "Auth/IAuthSessionService.h"
 #include "Auth/IGuestAccess.h"
 #include "EspNow/IEspNowCommandSender.h"
+#include "HttpApi/ShellyPlugsHttp.h"
+#include "Shelly/IShellyPlugHistoryStore.h"
+#include "Shelly/IShellyPlugHub.h"
 #include "Storage/IDailyHistoryStore.h"
 #include "Telemetry/ITelemetryStore.h"
 #include "HttpApi/IWebGateway.h"
@@ -32,6 +35,9 @@ class EspWebGateway : public IWebGateway {
   void setGuestAccess(auth::IGuestAccess& guest);
   /// Optional. When unset, the mic-gain route answers 404.
   void setMicGain(audio::IMicGain& gain);
+  /// Optional. When unset, plug routes answer 404. History may be null.
+  void setShellyPlugs(shelly::IShellyPlugHub& plugs,
+                      shelly::IShellyPlugHistoryStore* history = nullptr);
 
  private:
   void handleRoot();
@@ -55,9 +61,7 @@ class EspWebGateway : public IWebGateway {
   bool parseAuthCredentials(char* username, size_t usernameCapacity, char* password,
                             size_t passwordCapacity);
   void sendJson(int code, const char* json);
-  void sendUnauthorized();
   bool requireAuth();
-  bool permitRead();
   fs::FS& files();
 
   telemetry::ITelemetryStore& store_;
@@ -66,6 +70,9 @@ class EspWebGateway : public IWebGateway {
   storage::IDailyHistoryStore& historyStore_;
   auth::IGuestAccess* guest_ = nullptr;
   audio::IMicGain* micGain_ = nullptr;
+  shelly::IShellyPlugHub* plugsHub_ = nullptr;
+  shelly::IShellyPlugHistoryStore* plugsHistory_ = nullptr;
+  std::unique_ptr<ShellyPlugsHttp> plugsHttp_;
   char role_[24] = {};
   char hubStaMac_[18] = {};
   char bmsBridgeMac_[18] = {};
