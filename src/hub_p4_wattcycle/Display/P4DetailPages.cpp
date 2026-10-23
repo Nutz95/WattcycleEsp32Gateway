@@ -36,6 +36,17 @@ void P4DetailPages::dispatchMeterCommand(uint8_t command) {
   }
 }
 
+void P4DetailPages::setGuestHandler(void (*handler)(void* user), void* user) {
+  guestHandler_ = handler;
+  guestUser_ = user;
+}
+
+void P4DetailPages::dispatchGuestToggle() {
+  if (guestHandler_ != nullptr) {
+    guestHandler_(guestUser_);
+  }
+}
+
 void P4DetailPages::show(HubPage page) {
   reveal(widgets_.wattcycle.root, page == HubPage::Wattcycle);
   reveal(widgets_.solar.root, page == HubPage::Solar);

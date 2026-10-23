@@ -97,6 +97,8 @@ bool EspWebGateway::begin(uint16_t port) {
   server_->on("/api/history/days", HTTP_GET, [this]() { handleHistoryDays(); });
   server_->on("/api/history/day", HTTP_GET, [this]() { handleHistoryDay(); });
   server_->on("/api/device", HTTP_GET, [this]() { handleDeviceInfo(); });
+  server_->on("/api/guest", HTTP_ANY, [this]() { handleGuest(); });
+  server_->on("/api/mic-gain", HTTP_ANY, [this]() { handleMicGain(); });
   server_->onNotFound([this]() { handleNotFound(); });
   server_->begin();
   started_ = true;
@@ -220,11 +222,14 @@ void EspWebGateway::handleAuthStatus() {
   char token[auth::kSessionTokenHexLen + 1] = {};
   collectSessionToken(token, sizeof(token));
   const auto st = authSessions_.status(token);
-  char json[160];
+  const bool guest = guest_ != nullptr && guest_->enabled();
+  char json[192];
   std::snprintf(json, sizeof(json),
-                "{\"configured\":%s,\"pendingSetup\":%s,\"pendingReset\":%s,\"authenticated\":%s}",
+                "{\"configured\":%s,\"pendingSetup\":%s,\"pendingReset\":%s,\"authenticated\":%s,"
+                "\"guest\":%s}",
                 st.configured ? "true" : "false", st.pendingSetup ? "true" : "false",
-                st.pendingReset ? "true" : "false", st.authenticated ? "true" : "false");
+                st.pendingReset ? "true" : "false", st.authenticated ? "true" : "false",
+                guest ? "true" : "false");
   sendJson(200, json);
 }
 
@@ -294,7 +299,7 @@ void EspWebGateway::handleAuthLogout() {
 }
 
 void EspWebGateway::handleApiTelemetryBinary() {
-  if (!requireAuth()) {
+  if (!permitRead()) {
     return;
   }
   uint8_t payload[telemetry::BinaryTelemetryCodec::kMaxEncodedBytes];

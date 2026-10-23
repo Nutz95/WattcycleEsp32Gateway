@@ -159,7 +159,7 @@ size_t appendDays(char* json, size_t cap, size_t pos, const char days[][11], siz
 }  // namespace
 
 void EspWebGateway::handleHistoryDays() {
-  if (!requireAuth()) {
+  if (!permitRead()) {
     return;
   }
   static char periods[48][8];
@@ -198,7 +198,7 @@ void EspWebGateway::handleHistoryDays() {
 }
 
 void EspWebGateway::handleHistoryDay() {
-  if (!requireAuth()) {
+  if (!permitRead()) {
     return;
   }
   if (!historyStore_.isReady()) {
@@ -219,7 +219,7 @@ void EspWebGateway::handleHistoryDay() {
 }
 
 void EspWebGateway::handleDeviceInfo() {
-  if (!requireAuth()) {
+  if (!permitRead()) {
     return;
   }
   const char* role = role_[0] != '\0' ? role_ : "hub";

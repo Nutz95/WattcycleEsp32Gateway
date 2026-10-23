@@ -48,6 +48,7 @@ void applyGateway(P4TextPage& page, const P4GatewayFields& fields) {
   setDetailValue(page.values[2], macOrDash(fields.ecoMac), fields.ecoUp ? kAccent : kDanger);
   setDetailValue(page.values[3], macOrDash(fields.solarMac), fields.solarUp ? kAccent : kDanger);
   setDetailValue(page.values[4], fields.wifiUp ? "up" : "down", fields.wifiUp ? kAccent : kDanger);
+  setDetailValue(page.values[5], fields.guestOn ? "on" : "off", fields.guestOn ? kAccent : kMuted);
 }
 
 void formatUptime(char* line, size_t capacity, int seconds) {

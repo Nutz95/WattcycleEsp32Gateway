@@ -6,9 +6,18 @@
   </header>
   <p class="hint">Session cookies stay on this gateway only (HttpOnly, SameSite=Strict).</p>
   <div class="account-actions">
+    <button type="button" id="signInBtn" class="primary-btn" hidden>Sign in</button>
     <button type="button" id="logoutBtn" class="primary-btn">Sign out</button>
     <p class="error" id="logoutError" hidden></p>
   </div>
+  <h3>Guest access</h3>
+  <label class="hint" for="guestAccess">
+    <input type="checkbox" id="guestAccess" />
+    Allow the dashboard, history, and camera without signing in
+  </label>
+  <p class="hint" id="guestHint">Off by default. Stored on the SD card. Guests see the tabs you tick. The camera and meter commands stay signed in.</p>
+  <div id="guestTabs"></div>
+  <p class="error" id="guestError" hidden></p>
   <h3>Reset credentials</h3>
   <ol class="steps">
     <li>On the M5 hub, hold <strong>A</strong> (left) about 3 seconds until the reset prompt appears, then confirm with <strong>B</strong>.</li>

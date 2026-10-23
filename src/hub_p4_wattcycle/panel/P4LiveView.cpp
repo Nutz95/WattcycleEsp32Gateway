@@ -13,6 +13,7 @@ namespace wattcycle::panel {
 void P4LiveView::begin(i2c_master_bus_handle_t bus, auth::IAuthSessionService& auth) {
   bus_ = bus;
   auth_ = &auth;
+  micPump_.start(microphone);
   xTaskCreatePinnedToCore(&P4LiveView::taskMain, "liveView", 16384, this, 1, nullptr, 1);
 }
 

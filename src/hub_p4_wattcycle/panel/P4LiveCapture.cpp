@@ -123,14 +123,19 @@ bool P4LiveView::openMic() {
   micOpen_ = microphone.begin(I2S_MODE_STD, 16000, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO);
   if (!micOpen_) {
     codec_.end();
+    return false;
   }
-  return micOpen_;
+  micPump_.setRunning(true);
+  return true;
 }
 
 void P4LiveView::closeMic() {
   if (!micOpen_) {
     return;
   }
+  micPump_.setRunning(false);
+  delay(30);
+  micPump_.clear();
   microphone.end();
   codec_.end();
   micOpen_ = false;
@@ -154,20 +159,7 @@ int P4LiveView::readMicPeak() {
   if (!micOpen_) {
     return 0;
   }
-  int16_t samples[256] = {};
-  const size_t got = microphone.readBytes(reinterpret_cast<char*>(samples), sizeof(samples));
-  if (got < 4) {
-    return 0;
-  }
-  int peak = 0;
-  const size_t count = got / sizeof(int16_t);
-  for (size_t index = 0; index < count; ++index) {
-    const int value = samples[index] < 0 ? -samples[index] : samples[index];
-    if (value > peak) {
-      peak = value;
-    }
-  }
-  return (peak * 100) / 32768;
+  return micPump_.peak();
 }
 
 void P4LiveView::pollPanel() {
@@ -305,9 +297,9 @@ void P4LiveView::pollMic() {
     micStarted_ = true;
   }
   int drained = 0;
-  while (drained < 8192 && microphone.available() >= 4) {
+  while (drained < 8192) {
     uint8_t chunk[1024] = {};
-    const size_t got = microphone.readBytes(reinterpret_cast<char*>(chunk), sizeof(chunk));
+    const size_t got = micPump_.take(chunk, sizeof(chunk));
     if (got == 0) {
       break;
     }

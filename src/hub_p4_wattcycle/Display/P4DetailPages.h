@@ -19,11 +19,17 @@ class P4DetailPages {
   void setMeterCommandHandler(void (*handler)(uint8_t command, void* user), void* user);
   /// Forward one reset button to the handler set above.
   void dispatchMeterCommand(uint8_t command);
+  /// Gateway guest button calls this. The handler flips the SD flag.
+  void setGuestHandler(void (*handler)(void* user), void* user);
+  /// Forward the guest button to the handler set above.
+  void dispatchGuestToggle();
 
  private:
   P4DetailWidgets widgets_;
   void (*meterCommand_)(uint8_t command, void* user) = nullptr;
   void* meterUser_ = nullptr;
+  void (*guestHandler_)(void* user) = nullptr;
+  void* guestUser_ = nullptr;
 };
 
 }  // namespace wattcycle::display

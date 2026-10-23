@@ -66,6 +66,7 @@
         renderLogin(result.payload.error || "Login failed");
         return;
       }
+      global.WattcycleAuth.guest = false;
       global.WattcycleAuth.onAuthenticated();
     });
   }
@@ -127,6 +128,7 @@
     try {
       const status = await fetchStatus();
       if (status.authenticated) {
+        global.WattcycleAuth.guest = false;
         showApp();
         onAuthenticated();
         return;
@@ -137,6 +139,12 @@
         } else {
           renderSetup();
         }
+        return;
+      }
+      if (status.guest) {
+        global.WattcycleAuth.guest = true;
+        showApp();
+        onAuthenticated();
         return;
       }
       renderLogin(status.pendingReset ? "Password reset pending on device." : "");
@@ -153,6 +161,11 @@
   global.WattcycleAuth = {
     bootstrap: bootstrap,
     handleUnauthorized: handleUnauthorized,
-    showApp: showApp
+    showApp: showApp,
+    guest: false,
+    requestSignIn: function () {
+      showAuth();
+      renderLogin("");
+    }
   };
 })(window);

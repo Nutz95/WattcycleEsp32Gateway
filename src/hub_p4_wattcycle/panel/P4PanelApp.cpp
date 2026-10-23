@@ -17,12 +17,15 @@
 #include "P4SdHistory.h"
 #include "P4StaRadio.h"
 #include "P4WebPublish.h"
+#include "Storage/HistorySampleFill.h"
 #include "Telemetry/InMemoryTelemetryStore.h"
 #include "Time/NtpClock.h"
 #include "esp_heap_caps.h"
 #include "driver/i2c_master.h"
 #include "P4CameraPage.h"
+#include "P4GuestAccess.h"
 #include "P4LiveView.h"
+#include "P4MicLevel.h"
 #include "P4ScreenSleep.h"
 #include "lvgl.h"
 #include "pins_config.h"
@@ -46,6 +49,8 @@ wattcycle::time_sync::NtpClock ntpClock;
 wattcycle::auth::NvsCredentialStore credentials;
 wattcycle::auth::AuthService authService(credentials);
 P4SdHistory history;
+P4GuestAccess guestAccess;
+P4MicLevel micLevel;
 P4MeterCommands meterCommands;
 wattcycle::web::EspWebGateway webGateway(store, authService, meterCommands, history);
 wattcycle::esp_sys::EspHealthSampler health;
@@ -58,6 +63,7 @@ void onAuthTap(void* /*user*/) {
 }
 
 void paintBoard() {
+  board.gateway.guestOn = guestAccess.enabled();
   overview.apply(board.overview);
   overview.setLinks(board.gateway.wifiUp,
                     board.gateway.bmsUp || board.gateway.ecoUp || board.gateway.solarUp);
@@ -82,22 +88,7 @@ void recordHistory() {
   }
   storage::HistorySample sample = {};
   sample.epochUtc = ntpClock.nowEpoch();
-  const auto battery = store.battery();
-  const auto solar = store.solar();
-  sample.socPercent = static_cast<uint8_t>(battery.stateOfChargePercent);
-  sample.packVoltageV = battery.moduleVoltage;
-  sample.packCurrentA = battery.currentAmps;
-  sample.packPowerW = battery.powerWatts;
-  sample.packValid = battery.valid;
-  sample.packRemainingAh = battery.remainingCapacityAh;
-  sample.packMosTempC = battery.mosTemperatureC;
-  sample.packPcbTempC = battery.pcbTemperatureC;
-  sample.solarVoltageV = solar.voltageV;
-  sample.solarCurrentA = solar.currentA;
-  sample.solarPowerW = solar.powerW;
-  sample.solarValid = solar.meterValid;
-  sample.solarEnergyWh = solar.energyWh;
-  sample.solarCapacityAh = solar.capacityAh;
+  storage::fillHistorySample(sample, store.battery(), store.solar(), store.ecoflow());
   history.append(sample);
 }
 
@@ -116,6 +107,16 @@ i2c_master_bus_handle_t panelBus = nullptr;
 
 void onMeterCommand(uint8_t command, void* /*user*/) {
   meterCommands.sendMeterCommand(command);
+}
+
+void onGuestToggle(void* /*user*/) {
+  const bool next = !guestAccess.enabled();
+  if (!guestAccess.setEnabled(next)) {
+    Serial.println("guest: sd write failed");
+    return;
+  }
+  Serial.printf("guest access %s\n", next ? "on" : "off");
+  paintBoard();
 }
 
 void onPanelPage(uint8_t index, void* /*user*/) {
@@ -207,7 +208,8 @@ void setupPanel() {
   screenSleep.begin(lcd, touch, lcdPanels.panel);
   detailPages.mount(lv_scr_act());
   detailPages.setMeterCommandHandler(onMeterCommand, nullptr);
-  cameraPage.mount(lv_scr_act(), liveView);
+  detailPages.setGuestHandler(onGuestToggle, nullptr);
+  cameraPage.mount(lv_scr_act(), liveView, micLevel);
   cameraPage.show(false);
   overview.setPageHandler(onPanelPage, nullptr);
   overview.mount(lv_scr_act(), "waiting for bridges");
@@ -216,12 +218,15 @@ void setupPanel() {
   ntpClock.begin();
   authService.begin();
   history.begin();
+  guestAccess.begin();
   P4WebPublish webFiles;
   if (webFiles.install()) {
     webGateway.useFiles(SD_MMC);
   }
   authTap.mount(lv_scr_act());
   authTap.setHandler(onAuthTap, nullptr);
+  webGateway.setGuestAccess(guestAccess);
+  webGateway.setMicGain(micLevel);
   webGateway.setDeviceIdentity("p4_hub", "", P4_BMS_MAC, P4_SOLAR_MAC, P4_ECO_MAC);
   if (!webGateway.begin(6789)) {
     Serial.println("web fs failed");

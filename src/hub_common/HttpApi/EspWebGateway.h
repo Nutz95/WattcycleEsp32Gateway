@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Audio/IMicGain.h"
 #include "Auth/IAuthSessionService.h"
+#include "Auth/IGuestAccess.h"
 #include "EspNow/IEspNowCommandSender.h"
 #include "Storage/IDailyHistoryStore.h"
 #include "Telemetry/ITelemetryStore.h"
@@ -26,6 +28,10 @@ class EspWebGateway : public IWebGateway {
                          const char* xtBridgeMac, const char* ecoflowBridgeMac = "");
   /// Serve the site from this volume and leave LittleFS unmounted. Call before begin().
   void useFiles(fs::FS& volume);
+  /// Optional. When unset, guest reads stay closed.
+  void setGuestAccess(auth::IGuestAccess& guest);
+  /// Optional. When unset, the mic-gain route answers 404.
+  void setMicGain(audio::IMicGain& gain);
 
  private:
   void handleRoot();
@@ -38,6 +44,8 @@ class EspWebGateway : public IWebGateway {
   void handleAuthSetup();
   void handleAuthLogin();
   void handleAuthLogout();
+  void handleGuest();
+  void handleMicGain();
   void handleNotFound();
   bool trySendCached(const char* path, const char* contentType);
   void sendWithEtag(const char* path, const char* contentType);
@@ -49,12 +57,15 @@ class EspWebGateway : public IWebGateway {
   void sendJson(int code, const char* json);
   void sendUnauthorized();
   bool requireAuth();
+  bool permitRead();
   fs::FS& files();
 
   telemetry::ITelemetryStore& store_;
   auth::IAuthSessionService& authSessions_;
   espnow_rx::IEspNowCommandSender& espNow_;
   storage::IDailyHistoryStore& historyStore_;
+  auth::IGuestAccess* guest_ = nullptr;
+  audio::IMicGain* micGain_ = nullptr;
   char role_[24] = {};
   char hubStaMac_[18] = {};
   char bmsBridgeMac_[18] = {};

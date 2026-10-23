@@ -3,6 +3,7 @@
 #include "Auth/IAuthSessionService.h"
 #include "P4Es8311.h"
 #include "P4LiveClaim.h"
+#include "P4MicPump.h"
 
 #include "driver/i2c_master.h"
 #include "driver/jpeg_encode.h"
@@ -61,6 +62,7 @@ class P4LiveView {
   bool nullVfsReleased_ = false;
   i2c_master_bus_handle_t bus_ = nullptr;
   auth::IAuthSessionService* auth_ = nullptr;
+  P4MicPump micPump_;
   P4Es8311 codec_;
   volatile bool wantsBlank_ = false;
   volatile bool panelRequested_ = false;

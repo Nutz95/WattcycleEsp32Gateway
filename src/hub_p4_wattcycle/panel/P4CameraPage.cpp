@@ -16,10 +16,19 @@ namespace {
 constexpr int kPreviewW = 320;
 constexpr int kPreviewH = 180;
 
+void onMicSlider(lv_event_t* event) {
+  auto* mic = static_cast<audio::IMicGain*>(lv_event_get_user_data(event));
+  if (mic == nullptr) {
+    return;
+  }
+  mic->setPercent(lv_slider_get_value(lv_event_get_target(event)));
+}
+
 }  // namespace
 
-void P4CameraPage::mount(lv_obj_t* parent, P4LiveView& live) {
+void P4CameraPage::mount(lv_obj_t* parent, P4LiveView& live, audio::IMicGain& mic) {
   live_ = &live;
+  mic_ = &mic;
   root_ = wattcycle::display::makeDetailRoot(parent);
   lv_obj_t* title = lv_label_create(root_);
   lv_label_set_text(title, "Camera");
@@ -59,12 +68,24 @@ void P4CameraPage::mount(lv_obj_t* parent, P4LiveView& live) {
   lv_obj_set_style_border_width(vuFill_, 0, 0);
   lv_obj_set_style_radius(vuFill_, 4, 0);
 
+  lv_obj_t* volumeName = lv_label_create(root_);
+  lv_label_set_text(volumeName, "Volume");
+  lv_obj_set_style_text_font(volumeName, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(volumeName, lv_color_hex(wattcycle::display::kMuted), 0);
+  lv_obj_set_pos(volumeName, 16, 348);
+  lv_obj_t* volume = lv_slider_create(root_);
+  lv_obj_set_pos(volume, 110, 348);
+  lv_obj_set_width(volume, 340);
+  lv_slider_set_range(volume, 0, 100);
+  lv_slider_set_value(volume, mic_->percent(), LV_ANIM_OFF);
+  lv_obj_add_event_cb(volume, onMicSlider, LV_EVENT_VALUE_CHANGED, mic_);
+
   lv_obj_t* hint = lv_label_create(root_);
   lv_label_set_text(hint, "Web stream is blocked while this page is open.\nLeave the page to free the camera.");
   lv_obj_set_width(hint, 448);
   lv_obj_set_style_text_font(hint, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(hint, lv_color_hex(wattcycle::display::kMuted), 0);
-  lv_obj_set_pos(hint, 16, 348);
+  lv_obj_set_pos(hint, 16, 400);
 }
 
 void P4CameraPage::show(bool visible) {

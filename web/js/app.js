@@ -90,7 +90,7 @@
 
       const eco = data.ecoflow || {};
       const ecoflowHistory =
-        eco.valid && eco.linkFresh
+        eco.linkFresh && eco.bleConnected && eco.valid
           ? window.WattcycleEcoflowHistory.pushSample({
               t: Date.now(),
               soc: eco.soc,
@@ -121,9 +121,68 @@
     }
   }
 
+  const guestTabNames = [
+    "overview", "dashboard", "solar", "wattcycle", "ecoflow", "history",
+    "cells", "temperatures", "warnings", "gateway", "esp"
+  ];
+
+  function applyGuest(active, mask) {
+    const banner = document.getElementById("guestBanner");
+    if (banner) {
+      banner.hidden = !active;
+    }
+    document.querySelectorAll(".tab").forEach(function (tab) {
+      const name = tab.getAttribute("data-tab");
+      if (!active || name === "account") {
+        tab.hidden = false;
+        return;
+      }
+      if (name === "camera") {
+        tab.hidden = true;
+        return;
+      }
+      const index = guestTabNames.indexOf(name);
+      tab.hidden = index < 0 || ((mask >> index) & 1) === 0;
+    });
+    if (active) {
+      const current = document.querySelector(".tab.active");
+      if (!current || current.hidden) {
+        const visible = document.querySelector(".tab:not([hidden])");
+        if (visible) {
+          activateTab(visible.getAttribute("data-tab"));
+        }
+      }
+    }
+  }
+
+  async function refreshGuest() {
+    if (!window.WattcycleAuth || !window.WattcycleAuth.guest) {
+      applyGuest(false, 0);
+      return;
+    }
+    let mask = (1 << guestTabNames.length) - 1;
+    try {
+      const response = await fetch("/api/guest", { cache: "no-store", credentials: "same-origin" });
+      if (response.ok) {
+        const payload = await response.json();
+        if (typeof payload.tabs === "number") {
+          mask = payload.tabs;
+        }
+      }
+    } catch (error) {
+      mask = (1 << guestTabNames.length) - 1;
+    }
+    applyGuest(true, mask);
+  }
+
+  window.WattcycleGuest = { refresh: refreshGuest };
+
   function startDashboard() {
     window.WattcycleAuth.showApp();
-    activateTab("overview");
+    if (!window.WattcycleAuth.guest) {
+      activateTab("overview");
+    }
+    refreshGuest();
     refresh();
     if (refreshTimer) {
       clearInterval(refreshTimer);
