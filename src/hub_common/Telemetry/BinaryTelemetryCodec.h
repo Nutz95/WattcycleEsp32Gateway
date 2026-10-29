@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "Telemetry/ITelemetryStore.h"
+#include "Telemetry/ITelemetryReader.h"
 
 namespace wattcycle::telemetry {
 
@@ -15,7 +15,7 @@ class BinaryTelemetryCodec {
   static constexpr uint8_t kVersion = 9;
   static constexpr size_t kMaxEncodedBytes = 720;
 
-  static size_t encode(const ITelemetryStore& store, uint8_t* buffer, size_t capacity);
+  static size_t encode(const ITelemetryReader& store, uint8_t* buffer, size_t capacity);
 };
 
 }  // namespace wattcycle::telemetry

@@ -29,7 +29,7 @@ SolarBridgeTelemetry solarOverview(const SolarBridgeTelemetry& full) {
 
 }  // namespace
 
-GuestTelemetryView::GuestTelemetryView(const ITelemetryStore& inner, uint32_t mask)
+GuestTelemetryView::GuestTelemetryView(const ITelemetryReader& inner, uint32_t mask)
     : inner_(inner), mask_(mask & auth::IGuestAccess::kTabMask) {}
 
 bool GuestTelemetryView::allows(uint32_t bit) const {

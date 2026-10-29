@@ -25,11 +25,11 @@ class AuthService : public IAuthService {
   void onCancelHeld(bool held, uint32_t nowMs) override;
   void onConfirmPressed() override;
   void onCancelPressed() override;
+  bool beginResetRequest() override;
 
  private:
   bool confirmSetup();
   void cancelPending();
-  bool beginResetRequest();
   bool confirmReset();
   bool recordLoginFailure(uint32_t nowMs, char* error, size_t errorCapacity);
   uint32_t nowMs() const;

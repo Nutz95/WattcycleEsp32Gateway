@@ -101,7 +101,7 @@ void writeEcoFlowRuntime(uint8_t*& cursor, const EcoFlowBridgeTelemetry& ecoflow
 
 }  // namespace
 
-size_t BinaryTelemetryCodec::encode(const ITelemetryStore& store, uint8_t* buffer,
+size_t BinaryTelemetryCodec::encode(const ITelemetryReader& store, uint8_t* buffer,
                                     size_t capacity) {
   if (buffer == nullptr || capacity < 128) {
     return 0;
