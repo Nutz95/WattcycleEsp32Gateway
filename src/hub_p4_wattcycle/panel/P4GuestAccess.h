@@ -7,11 +7,14 @@ namespace wattcycle::panel {
 /// Guest flag in `/guest.cfg` on the SD card. A missing file means off.
 class P4GuestAccess : public auth::IGuestAccess {
  public:
+  /// Load `/guest.cfg` from the SD card (missing file means guest off).
   void begin();
   bool enabled() const override;
   uint32_t tabs() const override;
   bool setEnabled(bool on) override;
   bool setTabs(uint32_t tabs) override;
+  /// Write the switch and the tab mask together.
+  bool update(bool enabled, uint32_t tabs) override;
 
  private:
   bool store();

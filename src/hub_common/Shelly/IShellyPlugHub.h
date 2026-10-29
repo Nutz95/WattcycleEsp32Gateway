@@ -13,10 +13,15 @@ class IShellyPlugHub {
  public:
   virtual ~IShellyPlugHub() = default;
 
+  /// True while listen mode accepts unknown device ids.
   virtual bool listenOpen() const = 0;
+  /// Open or close listen mode; `nowMs` starts the listen window.
   virtual void setListen(bool open, uint32_t nowMs) = 0;
+  /// Add `id` to the whitelist with an optional display name.
   virtual bool authorize(const char* id, const char* name) = 0;
+  /// Change the display name of an authorized plug.
   virtual bool rename(const char* id, const char* name) = 0;
+  /// Remove `id` from the whitelist.
   virtual bool revoke(const char* id) = 0;
   /// Copy current display name for an authorized id.
   virtual bool copyName(const char* id, char* out, size_t capacity) const = 0;
@@ -32,6 +37,7 @@ class IShellyPlugHub {
 
   /// Ingest one UDP JSON datagram. `epochUtc` may be 0 when NTP is down.
   virtual void ingest(const char* json, uint32_t nowMs, std::time_t epochUtc) = 0;
+  /// Expire listen, roll the UTC day baseline, and drop stale posters.
   virtual void tick(uint32_t nowMs, std::time_t epochUtc) = 0;
 };
 

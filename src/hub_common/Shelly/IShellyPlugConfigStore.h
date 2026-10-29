@@ -13,10 +13,12 @@ class IShellyPlugConfigStore {
   virtual ~IShellyPlugConfigStore() = default;
   /// Load whitelist entries. Returns count written into `out`.
   virtual size_t loadAuthorized(ShellyPlugIdentity* out, size_t capacity) = 0;
+  /// Replace the persisted whitelist.
   virtual bool saveAuthorized(const ShellyPlugIdentity* entries, size_t count) = 0;
   /// Day key YYYYMMDD UTC and baseline Wh per id. Missing id leaves baseline unset.
   virtual bool loadDayBaseline(uint32_t& dayYyyymmdd, float* whBySlot, char ids[][kShellyIdCapacity],
                                size_t capacity, size_t& count) = 0;
+  /// Persist the UTC day key and per-id Wh baselines.
   virtual bool saveDayBaseline(uint32_t dayYyyymmdd, const float* whBySlot,
                                const char ids[][kShellyIdCapacity], size_t count) = 0;
 };

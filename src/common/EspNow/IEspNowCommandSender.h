@@ -8,6 +8,7 @@ namespace wattcycle::espnow_rx {
 class IEspNowCommandSender {
  public:
   virtual ~IEspNowCommandSender() = default;
+  /// Send one XT369P meter command byte to the peer bridge.
   virtual bool sendMeterCommand(uint8_t command) = 0;
 };
 

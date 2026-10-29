@@ -41,8 +41,11 @@ using HistoryChunkSink = bool (*)(const uint8_t* data, size_t length, void* user
 class IDailyHistoryStore {
  public:
   virtual ~IDailyHistoryStore() = default;
+  /// Mount or open the history volume.
   virtual bool begin() = 0;
+  /// True when day files can be listed and written.
   virtual bool isReady() const = 0;
+  /// Append one pack/solar/eco sample row for the current UTC day.
   virtual void append(const HistorySample& sample) = 0;
   /// Fills out[i] with "YYYY-MM-DD"; returns count written.
   virtual size_t listDays(char out[][11], size_t maxDays) const = 0;
