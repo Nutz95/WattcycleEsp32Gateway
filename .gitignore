@@ -91,3 +91,4 @@ docs/local/
 tools/python_guardrails/
 tools/esp_cpp_guardrails/
 third_party/esp_ipa_tools/
+tools/pentesting/__pycache__/
