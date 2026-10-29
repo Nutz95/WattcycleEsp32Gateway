@@ -1,33 +1,50 @@
 #include "HttpApi/GuestHistoryCsv.h"
 
 #include "Auth/IGuestAccess.h"
+#include "Storage/HistoryCsvColumn.h"
 
 #include <cstring>
 
 namespace wattcycle::web {
 namespace {
 
+/// Guest tab bits that may see this column. `kAlways` keeps the field for every guest.
+constexpr uint32_t kAlways = 0xffffffffu;
+
+constexpr uint32_t kGuestTabsByColumn[static_cast<size_t>(storage::HistoryCsvColumn::Count)] = {
+    kAlways,                                          // Epoch
+    auth::IGuestAccess::kTabWattcycle,                // Soc
+    auth::IGuestAccess::kTabWattcycle,                // PackV
+    auth::IGuestAccess::kTabWattcycle,                // PackA
+    auth::IGuestAccess::kTabWattcycle,                // PackW
+    auth::IGuestAccess::kTabSolar,                    // SolarV
+    auth::IGuestAccess::kTabSolar,                    // SolarA
+    auth::IGuestAccess::kTabSolar,                    // SolarW
+    auth::IGuestAccess::kTabWattcycle,                // PackOk
+    auth::IGuestAccess::kTabSolar,                    // SolarOk
+    auth::IGuestAccess::kTabWattcycle,                // PackAh
+    auth::IGuestAccess::kTabWattcycle | auth::IGuestAccess::kTabTemperatures,  // MosC
+    auth::IGuestAccess::kTabWattcycle | auth::IGuestAccess::kTabTemperatures,  // PcbC
+    auth::IGuestAccess::kTabSolar,                    // SolarWh
+    auth::IGuestAccess::kTabSolar,                    // SolarAh
+    auth::IGuestAccess::kTabEcoFlow,                  // EcoOk
+    auth::IGuestAccess::kTabEcoFlow,                  // EcoSoc
+    auth::IGuestAccess::kTabEcoFlow,                  // EcoAcOut
+    auth::IGuestAccess::kTabEcoFlow,                  // EcoAcIn
+    auth::IGuestAccess::kTabEcoFlow,                  // EcoDc
+    auth::IGuestAccess::kTabEcoFlow,                  // EcoUsb
+};
+
 bool keepHistoryColumn(uint32_t mask, int index) {
-  if (index <= 0) {
+  storage::HistoryCsvColumn column = storage::HistoryCsvColumn::Epoch;
+  if (!storage::historyCsvColumnAt(index, column)) {
+    return false;
+  }
+  const uint32_t tabs = kGuestTabsByColumn[static_cast<size_t>(column)];
+  if (tabs == kAlways) {
     return true;
   }
-  const bool pack = (mask & auth::IGuestAccess::kTabWattcycle) != 0;
-  const bool temps = (mask & auth::IGuestAccess::kTabTemperatures) != 0;
-  const bool solar = (mask & auth::IGuestAccess::kTabSolar) != 0;
-  const bool eco = (mask & auth::IGuestAccess::kTabEcoFlow) != 0;
-  if (index == 11 || index == 12) {
-    return pack || temps;
-  }
-  if (index <= 4 || index == 8 || index == 10) {
-    return pack;
-  }
-  if (index <= 7 || index == 9 || index == 13 || index == 14) {
-    return solar;
-  }
-  if (index >= 15 && index <= 20) {
-    return eco;
-  }
-  return false;
+  return (mask & tabs) != 0;
 }
 
 bool writeFilteredLine(GuestHistoryCsv* ctx, char* line) {
@@ -51,7 +68,8 @@ bool writeFilteredLine(GuestHistoryCsv* ctx, char* line) {
       rebuilt[pos++] = ',';
     }
     const bool keep = header || keepHistoryColumn(ctx->mask, index);
-    const char* value = keep && fields[index] != nullptr ? fields[index] : "0";
+    // Empty field when redacted so guests do not confuse denial with a real zero.
+    const char* value = keep && fields[index] != nullptr ? fields[index] : "";
     const size_t len = std::strlen(value);
     if (pos + len >= sizeof(rebuilt)) {
       break;
@@ -71,7 +89,7 @@ bool beginGuestHistoryCsv(size_t /*totalBytes*/, void* user) {
     return false;
   }
   ctx->server->setContentLength(CONTENT_LENGTH_UNKNOWN);
-  ctx->server->send(200, "text/csv", "");
+  ctx->server->send(200, "text/csv; charset=utf-8", "");
   ctx->headerSent = true;
   return true;
 }
