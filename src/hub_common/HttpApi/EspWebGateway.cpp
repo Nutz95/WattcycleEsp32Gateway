@@ -216,7 +216,7 @@ void EspWebGateway::sendWithEtag(const char* path, const char* contentType) {
 }
 
 void EspWebGateway::handleRoot() {
-  sendWithEtag("/index.html", "text/html");
+  sendWithEtag("/index.html", "text/html; charset=utf-8");
 }
 
 void EspWebGateway::handleAuthStatus() {
@@ -371,21 +371,21 @@ void EspWebGateway::handleNotFound() {
     return;
   }
   if (path == "/app.css") {
-    sendWithEtag("/app.css", "text/css");
+    sendWithEtag("/app.css", "text/css; charset=utf-8");
     return;
   }
   if (path == "/app.js") {
-    sendWithEtag("/app.js", "application/javascript");
+    sendWithEtag("/app.js", "application/javascript; charset=utf-8");
     return;
   }
   if (files().exists(path)) {
-    String contentType = "text/plain";
+    String contentType = "text/plain; charset=utf-8";
     if (path.endsWith(".css")) {
-      contentType = "text/css";
+      contentType = "text/css; charset=utf-8";
     } else if (path.endsWith(".js")) {
-      contentType = "application/javascript";
+      contentType = "application/javascript; charset=utf-8";
     } else if (path.endsWith(".html")) {
-      contentType = "text/html";
+      contentType = "text/html; charset=utf-8";
     }
     File file = files().open(path, "r");
     server_->streamFile(file, contentType);

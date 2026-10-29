@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Bundles modular web/ sources into compact LittleFS assets under data/.
 #>
@@ -9,8 +9,17 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $webRoot = Join-Path $repoRoot "web"
 $dataRoot = Join-Path $repoRoot "data"
+$utf8 = New-Object System.Text.UTF8Encoding $false
 
 New-Item -ItemType Directory -Force -Path $dataRoot | Out-Null
+
+function Read-Utf8Text([string]$path) {
+  return [System.IO.File]::ReadAllText($path, $utf8)
+}
+
+function Write-Utf8NoBom([string]$path, [string]$text) {
+  [System.IO.File]::WriteAllText($path, $text, $utf8)
+}
 
 function Minify-Css([string]$text) {
   $text = [regex]::Replace($text, '/\*[\s\S]*?\*/', '')
@@ -31,20 +40,20 @@ function Minify-Js([string]$text) {
   return $joined.Trim()
 }
 
-# HTML: inject view fragments
-$html = Get-Content (Join-Path $webRoot "index.html") -Raw
+# HTML: inject view fragments (UTF-8 in, UTF-8 out — never Windows ANSI)
+$html = Read-Utf8Text (Join-Path $webRoot "index.html")
 $views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "cells", "temperatures", "warnings", "gateway", "esp", "plugs", "camera", "account")
 foreach ($view in $views) {
-  $fragment = Get-Content (Join-Path $webRoot "views\$view.html") -Raw
+  $fragment = Read-Utf8Text (Join-Path $webRoot "views\$view.html")
   $html = $html.Replace("<!--VIEW:$view-->", $fragment.Trim())
 }
 $html = [regex]::Replace($html, '>\s+<', '><')
 $html = $html.Trim()
-Set-Content -Path (Join-Path $dataRoot "index.html") -Value $html -NoNewline
+Write-Utf8NoBom (Join-Path $dataRoot "index.html") $html
 
 # CSS
-$css = Get-Content (Join-Path $webRoot "css\app.css") -Raw
-Set-Content -Path (Join-Path $dataRoot "app.css") -Value (Minify-Css $css) -NoNewline
+$css = Read-Utf8Text (Join-Path $webRoot "css\app.css")
+Write-Utf8NoBom (Join-Path $dataRoot "app.css") (Minify-Css $css)
 
 # JS bundle order matters
 $jsParts = @(
@@ -71,10 +80,10 @@ $jsParts = @(
   "js\views\account.js",
   "js\app.js"
 ) | ForEach-Object {
-  Minify-Js (Get-Content (Join-Path $webRoot $_) -Raw)
+  Minify-Js (Read-Utf8Text (Join-Path $webRoot $_))
 }
 $bundle = ($jsParts -join "`n")
-Set-Content -Path (Join-Path $dataRoot "app.js") -Value $bundle -NoNewline
+Write-Utf8NoBom (Join-Path $dataRoot "app.js") $bundle
 $stamp = (Get-FileHash (Join-Path $dataRoot "index.html")).Hash.Substring(0, 16) +
     (Get-FileHash (Join-Path $dataRoot "app.css")).Hash.Substring(0, 16) +
     (Get-FileHash (Join-Path $dataRoot "app.js")).Hash.Substring(0, 16)
@@ -90,4 +99,3 @@ Set-Content -Path (Join-Path $dataRoot "bundle.txt") -Value $stamp -NoNewline -E
 
 Write-Host "Bundled web assets -> data/ (index.html, app.css, app.js)" -ForegroundColor Green
 exit 0
-
