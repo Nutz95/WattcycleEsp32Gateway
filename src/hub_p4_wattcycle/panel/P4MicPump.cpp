@@ -11,15 +11,15 @@ void P4MicPump::start(I2SClass& microphone) {
   if (ring_ == nullptr) {
     ring_ = static_cast<uint8_t*>(heap_caps_malloc(kCapacity, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
   }
-  if (started_) {
-    return;
-  }
-  started_ = true;
-  xTaskCreatePinnedToCore(&P4MicPump::taskMain, "micPump", 6144, this, 3, nullptr, 0);
 }
 
 void P4MicPump::setRunning(bool running) {
   running_ = running;
+  if (!running || started_ || microphone_ == nullptr) {
+    return;
+  }
+  started_ = true;
+  xTaskCreatePinnedToCore(&P4MicPump::taskMain, "micPump", 6144, this, 3, nullptr, 0);
 }
 
 void P4MicPump::clear() {
@@ -105,7 +105,7 @@ void P4MicPump::run() {
   uint8_t encoded[P4AdpcmEncoder::kFrameBytes * 2];
   for (;;) {
     if (!running_ || microphone_ == nullptr || ring_ == nullptr) {
-      vTaskDelay(pdMS_TO_TICKS(20));
+      vTaskDelay(pdMS_TO_TICKS(200));
       continue;
     }
     if (microphone_->available() < 4) {

@@ -1,8 +1,5 @@
 (function (global) {
-  const guestTabNames = [
-    "overview", "dashboard", "solar", "wattcycle", "ecoflow", "history",
-    "cells", "temperatures", "warnings", "gateway", "esp"
-  ];
+  const guestTabNames = global.WattcycleGuestTabs || [];
 
   async function logout() {
     const errorEl = document.getElementById("logoutError");
@@ -99,23 +96,33 @@
     if (!box) {
       return;
     }
-    ensureTabBoxes();
     let authenticated = false;
     try {
       const status = await fetch("/api/auth/status", { cache: "no-store", credentials: "same-origin" });
       const auth = status.ok ? await status.json() : {};
       authenticated = !!auth.authenticated;
+      if (authenticated) {
+        ensureTabBoxes();
+      }
       const guest = await fetch("/api/guest", { cache: "no-store", credentials: "same-origin" });
       if (guest.ok) {
         const payload = await guest.json();
         box.checked = !!payload.enabled;
-        showTabMask(typeof payload.tabs === "number" ? payload.tabs : (1 << guestTabNames.length) - 1);
+        showTabMask(typeof payload.tabs === "number" ? payload.tabs : 0);
       }
     } catch (error) {
       if (errorEl) {
         errorEl.hidden = false;
         errorEl.textContent = "Guest status unavailable.";
       }
+    }
+    const admin = document.getElementById("guestAdmin");
+    const help = document.getElementById("accountHelp");
+    if (admin) {
+      admin.hidden = !authenticated;
+    }
+    if (help) {
+      help.hidden = !authenticated;
     }
     box.disabled = !authenticated;
     document.querySelectorAll("#guestTabs input").forEach(function (input) {
@@ -149,11 +156,11 @@
       box.dataset.bound = "1";
       box.addEventListener("change", saveGuest);
     }
-    loadGuest();
   }
 
   global.WattcycleViews = global.WattcycleViews || {};
   global.WattcycleViews.account = function () {
     bind();
   };
+  global.WattcycleViews.reloadAccount = loadGuest;
 })(window);

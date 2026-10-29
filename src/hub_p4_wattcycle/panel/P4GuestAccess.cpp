@@ -33,7 +33,7 @@ void P4GuestAccess::begin() {
   }
   file.close();
   if (used > 0) {
-    tabs_ = static_cast<uint32_t>(std::strtoul(line, nullptr, 16)) & kDefaultTabs;
+    tabs_ = static_cast<uint32_t>(std::strtoul(line, nullptr, 16)) & kTabMask;
   }
 }
 
@@ -61,20 +61,21 @@ bool P4GuestAccess::store() {
 }
 
 bool P4GuestAccess::setEnabled(bool on) {
-  const bool previous = enabled_;
-  enabled_ = on;
-  if (!store()) {
-    enabled_ = previous;
-    return false;
-  }
-  return true;
+  return update(on, tabs_);
 }
 
 bool P4GuestAccess::setTabs(uint32_t tabs) {
-  const uint32_t previous = tabs_;
-  tabs_ = tabs & kDefaultTabs;
+  return update(enabled_, tabs);
+}
+
+bool P4GuestAccess::update(bool on, uint32_t tabs) {
+  const bool previousOn = enabled_;
+  const uint32_t previousTabs = tabs_;
+  enabled_ = on;
+  tabs_ = tabs & kTabMask;
   if (!store()) {
-    tabs_ = previous;
+    enabled_ = previousOn;
+    tabs_ = previousTabs;
     return false;
   }
   return true;

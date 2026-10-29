@@ -10,28 +10,27 @@
     <button type="button" id="logoutBtn" class="primary-btn">Sign out</button>
     <p class="error" id="logoutError" hidden></p>
   </div>
-  <h3>Guest access</h3>
-  <label class="hint" for="guestAccess">
-    <input type="checkbox" id="guestAccess" />
-    Allow the dashboard, history, and camera without signing in
-  </label>
-  <p class="hint" id="guestHint">Off by default. Stored on the SD card. Guests see the tabs you tick. The camera and meter commands stay signed in.</p>
-  <div id="guestTabs"></div>
-  <p class="error" id="guestError" hidden></p>
-  <h3>Reset credentials</h3>
-  <ol class="steps">
-    <li>On the M5 hub, hold <strong>A</strong> (left) about 3 seconds until the reset prompt appears, then confirm with <strong>B</strong>.</li>
-    <li>Press the <strong>top</strong> button (GPIO35) to confirm wiping the stored login, or bottom to cancel.</li>
-    <li>Open the dashboard again and create a new username/password, then confirm on the device.</li>
-  </ol>
-  <h3>Password rules</h3>
-  <ul class="steps">
-    <li>Username: up to 32 characters — letters, digits, <code>.</code> <code>_</code> <code>-</code> only.</li>
-    <li>Password: 8–64 printable ASCII characters (no control / non-ASCII bytes).</li>
-  </ul>
-  <h3>Network</h3>
-  <p class="hint">
-    The UI is served over HTTP on the LAN (<code>http://&lt;ip&gt;:6789</code>).
-    TLS was tried on this board but freezes the gateway when combined with BLE — keep the port off the public internet.
-  </p>
+  <div id="guestAdmin" hidden>
+    <h3>Guest access</h3>
+    <label class="hint" for="guestAccess">
+      <input type="checkbox" id="guestAccess" />
+      Allow signed-out access to the tabs ticked below
+    </label>
+    <p class="hint" id="guestHint">Off, and no tab is ticked, until you change it. The choice is stored on the SD card. The camera stays signed in. A guest does not receive addresses, the IP, or ports.</p>
+    <div id="guestTabs"></div>
+    <p class="error" id="guestError" hidden></p>
+  </div>
+  <div id="accountHelp" hidden>
+    <h3>Reset credentials</h3>
+    <ol class="steps">
+      <li>On the P4, open Account and tap <strong>Reset login</strong>, then tap the confirm bar (Cancel leaves the login in place).</li>
+      <li>On the M5, hold <strong>A</strong> about 3 seconds, then confirm with <strong>B</strong>.</li>
+      <li>Create a new username and password in this browser, then confirm on the device.</li>
+    </ol>
+    <h3>Password rules</h3>
+    <ul class="steps">
+      <li>Username: up to 32 characters — letters, digits, <code>.</code> <code>_</code> <code>-</code> only.</li>
+      <li>Password: 8–64 printable ASCII characters (no control / non-ASCII bytes).</li>
+    </ul>
+  </div>
 </section>

@@ -52,7 +52,8 @@
     const solar = data.solar || {};
 
     setLink("wifi", gateway.wifi, gateway.ip || (gateway.wifi ? "ok" : "down"));
-    document.getElementById("webPort").textContent = String(gateway.webPort || 6789);
+    const port = deviceInfo && Number(deviceInfo.webPort);
+    document.getElementById("webPort").textContent = port > 0 ? String(port) : "--";
     document.getElementById("hubError").textContent = gateway.error || "none";
 
     const ntpEl = document.getElementById("gatewayNtp");
@@ -92,9 +93,10 @@
       bleLive && bmsEncrypted,
       bleLive ? (bmsEncrypted ? "secured (PMK)" : "plaintext") : "--"
     );
+    const guestView = !!(global.WattcycleAuth && global.WattcycleAuth.guest);
     document.getElementById("fw").textContent = product.fw || "--";
-    document.getElementById("mfr").textContent = product.mfr || "--";
-    document.getElementById("sn").textContent = product.sn || "--";
+    document.getElementById("mfr").textContent = guestView ? "--" : (product.mfr || "--");
+    document.getElementById("sn").textContent = guestView ? "--" : (product.sn || "--");
 
     setLink("solarLink", gateway.solarLink, gateway.solarLink ? "fresh" : "stale/down");
     const encrypted = !!(solar.espNowEncrypted || gateway.espNowEncrypted);

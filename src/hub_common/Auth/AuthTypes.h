@@ -13,8 +13,8 @@ constexpr size_t kSessionTokenHexLen = kSessionTokenBytes * 2;
 constexpr uint32_t kSessionTtlMs = 24u * 60u * 60u * 1000u;
 constexpr uint32_t kMinPasswordLen = 8;
 constexpr size_t kMaxPasswordLen = 64;
-constexpr uint32_t kMaxLoginFailures = 5;
-constexpr uint32_t kLoginLockoutMs = 30000;
+constexpr uint32_t kMaxLoginFailures = 3;
+constexpr uint32_t kLoginLockoutMs = 10u * 60u * 1000u;
 constexpr uint32_t kResetHoldMs = 3000;
 
 enum class AuthPromptKind : uint8_t {

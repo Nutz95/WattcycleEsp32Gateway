@@ -223,12 +223,12 @@
       return;
     }
     if (note) {
-      note.textContent = "Connecting to camera on port 47690…";
+      note.textContent = "Connecting to the camera…";
     }
     image.onerror = function () {
       if (note) {
         note.textContent =
-          "Camera stream failed (port 47690). Stay signed in, hard-refresh, and open this tab again.";
+          "Camera stream failed. Stay signed in, hard-refresh, and open this tab again.";
       }
     };
     image.onload = function () {

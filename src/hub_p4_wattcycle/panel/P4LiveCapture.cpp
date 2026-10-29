@@ -270,9 +270,7 @@ void P4LiveView::pollMic() {
   }
   if (!liveAcceptAuthorized(micServer, micClient, *auth_, micOrigin_, sizeof(micOrigin_))) {
     micStarted_ = false;
-    if (claim_ != P4LiveClaim::Web) {
-      closeMic();
-    }
+    closeMic();
     return;
   }
   if (!micOpen_ && !openMic()) {

@@ -11,10 +11,17 @@ void P4AuthTap::onClicked(lv_event_t* event) {
   }
 }
 
+void P4AuthTap::onCancelClicked(lv_event_t* event) {
+  auto* tap = static_cast<P4AuthTap*>(lv_event_get_user_data(event));
+  if (tap != nullptr && tap->cancelHandler_ != nullptr) {
+    tap->cancelHandler_(tap->cancelUser_);
+  }
+}
+
 void P4AuthTap::mount(lv_obj_t* parent) {
   bar_ = lv_btn_create(parent);
   lv_obj_set_pos(bar_, 16, 620);
-  lv_obj_set_size(bar_, 448, 84);
+  lv_obj_set_size(bar_, 280, 84);
   lv_obj_set_style_bg_color(bar_, lv_color_hex(display::kAccent), 0);
   lv_obj_set_style_radius(bar_, 14, 0);
   lv_obj_set_style_shadow_width(bar_, 0, 0);
@@ -25,6 +32,19 @@ void P4AuthTap::mount(lv_obj_t* parent) {
   lv_obj_center(label_);
   lv_obj_add_flag(bar_, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_event_cb(bar_, onClicked, LV_EVENT_CLICKED, this);
+  cancel_ = lv_btn_create(parent);
+  lv_obj_set_pos(cancel_, 308, 620);
+  lv_obj_set_size(cancel_, 156, 84);
+  lv_obj_set_style_bg_color(cancel_, lv_color_hex(display::kCard), 0);
+  lv_obj_set_style_radius(cancel_, 14, 0);
+  lv_obj_set_style_shadow_width(cancel_, 0, 0);
+  lv_obj_t* cancelLabel = lv_label_create(cancel_);
+  lv_label_set_text(cancelLabel, "Cancel");
+  lv_obj_set_style_text_font(cancelLabel, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(cancelLabel, lv_color_hex(display::kInk), 0);
+  lv_obj_center(cancelLabel);
+  lv_obj_add_flag(cancel_, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_event_cb(cancel_, onCancelClicked, LV_EVENT_CLICKED, this);
 }
 
 void P4AuthTap::apply(auth::AuthPromptKind kind) {
@@ -34,6 +54,9 @@ void P4AuthTap::apply(auth::AuthPromptKind kind) {
   shown_ = kind;
   if (kind == auth::AuthPromptKind::None) {
     lv_obj_add_flag(bar_, LV_OBJ_FLAG_HIDDEN);
+    if (cancel_ != nullptr) {
+      lv_obj_add_flag(cancel_, LV_OBJ_FLAG_HIDDEN);
+    }
     return;
   }
   const char* text = "Tap to confirm web account";
@@ -43,6 +66,15 @@ void P4AuthTap::apply(auth::AuthPromptKind kind) {
   lv_label_set_text(label_, text);
   lv_obj_clear_flag(bar_, LV_OBJ_FLAG_HIDDEN);
   lv_obj_move_foreground(bar_);
+  if (cancel_ != nullptr) {
+    lv_obj_clear_flag(cancel_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(cancel_);
+  }
+}
+
+void P4AuthTap::setCancelHandler(void (*handler)(void* user), void* user) {
+  cancelHandler_ = handler;
+  cancelUser_ = user;
 }
 
 void P4AuthTap::setHandler(void (*handler)(void* user), void* user) {
