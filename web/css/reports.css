@@ -1,0 +1,88 @@
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.data-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.reports-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: min(100%, 16rem);
+}
+.reports-load[hidden] {
+  display: none !important;
+}
+.reports-load progress {
+  flex: 1;
+  height: 0.65rem;
+}
+.reports-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: reports-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes reports-spin {
+  to { transform: rotate(360deg); }
+}
+#reportsRefreshBtn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.tariff-editor {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0.75rem 0 1rem;
+}
+.tariff-window,
+.tariff-band {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+.tariff-window h3,
+.tariff-band h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.tariff-field {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.tariff-field input {
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  max-width: 12rem;
+}
+.tariff-interval-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: end;
+}

@@ -21,6 +21,9 @@
     if (name === "plugs" && window.WattcyclePlugs) {
       window.WattcyclePlugs.bind();
     }
+    if (name === "reports" && window.WattcycleReports) {
+      window.WattcycleReports.bind();
+    }
     if (name === "camera") {
       if (refreshTimer) {
         clearInterval(refreshTimer);
@@ -144,7 +147,7 @@
         tab.hidden = false;
         return;
       }
-      if (name === "camera") {
+      if (name === "camera" || name === "reports" || name === "plugs") {
         tab.hidden = true;
         return;
       }

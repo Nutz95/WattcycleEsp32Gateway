@@ -1,0 +1,104 @@
+<section class="view" data-view="reports" hidden>
+  <header class="page-head">
+    <p class="brand">WattCycle</p>
+    <hr class="brand-rule" />
+    <p class="page-title">Reports</p>
+  </header>
+  <p class="hint">Energy and plug totals from SD day CSVs (gzip + browser cache). Tariffs stay in this browser only.</p>
+  <div class="charts-toolbar" id="reportsToolbar">
+    <label for="reportsPeriod">Period
+      <select id="reportsPeriod" aria-label="Report period">
+        <option value="day">Day</option>
+        <option value="week">Week</option>
+        <option value="month" selected>Month</option>
+        <option value="year">Year</option>
+      </select>
+    </label>
+    <label for="reportsAnchor">Anchor day (UTC)
+      <input type="date" id="reportsAnchor" />
+    </label>
+    <button type="button" id="reportsRefreshBtn" class="ghost-btn">Refresh</button>
+    <div class="reports-load" id="reportsLoad" hidden aria-live="polite">
+      <span class="reports-spinner" aria-hidden="true"></span>
+      <progress id="reportsProgress" max="100" value="0"></progress>
+    </div>
+    <p class="hint" id="reportsStatus">Loading reports…</p>
+  </div>
+  <div class="subtabs" role="tablist" aria-label="Reports panels">
+    <button type="button" class="subtab active" data-reports-tab="flow">Energy flow</button>
+    <button type="button" class="subtab" data-reports-tab="plugs">Plugs</button>
+    <button type="button" class="subtab" data-reports-tab="tariffs">Tariffs</button>
+  </div>
+
+  <div class="reports-panel" data-reports-panel="flow">
+    <div class="metrics" id="reportsFlowMetrics">
+      <article><span>Pack in</span><strong id="repPackIn">—</strong></article>
+      <article><span>Pack out</span><strong id="repPackOut">—</strong></article>
+      <article><span>Solar</span><strong id="repSolar">—</strong></article>
+      <article><span>SoC envelope</span><strong id="repSoc">—</strong></article>
+      <article><span>Eco AC in</span><strong id="repEcoIn">—</strong></article>
+      <article><span>Eco cost</span><strong id="repEcoCost">—</strong></article>
+      <article><span>Économie HC vs HP</span><strong id="repEcoSavings">—</strong></article>
+      <article><span>Flow cost (pack+eco)</span><strong id="repFlowCost">—</strong></article>
+    </div>
+    <div class="charts">
+      <figure>
+        <figcaption>Eco AC in — Wh by band (HP / HC)</figcaption>
+        <canvas id="chartRepFlowBars" width="860" height="180"></canvas>
+      </figure>
+      <figure>
+        <figcaption>Eco cost by tariff band</figcaption>
+        <canvas id="chartRepFlowPie" width="420" height="180"></canvas>
+      </figure>
+    </div>
+  </div>
+
+  <div class="reports-panel" data-reports-panel="plugs" hidden>
+    <div class="metrics">
+      <article><span>Plugs total</span><strong id="repPlugsTotal">—</strong></article>
+      <article><span>Est. cost</span><strong id="repPlugsCost">—</strong></article>
+      <article><span>Économie HC vs HP</span><strong id="repPlugsSavings">—</strong></article>
+    </div>
+    <div class="charts">
+      <figure>
+        <figcaption>Per-plug energy (HP / HC)</figcaption>
+        <canvas id="chartRepPlugBars" width="860" height="180"></canvas>
+      </figure>
+      <figure>
+        <figcaption>Share by plug</figcaption>
+        <canvas id="chartRepPlugPie" width="420" height="180"></canvas>
+      </figure>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="reportsPlugTable">
+        <thead>
+          <tr>
+            <th>Plug</th>
+            <th>Wh</th>
+            <th>Wh HP</th>
+            <th>Wh HC</th>
+            <th>Cost HP</th>
+            <th>Cost HC</th>
+            <th>Cost</th>
+            <th>€/kWh</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="reports-panel" data-reports-panel="tariffs" hidden>
+    <p class="hint">Éditez les périodes HP/HC ici. Les valeurs sont vérifiées avant enregistrement (prix 0–5 €/kWh, horaires HH:MM, périodes sans chevauchement).</p>
+    <div id="reportsTariffEditor" class="tariff-editor"></div>
+    <div class="charts-toolbar">
+      <button type="button" id="reportsTariffSaveBtn" class="ghost-btn">Enregistrer</button>
+      <button type="button" id="reportsTariffResetBtn" class="ghost-btn">Réinitialiser défaut</button>
+      <button type="button" id="reportsTariffExportBtn" class="ghost-btn">Exporter JSON</button>
+      <label class="ghost-btn" for="reportsTariffImportFile">Importer JSON
+        <input type="file" id="reportsTariffImportFile" accept="application/json,.json" hidden />
+      </label>
+      <p class="hint" id="reportsTariffStatus"></p>
+    </div>
+  </div>
+</section>
