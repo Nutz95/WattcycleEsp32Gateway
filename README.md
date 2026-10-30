@@ -216,6 +216,8 @@ The same flash writes the dashboard onto the panel. Open the IP shown on the Esp
 
 Shelly Plug M Gen3 metering (P4 only): point each plug’s **RPC over UDP** at the hub IP, port **2267**. On the web **Plugs** tab, turn on listen, then **Authorize** by device id (`shellyplugmg3-…`) and set a display name (saved in `/plugs.cfg`). Bubble cards show live watts, Wh today, and a History link. The History tab has a **Plugs** sub-tab (power / Wh-today curves, filter by plug). The panel **Plugs** page shows authorized names and watts. Day energy is the delta of the plug’s lifetime `wh_total` (logged under `/history/plugs/YYYY-MM-DD.csv`); the hub does not reset the Shelly counter.
 
+History day downloads (`/api/history/day`, `/api/history/plugs/day`) default to **gzip** (`Content-Type: application/gzip`, verified round-trip on device; falls back to plain CSV in the **same** response if compress/verify fails). Use `?encoding=identity` to force streamed plain CSV. The browser caches valid gzip bodies in **IndexedDB** and decompresses with `DecompressionStream` (no silent second identity fetch). The signed-in **Reports** tab rolls up pack/solar/EcoFlow and plugs energy (day/week/month/year) and estimates cost from browser-only HP/HC tariffs (form UI + JSON export/import).
+
 ### 2b. Pair ESP-NOW peers
 
 Plug the hub and bridges (including EcoFlow S3), then run the pairing script
@@ -418,7 +420,7 @@ classDiagram
 
 Each target’s `main.cpp` constructs concrete adapters and injects them into that target’s `GatewayApplication` (interfaces only); auth `begin()` runs in `main` before the composition root.
 Auth is ISP-split: `EspWebGateway` depends on `IAuthSessionService` (login/setup start only — physical confirm/reset stay private on `AuthService`); display/buttons use `IAuthPhysicalConfirm` + shared `auth::AuthPrompt`.
-Browser chart history is **localStorage** (up to 24 h): live samples append continuously, and the History tab can **merge today’s SD CSV** (UTC day files under `/history/`) into that store so charts are complete after login. Picking another day in the list loads that CSV into the charts. CSV **v1** days only have pack/solar V·I·P; **v2** (current hub) also stores pack Ah/MOS/PCB and solar Wh/Ah. The dedicated **Wattcycle** tab shows pack live metrics + charts (no cell grid).
+Browser chart history is **localStorage** (up to 24 h): live samples append continuously, and the History tab can **merge today’s SD CSV** (UTC day files under `/history/`) into that store so charts are complete after login. Picking another day in the list loads that CSV into the charts (gzip + IndexedDB day cache). CSV **v1** days only have pack/solar V·I·P; **v2** (current hub) also stores pack Ah/MOS/PCB and solar Wh/Ah. The dedicated **Wattcycle** tab shows pack live metrics + charts (no cell grid). **Reports** (signed-in) aggregates cached days and optional tariff costing.
 M5 overview clock uses local time via `POSIX_TIMEZONE` (default Europe/Paris `CET-1CEST,M3.5.0,M10.5.0/3`); SD filenames stay UTC.
 `scripts/check_guardrails.ps1` wraps shared `tools/esp_cpp_guardrails` (from sibling [CursorCodingSkills](../CursorCodingSkills); deploy with `.\deploy.ps1 -ProjectPath` this repo). It fails if files grow past limits, nested classes appear, a header under the opted-in trees defines more than one type, `UNIT_TEST` leaks into headers, or concrete adapter headers leak outside `main.cpp` / their domain. The P4 hub is one of those trees.
 
