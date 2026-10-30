@@ -28,76 +28,8 @@
     return y + "-" + m + "-" + day;
   }
 
-  function numOrUndef(raw) {
-    if (raw === undefined || raw === null || raw === "") return undefined;
-    const n = Number(raw);
-    return Number.isFinite(n) ? n : undefined;
-  }
-
   function parseCsvDay(csv) {
-    // v1: epoch,soc,pack_v,pack_a,pack_w,solar_v,solar_a,solar_w,pack_ok,solar_ok
-    // v2: + pack_ah,mos_c,pcb_c,solar_wh,solar_ah
-    const pack = [];
-    const solar = [];
-    const eco = [];
-    if (!csv) return { pack: pack, solar: solar, eco: eco };
-    const lines = csv.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i].trim();
-      if (!line || line.charAt(0) === "e" || line.charAt(0) === "E") continue;
-      const cols = line.split(",");
-      if (cols.length < 10) continue;
-      const epoch = Number(cols[0]);
-      if (!Number.isFinite(epoch) || epoch <= 0) continue;
-      const t = epoch * 1000;
-      const packOk = cols[8] === "1";
-      const solarOk = cols[9] === "1";
-      const hasExt = cols.length >= 15;
-      if (packOk) {
-        const row = {
-          t: t,
-          v: Number(cols[2]),
-          i: Number(cols[3]),
-          p: Number(cols[4]),
-          soc: Number(cols[1])
-        };
-        if (hasExt) {
-          const ah = numOrUndef(cols[10]);
-          const mos = numOrUndef(cols[11]);
-          const pcb = numOrUndef(cols[12]);
-          if (ah !== undefined) row.ah = ah;
-          if (mos !== undefined) row.mos = mos;
-          if (pcb !== undefined) row.pcb = pcb;
-        }
-        pack.push(row);
-      }
-      if (solarOk) {
-        const row = {
-          t: t,
-          v: Number(cols[5]),
-          i: Number(cols[6]),
-          p: Number(cols[7])
-        };
-        if (hasExt) {
-          const wh = numOrUndef(cols[13]);
-          const ah = numOrUndef(cols[14]);
-          if (wh !== undefined) row.wh = wh;
-          if (ah !== undefined) row.ah = ah;
-        }
-        solar.push(row);
-      }
-      if (cols.length >= 21 && cols[15] === "1") {
-        eco.push({
-          t: t,
-          soc: Number(cols[16]),
-          acOut: Number(cols[17]),
-          acIn: Number(cols[18]),
-          dcOut: Number(cols[19]),
-          usbOut: Number(cols[20])
-        });
-      }
-    }
-    return { pack: pack, solar: solar, eco: eco };
+    return global.WattcycleHistoryCsv.parsePackDay(csv);
   }
 
   function fillSelect(select, values, selected, textOf) {
@@ -182,7 +114,7 @@
       catalog.days.forEach(function (day) {
         const opt = document.createElement("option");
         opt.value = day;
-        opt.textContent = day;
+        opt.textContent = global.WattcycleDateFormat.ymdToDmy(day);
         select.appendChild(opt);
       });
       if (current && catalog.days.indexOf(current) >= 0) select.value = current;
@@ -205,55 +137,46 @@
       progress.hidden = false;
       progress.value = 0;
     }
-    if (statusEl) statusEl.textContent = "Downloading " + date + "…";
-    const res = await fetch("/api/history/day?date=" + encodeURIComponent(date), {
-      credentials: "same-origin",
-    });
-    if (!res.ok) {
-      if (progress) progress.hidden = true;
-      if (statusEl) statusEl.textContent = "Day download failed (" + res.status + ").";
-      return null;
-    }
-    const total = Number(res.headers.get("Content-Length") || 0);
-    if (!res.body || !res.body.getReader) {
-      const text = await res.text();
+    const dayLabel = global.WattcycleDateFormat.ymdToDmy(date);
+    if (statusEl) statusEl.textContent = "Downloading " + dayLabel + "…";
+    try {
+      const text = await global.WattcycleHistoryDayCache.fetchDayCsv(
+        "pack",
+        date,
+        "/api/history/day",
+        {
+          onProgress: function (received, total) {
+            if (progress && total > 0) {
+              const pct = Math.min(100, Math.round((received / total) * 100));
+              progress.value = pct;
+              if (statusEl) {
+                statusEl.textContent =
+                  "Downloading " + dayLabel + "… " + pct + "% (" + Math.round(received / 1024) + " KB)";
+              }
+            } else if (statusEl) {
+              statusEl.textContent =
+                "Downloading " + dayLabel + "… " + Math.round(received / 1024) + " KB";
+            }
+          },
+        }
+      );
       if (progress) {
         progress.value = 100;
         progress.hidden = true;
       }
-      return text;
-    }
-    const reader = res.body.getReader();
-    const chunks = [];
-    let received = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.byteLength;
-      if (progress && total > 0) {
-        const pct = Math.min(100, Math.round((received / total) * 100));
-        progress.value = pct;
-        if (statusEl) {
-          statusEl.textContent =
-            "Downloading " + date + "… " + pct + "% (" + Math.round(received / 1024) + " KB)";
-        }
-      } else if (statusEl) {
-        statusEl.textContent = "Downloading " + date + "… " + Math.round(received / 1024) + " KB";
+      if (statusEl) {
+        statusEl.textContent =
+          "Loaded " + dayLabel + " (" + Math.round(text.length / 1024) + " KB csv)";
       }
+      return text;
+    } catch (error) {
+      if (progress) progress.hidden = true;
+      if (statusEl) {
+        statusEl.textContent =
+          "Day download failed" + (error && error.status ? " (" + error.status + ")" : "") + ".";
+      }
+      return null;
     }
-    if (progress) {
-      progress.value = 100;
-      progress.hidden = true;
-    }
-    if (statusEl) statusEl.textContent = "Loaded " + date + " (" + Math.round(received / 1024) + " KB)";
-    const merged = new Uint8Array(received);
-    let offset = 0;
-    chunks.forEach(function (chunk) {
-      merged.set(chunk, offset);
-      offset += chunk.byteLength;
-    });
-    return new TextDecoder().decode(merged);
   }
 
   async function loadDayIntoCharts(date, options) {
@@ -265,6 +188,7 @@
       if (!csv) return;
       const parsed = parseCsvDay(csv);
       const statusEl = document.getElementById("historySdStatus");
+      const dayLabel = global.WattcycleDateFormat.ymdToDmy(date);
       if (opts.mergeIntoLive) {
         global.WattcycleHistory.mergeSamples(parsed.pack);
         global.WattcycleSolarHistory.mergeSamples(parsed.solar);
@@ -278,7 +202,7 @@
         }
         if (statusEl) {
           statusEl.textContent =
-            "Merged " + date + " from SD (" + parsed.pack.length + " pack / " +
+            "Merged " + dayLabel + " from SD (" + parsed.pack.length + " pack / " +
             parsed.solar.length + " solar pts) into live charts";
         }
       } else {
@@ -295,7 +219,7 @@
         }
         if (statusEl) {
           statusEl.textContent =
-            "Showing SD day " + date + " (" + parsed.pack.length + " pack / " +
+            "Showing SD day " + dayLabel + " (" + parsed.pack.length + " pack / " +
             parsed.solar.length + " solar pts)";
         }
       }
@@ -381,8 +305,8 @@
       lastTotalAh = data.totalAh;
     }
 
-    const pack = activeDay && dayOverlayPack ? dayOverlayPack : packHistory;
-    const solar = activeDay && dayOverlaySolar ? dayOverlaySolar : solarHistory;
+    const pack = activeDay && dayOverlayPack !== null ? dayOverlayPack : packHistory;
+    const solar = activeDay && dayOverlaySolar !== null ? dayOverlaySolar : solarHistory;
 
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartVoltage"),
@@ -456,7 +380,9 @@
       { unit: "Ah", yDigits: 3 }
     );
 
-    const ecoHist = activeDay && dayOverlayEco ? dayOverlayEco : ecoflowHistory || global.WattcycleEcoflowHistory.all();
+    const ecoHist = activeDay && dayOverlayEco !== null
+      ? dayOverlayEco
+      : ecoflowHistory || global.WattcycleEcoflowHistory.all();
     global.WattcycleCharts.drawSeries(
       document.getElementById("chartHistEcoSoc"),
       [{ name: "SoC", color: "#3ecf8e", points: global.WattcycleEcoflowHistory.toPoints(ecoHist, "soc") }],

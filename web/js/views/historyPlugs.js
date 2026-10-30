@@ -5,30 +5,7 @@
   const PLUG_COLORS = ["#f0b429", "#3ecf8e", "#60a5fa", "#c084fc", "#fb7185", "#38bdf8", "#a3e635", "#f97316"];
 
   function parsePlugsCsv(csv) {
-    // epoch,id,name,watts,wh_total,wh_today,output
-    const byId = {};
-    if (!csv) return byId;
-    const lines = csv.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i].trim();
-      if (!line || line.indexOf("epoch") === 0) continue;
-      const cols = line.split(",");
-      if (cols.length < 7) continue;
-      const epoch = Number(cols[0]);
-      if (!Number.isFinite(epoch) || epoch <= 0) continue;
-      const id = cols[1];
-      if (!id) continue;
-      if (!byId[id]) {
-        byId[id] = { id: id, name: cols[2] || id, points: [] };
-      }
-      byId[id].name = cols[2] || byId[id].name;
-      byId[id].points.push({
-        t: epoch * 1000,
-        p: Number(cols[3]),
-        whToday: Number(cols[5]),
-      });
-    }
-    return byId;
+    return global.WattcycleHistoryCsv.parsePlugsDay(csv);
   }
 
   function plugSeriesList(byId, key) {
@@ -93,24 +70,34 @@
       render();
       return;
     }
+    const statusEl = document.getElementById("historySdStatus");
+    const dayLabel = global.WattcycleDateFormat
+      ? global.WattcycleDateFormat.ymdToDmy(date)
+      : date;
     try {
-      const response = await fetch("/api/history/plugs/day?date=" + encodeURIComponent(date), {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        dayOverlayPlugs = {};
-        refreshPlugFilter({});
-        render();
-        return;
-      }
-      dayOverlayPlugs = parsePlugsCsv(await response.text());
+      const csv = await global.WattcycleHistoryDayCache.fetchDayCsv(
+        "plugs",
+        date,
+        "/api/history/plugs/day"
+      );
+      dayOverlayPlugs = parsePlugsCsv(csv);
       refreshPlugFilter(dayOverlayPlugs);
       render();
+      const count = Object.keys(dayOverlayPlugs).length;
+      if (statusEl) {
+        statusEl.textContent =
+          "Plugs " + dayLabel + " : " + count + " device(s), " +
+          Math.round((csv || "").length / 1024) + " KB";
+      }
     } catch (error) {
       dayOverlayPlugs = {};
       refreshPlugFilter({});
       render();
+      if (statusEl) {
+        statusEl.textContent =
+          "Plugs day failed" + (error && error.status ? " (" + error.status + ")" : "") +
+          " for " + dayLabel;
+      }
     }
   }
 

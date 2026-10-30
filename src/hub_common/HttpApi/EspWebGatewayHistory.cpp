@@ -1,6 +1,7 @@
 #include "HttpApi/EspWebGateway.h"
 
 #include "HttpApi/GuestHistoryCsv.h"
+#include "HttpApi/GzipDayBody.h"
 #include "HttpApi/HttpReadDecision.h"
 
 #include <ctime>
@@ -25,7 +26,7 @@ bool beginDayStream(size_t totalBytes, void* user) {
   } else {
     ctx->server->setContentLength(CONTENT_LENGTH_UNKNOWN);
   }
-  ctx->server->send(200, "text/csv", "");
+  ctx->server->send(200, "text/csv; charset=utf-8", "");
   ctx->headerSent = true;
   return true;
 }
@@ -38,8 +39,7 @@ bool writeDayChunk(const uint8_t* data, size_t length, void* user) {
   if (length == 0) {
     return true;
   }
-  const size_t written = ctx->server->client().write(data, length);
-  return written == length;
+  return ctx->server->client().write(data, length) == length;
 }
 
 void currentUtc(int& year, int& month) {
@@ -220,22 +220,47 @@ void EspWebGateway::handleHistoryDay() {
     return;
   }
   const String date = server_->arg("date");
-  if (access.guest) {
-    GuestHistoryCsv filter;
-    filter.server = server_.get();
-    filter.mask = access.mask;
-    historyStore_.streamDay(date.c_str(), &beginGuestHistoryCsv, &writeGuestHistoryChunk, &filter);
-    if (!filter.headerSent) {
+  const bool gzip = GzipDayBody::wantsGzip(*server_);
+  if (!gzip) {
+    if (access.guest) {
+      GuestHistoryCsv filter;
+      filter.server = server_.get();
+      filter.mask = access.mask;
+      historyStore_.streamDay(date.c_str(), &beginGuestHistoryCsv, &writeGuestHistoryChunk, &filter);
+      if (!filter.headerSent) {
+        sendJson(404, "{\"error\":\"day_not_found\"}");
+      }
+      return;
+    }
+    DayStreamContext ctx;
+    ctx.server = server_.get();
+    historyStore_.streamDay(date.c_str(), &beginDayStream, &writeDayChunk, &ctx);
+    if (!ctx.headerSent) {
       sendJson(404, "{\"error\":\"day_not_found\"}");
     }
     return;
   }
-  DayStreamContext ctx;
-  ctx.server = server_.get();
-  historyStore_.streamDay(date.c_str(), &beginDayStream, &writeDayChunk, &ctx);
-  if (!ctx.headerSent) {
-    sendJson(404, "{\"error\":\"day_not_found\"}");
+  DayCsvBuffer buffer;
+  if (access.guest) {
+    GuestHistoryCsv filter;
+    filter.server = server_.get();
+    filter.collect = &buffer;
+    filter.mask = access.mask;
+    historyStore_.streamDay(date.c_str(), &beginGuestHistoryCsv, &writeGuestHistoryChunk, &filter);
+    if (!filter.headerSent || !filter.collectOk) {
+      sendJson(filter.headerSent ? 500 : 404,
+               filter.headerSent ? "{\"error\":\"history_buffer\"}" : "{\"error\":\"day_not_found\"}");
+      return;
+    }
+    GzipDayBody::send(*server_, buffer.data(), buffer.size(), true);
+    return;
   }
+  if (!historyStore_.streamDay(date.c_str(), &GzipDayBody::beginCollect, &GzipDayBody::writeCollect,
+                               &buffer)) {
+    sendJson(404, "{\"error\":\"day_not_found\"}");
+    return;
+  }
+  GzipDayBody::send(*server_, buffer.data(), buffer.size(), true);
 }
 
 void EspWebGateway::handleDeviceInfo() {

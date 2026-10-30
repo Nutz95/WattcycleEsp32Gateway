@@ -1,6 +1,7 @@
 #include "HttpApi/ShellyPlugsHttp.h"
 
 #include "Auth/AuthTypes.h"
+#include "HttpApi/GzipDayBody.h"
 #include "HttpApi/JsonField.h"
 #include "Shelly/ShellyPlugLimits.h"
 #include "Shelly/ShellyPlugReading.h"
@@ -71,19 +72,33 @@ bool dateLooksUtc(const String& date) {
 
 struct DayStreamCtx {
   WebServer* server = nullptr;
+  bool headerSent = false;
 };
 
 bool beginDayStream(size_t totalBytes, void* user) {
-  DayStreamCtx* ctx = static_cast<DayStreamCtx*>(user);
-  ctx->server->setContentLength(totalBytes);
-  ctx->server->send(200, "text/csv", "");
+  auto* ctx = static_cast<DayStreamCtx*>(user);
+  if (ctx == nullptr || ctx->server == nullptr) {
+    return false;
+  }
+  if (totalBytes > 0) {
+    ctx->server->setContentLength(totalBytes);
+  } else {
+    ctx->server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  }
+  ctx->server->send(200, "text/csv; charset=utf-8", "");
+  ctx->headerSent = true;
   return true;
 }
 
 bool writeDayChunk(const uint8_t* data, size_t length, void* user) {
-  DayStreamCtx* ctx = static_cast<DayStreamCtx*>(user);
-  ctx->server->sendContent(reinterpret_cast<const char*>(data), length);
-  return true;
+  auto* ctx = static_cast<DayStreamCtx*>(user);
+  if (ctx == nullptr || ctx->server == nullptr || data == nullptr) {
+    return false;
+  }
+  if (length == 0) {
+    return true;
+  }
+  return ctx->server->client().write(data, length) == length;
 }
 
 }  // namespace
@@ -294,11 +309,22 @@ void ShellyPlugsHttp::handleHistoryDay() {
     sendJson(400, "{\"error\":\"missing_date\"}");
     return;
   }
-  DayStreamCtx ctx = {};
-  ctx.server = &server_;
-  if (!history_->streamDay(server_.arg("date").c_str(), &beginDayStream, &writeDayChunk, &ctx)) {
-    sendJson(404, "{\"error\":\"day_not_found\"}");
+  const bool gzip = GzipDayBody::wantsGzip(server_);
+  if (!gzip) {
+    DayStreamCtx ctx = {};
+    ctx.server = &server_;
+    if (!history_->streamDay(server_.arg("date").c_str(), &beginDayStream, &writeDayChunk, &ctx)) {
+      sendJson(404, "{\"error\":\"day_not_found\"}");
+    }
+    return;
   }
+  DayCsvBuffer buffer;
+  if (!history_->streamDay(server_.arg("date").c_str(), &GzipDayBody::beginCollect,
+                           &GzipDayBody::writeCollect, &buffer)) {
+    sendJson(404, "{\"error\":\"day_not_found\"}");
+    return;
+  }
+  GzipDayBody::send(server_, buffer.data(), buffer.size(), true);
 }
 
 void ShellyPlugsHttp::registerRoutes() {

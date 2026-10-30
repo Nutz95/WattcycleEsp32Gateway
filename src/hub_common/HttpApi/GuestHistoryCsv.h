@@ -1,5 +1,7 @@
 #pragma once
 
+#include "HttpApi/DayCsvBuffer.h"
+
 #include <WebServer.h>
 
 #include <cstddef>
@@ -7,19 +9,21 @@
 
 namespace wattcycle::web {
 
-/// Line buffer for a guest history download. Columns the guest cannot see become 0.
+/// Line buffer for a guest history download. Columns the guest cannot see become empty.
 struct GuestHistoryCsv {
   WebServer* server = nullptr;
+  DayCsvBuffer* collect = nullptr;
   uint32_t mask = 0;
   char pending[192] = {};
   size_t used = 0;
   bool headerSent = false;
   bool sawHeader = false;
+  bool collectOk = true;
 };
 
-/// HTTP begin callback for HistoryStreamBegin.
+/// Begin callback: marks the day as found (streams headers when not collecting).
 bool beginGuestHistoryCsv(size_t totalBytes, void* user);
-/// HTTP chunk callback for HistoryChunkSink.
+/// Chunk callback: filter columns, then stream or append to `collect`.
 bool writeGuestHistoryChunk(const uint8_t* data, size_t length, void* user);
 
 }  // namespace wattcycle::web

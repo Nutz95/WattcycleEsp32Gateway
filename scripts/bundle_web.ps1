@@ -42,7 +42,7 @@ function Minify-Js([string]$text) {
 
 # HTML: inject view fragments (UTF-8 in, UTF-8 out — never Windows ANSI)
 $html = Read-Utf8Text (Join-Path $webRoot "index.html")
-$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "cells", "temperatures", "warnings", "gateway", "esp", "plugs", "camera", "account")
+$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "reports", "cells", "temperatures", "warnings", "gateway", "esp", "plugs", "camera", "account")
 foreach ($view in $views) {
   $fragment = Read-Utf8Text (Join-Path $webRoot "views\$view.html")
   $html = $html.Replace("<!--VIEW:$view-->", $fragment.Trim())
@@ -52,16 +52,29 @@ $html = $html.Trim()
 Write-Utf8NoBom (Join-Path $dataRoot "index.html") $html
 
 # CSS
-$css = Read-Utf8Text (Join-Path $webRoot "css\app.css")
-Write-Utf8NoBom (Join-Path $dataRoot "app.css") (Minify-Css $css)
+$css = (Minify-Css (Read-Utf8Text (Join-Path $webRoot "css\app.css"))) +
+  (Minify-Css (Read-Utf8Text (Join-Path $webRoot "css\reports.css")))
+Write-Utf8NoBom (Join-Path $dataRoot "app.css") $css
 
 # JS bundle order matters
 $jsParts = @(
   "js\binaryDecoder.js",
+  "js\dateFormat.js",
+  "js\historyCsvParse.js",
   "js\historyStore.js",
+  "js\historyDayCache.js",
   "js\draftStore.js",
   "js\charts.js",
   "js\auth.js",
+  "js\reports\dayAggregate.js",
+  "js\reports\plugEnergy.js",
+  "js\reports\periodRollup.js",
+  "js\reports\tariffValidate.js",
+  "js\reports\tariffStore.js",
+  "js\reports\tariffEditor.js",
+  "js\reports\costing.js",
+  "js\reports\barChart.js",
+  "js\reports\pieChart.js",
   "js\views\systemFlow.js",
   "js\views\dashboard.js",
   "js\views\solar.js",
@@ -69,6 +82,7 @@ $jsParts = @(
   "js\views\ecoflow.js",
   "js\views\historyPlugs.js",
   "js\views\history.js",
+  "js\views\reports.js",
   "js\views\cells.js",
   "js\views\temperatures.js",
   "js\views\warnings.js",

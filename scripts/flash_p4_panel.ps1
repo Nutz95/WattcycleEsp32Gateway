@@ -157,6 +157,8 @@ $HubSources = @(
     "src\hub_common\HttpApi\EspWebGateway.cpp",
     "src\hub_common\HttpApi\HttpReadDecision.cpp",
     "src\hub_common\HttpApi\GuestHistoryCsv.cpp",
+    "src\hub_common\HttpApi\DayCsvBuffer.cpp",
+    "src\hub_common\HttpApi\GzipDayBody.cpp",
     "src\hub_common\HttpApi\EspWebGatewayHistory.cpp",
     "src\hub_common\HttpApi\EspWebGatewayAccess.cpp",
     "src\hub_common\HttpApi\ShellyPlugsHttp.cpp",
