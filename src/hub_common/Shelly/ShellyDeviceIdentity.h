@@ -4,8 +4,8 @@
 
 namespace wattcycle::shelly {
 
-/// Whitelist entry: stable Shelly device id plus display name on the hub.
-struct ShellyPlugIdentity {
+/// Whitelist entry shared by Shelly plugs and smoke detectors.
+struct ShellyDeviceIdentity {
   char id[kShellyIdCapacity] = {};
   char name[kShellyNameCapacity] = {};
 };

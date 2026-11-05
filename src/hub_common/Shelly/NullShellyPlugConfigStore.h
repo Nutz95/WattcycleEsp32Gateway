@@ -7,10 +7,10 @@ namespace wattcycle::shelly {
 /// No-op store for tests and hosts without an SD card.
 class NullShellyPlugConfigStore : public IShellyPlugConfigStore {
  public:
-  size_t loadAuthorized(ShellyPlugIdentity* /*out*/, size_t /*capacity*/) override {
+  size_t loadAuthorized(ShellyDeviceIdentity* /*out*/, size_t /*capacity*/) override {
     return 0;
   }
-  bool saveAuthorized(const ShellyPlugIdentity* /*entries*/, size_t /*count*/) override {
+  bool saveAuthorized(const ShellyDeviceIdentity* /*entries*/, size_t /*count*/) override {
     return true;
   }
   bool loadDayBaseline(uint32_t& dayYyyymmdd, float* /*whBySlot*/,

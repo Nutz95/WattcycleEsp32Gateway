@@ -1,42 +1,12 @@
 #include "Shelly/ShellyPlugHub.h"
 
+#include "Shelly/ShellyDisplayName.h"
 #include "Shelly/ShellyPlugId.h"
 #include "Util/SafeCopy.h"
 
 #include <cstring>
 
 namespace wattcycle::shelly {
-
-bool ShellyPlugHub::sanitizeName(const char* name, char* out, size_t capacity) const {
-  if (out == nullptr || capacity == 0) {
-    return false;
-  }
-  out[0] = '\0';
-  if (name == nullptr) {
-    return false;
-  }
-  size_t written = 0;
-  for (const char* cursor = name; *cursor != '\0' && written + 1 < capacity; ++cursor) {
-    const unsigned char ch = static_cast<unsigned char>(*cursor);
-    if (ch < 32u || ch == 127u || ch == '|' || ch == '\n' || ch == '\r' || ch == '"' ||
-        ch == '\\' || ch == ',') {
-      continue;
-    }
-    out[written++] = static_cast<char>(ch);
-  }
-  out[written] = '\0';
-  return written > 0;
-}
-
-bool ShellyPlugHub::shortNameFromId(const char* id, char* out, size_t capacity) const {
-  if (id == nullptr) {
-    return false;
-  }
-  const char* dash = std::strrchr(id, '-');
-  const char* tail = dash != nullptr && dash[1] != '\0' ? dash + 1 : id;
-  util::copyCString(out, capacity, tail);
-  return out[0] != '\0';
-}
 
 int ShellyPlugHub::findById(const char* id) const {
   if (id == nullptr || id[0] == '\0') {
@@ -63,7 +33,7 @@ bool ShellyPlugHub::persistAuthorized() {
   if (store_ == nullptr) {
     return true;
   }
-  ShellyPlugIdentity entries[kMaxShellyPlugs] = {};
+  ShellyDeviceIdentity entries[kMaxShellyPlugs] = {};
   size_t count = 0;
   for (size_t i = 0; i < kMaxShellyPlugs; ++i) {
     if (!slots_[i].used || !slots_[i].authorized) {
@@ -97,8 +67,8 @@ bool ShellyPlugHub::authorize(const char* id, const char* name) {
     return false;
   }
   char label[kShellyNameCapacity] = {};
-  if (!sanitizeName(name, label, sizeof(label))) {
-    shortNameFromId(id, label, sizeof(label));
+  if (!ShellyDisplayName::sanitize(name, label, sizeof(label))) {
+    ShellyDisplayName::shortFromId(id, label, sizeof(label));
   }
   int index = findById(id);
   if (index < 0) {
@@ -137,7 +107,7 @@ bool ShellyPlugHub::rename(const char* id, const char* name) {
     return false;
   }
   char label[kShellyNameCapacity] = {};
-  if (!sanitizeName(name, label, sizeof(label))) {
+  if (!ShellyDisplayName::sanitize(name, label, sizeof(label))) {
     return false;
   }
   ShellyPlugSlot& slot = slots_[static_cast<size_t>(index)];
@@ -177,7 +147,7 @@ bool ShellyPlugHub::copyName(const char* id, char* out, size_t capacity) const {
   if (slot.identity.name[0] != '\0') {
     util::copyCString(out, capacity, slot.identity.name);
   } else {
-    shortNameFromId(slot.identity.id, out, capacity);
+    ShellyDisplayName::shortFromId(slot.identity.id, out, capacity);
   }
   return out[0] != '\0';
 }
@@ -189,7 +159,7 @@ void ShellyPlugHub::fillReading(const ShellyPlugSlot& slot, ShellyPlugReading& o
   util::copyCString(out.id, sizeof(out.id), slot.identity.id);
   util::copyCString(out.name, sizeof(out.name), slot.identity.name);
   if (out.name[0] == '\0') {
-    shortNameFromId(slot.identity.id, out.name, sizeof(out.name));
+    ShellyDisplayName::shortFromId(slot.identity.id, out.name, sizeof(out.name));
   }
   out.online = slot.reading.lastMs != 0 &&
                static_cast<uint32_t>(nowMs - slot.reading.lastMs) <= kShellyOfflineMs;

@@ -1,5 +1,7 @@
 #include "Shelly/ShellyPlugHub.h"
 
+#include "Shelly/ShellyDeviceIdentity.h"
+#include "Shelly/ShellyDisplayName.h"
 #include "Shelly/ShellyNotifyParser.h"
 #include "Shelly/ShellyPlugId.h"
 #include "Util/SafeCopy.h"
@@ -18,7 +20,7 @@ void ShellyPlugHub::begin() {
   if (store_ == nullptr) {
     return;
   }
-  ShellyPlugIdentity loaded[kMaxShellyPlugs] = {};
+  ShellyDeviceIdentity loaded[kMaxShellyPlugs] = {};
   const size_t count = store_->loadAuthorized(loaded, kMaxShellyPlugs);
   size_t slot = 0;
   for (size_t i = 0; i < count && slot < kMaxShellyPlugs; ++i) {
@@ -178,8 +180,8 @@ void ShellyPlugHub::ingest(const char* json, uint32_t nowMs, std::time_t epochUt
     slots_[static_cast<size_t>(index)].used = true;
     util::copyCString(slots_[static_cast<size_t>(index)].identity.id,
                       sizeof(slots_[static_cast<size_t>(index)].identity.id), delta.id);
-    shortNameFromId(delta.id, slots_[static_cast<size_t>(index)].identity.name,
-                    sizeof(slots_[static_cast<size_t>(index)].identity.name));
+    ShellyDisplayName::shortFromId(delta.id, slots_[static_cast<size_t>(index)].identity.name,
+                                   sizeof(slots_[static_cast<size_t>(index)].identity.name));
   }
   applyDelta(slots_[static_cast<size_t>(index)], delta, nowMs, epochUtc);
 }

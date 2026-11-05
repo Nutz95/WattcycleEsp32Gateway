@@ -33,8 +33,6 @@ class ShellyPlugHub : public IShellyPlugHub {
  private:
   int findById(const char* id) const;
   int findFreeSlot() const;
-  bool sanitizeName(const char* name, char* out, size_t capacity) const;
-  bool shortNameFromId(const char* id, char* out, size_t capacity) const;
   bool persistAuthorized();
   bool persistDay();
   void expireListen(uint32_t nowMs);
