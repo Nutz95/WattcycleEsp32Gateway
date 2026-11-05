@@ -21,6 +21,9 @@
     if (name === "plugs" && window.WattcyclePlugs) {
       window.WattcyclePlugs.bind();
     }
+    if (name === "smoke" && window.WattcycleSmoke) {
+      window.WattcycleSmoke.bind();
+    }
     if (name === "reports" && window.WattcycleReports) {
       window.WattcycleReports.bind();
     }
@@ -115,6 +118,9 @@
           : window.WattcycleEcoflowHistory.all();
 
       window.WattcycleViews.overview(data);
+      if (window.WattcycleSmoke) {
+        window.WattcycleSmoke.refreshOverview();
+      }
       window.WattcycleViews.dashboard(data);
       window.WattcycleViews.solar(data, solarHistory);
       window.WattcycleViews.wattcycle(data, packHistory);
@@ -147,7 +153,7 @@
         tab.hidden = false;
         return;
       }
-      if (name === "camera" || name === "reports" || name === "plugs") {
+      if (name === "camera" || name === "reports" || name === "plugs" || name === "smoke") {
         tab.hidden = true;
         return;
       }

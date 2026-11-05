@@ -270,6 +270,39 @@ code { font-family: Consolas, monospace; }
   margin-top: auto;
 }
 .plugs-listen { margin: 0.75rem 0 1rem; }
+.smoke-bubble.is-alarm { border-color: rgba(232, 88, 88, 0.7); box-shadow: 0 0 0 1px rgba(232, 88, 88, 0.25); }
+.smoke-bubble.is-alarm .smoke-status { color: #f07178; font-weight: 600; }
+.smoke-overview {
+  margin: 0.75rem 0 0.5rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+}
+.smoke-overview-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.smoke-overview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.smoke-chip {
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.22);
+  color: var(--ink);
+  padding: 0.4rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.smoke-chip.is-alarm {
+  border-color: rgba(232, 88, 88, 0.65);
+  color: #f07178;
+}
+.smoke-chip.is-offline { opacity: 0.65; }
 .plug-filter-row {
   display: flex;
   flex-wrap: wrap;
