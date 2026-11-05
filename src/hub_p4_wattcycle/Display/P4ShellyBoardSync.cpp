@@ -23,4 +23,20 @@ void fillPlugsFields(P4PlugsFields& fields, const shelly::IShellyPlugHub& hub, u
   fields.totalWatts = total;
 }
 
+void fillSmokeFields(P4SmokeFields& fields, const shelly::IShellySmokeHub& hub, uint32_t nowMs) {
+  fields = {};
+  shelly::ShellySmokeReading readings[shelly::kMaxShellySmoke] = {};
+  const size_t count = hub.snapshotAuthorized(readings, shelly::kMaxShellySmoke, nowMs);
+  for (size_t i = 0; i < count; ++i) {
+    util::copyCString(fields.names[i], sizeof(fields.names[i]), readings[i].name);
+    fields.alarm[i] = readings[i].alarm;
+    fields.online[i] = readings[i].online;
+    fields.batteryPercent[i] = readings[i].batteryPercent;
+    if (readings[i].alarm) {
+      fields.anyAlarm = true;
+    }
+  }
+  fields.count = static_cast<uint8_t>(count);
+}
+
 }  // namespace wattcycle::display

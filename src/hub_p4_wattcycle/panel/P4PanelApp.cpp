@@ -30,8 +30,10 @@
 #include "Display/P4ShellyBoardSync.h"
 #include "P4ShellyConfigStore.h"
 #include "P4ShellyHistory.h"
+#include "P4ShellySmokeConfigStore.h"
 #include "P4ShellyUdp.h"
 #include "Shelly/ShellyPlugHub.h"
+#include "Shelly/ShellySmokeHub.h"
 #include "lvgl.h"
 #include "pins_config.h"
 #include "src/lcd/st7701_lcd.h"
@@ -58,8 +60,10 @@ P4GuestAccess guestAccess;
 P4MicLevel micLevel;
 P4MeterCommands meterCommands;
 P4ShellyConfigStore shellyConfig;
+P4ShellySmokeConfigStore shellySmokeConfig;
 wattcycle::shelly::ShellyPlugHub shellyHub(&shellyConfig);
-P4ShellyUdp shellyUdp(shellyHub);
+wattcycle::shelly::ShellySmokeHub shellySmokeHub(&shellySmokeConfig);
+P4ShellyUdp shellyUdp(shellyHub, shellySmokeHub);
 P4ShellyHistory shellyHistory(shellyHub);
 wattcycle::web::EspWebGateway webGateway(store, authService, meterCommands, history);
 wattcycle::esp_sys::EspHealthSampler health;
@@ -86,7 +90,9 @@ void onAccountReset(void* /*user*/) {
 void paintBoard() {
   board.gateway.guestOn = guestAccess.enabled();
   display::fillPlugsFields(board.plugs, shellyHub, millis());
+  display::fillSmokeFields(board.smoke, shellySmokeHub, millis());
   overview.apply(board.overview);
+  overview.applySmoke(board.smoke);
   overview.setLinks(board.gateway.wifiUp,
                     board.gateway.bmsUp || board.gateway.ecoUp || board.gateway.solarUp);
   detailPages.apply(board);
@@ -243,6 +249,7 @@ void setupPanel() {
   history.begin();
   guestAccess.begin();
   shellyHub.begin();
+  shellySmokeHub.begin();
   shellyUdp.begin();
   P4WebPublish webFiles;
   if (webFiles.install()) {
@@ -254,6 +261,7 @@ void setupPanel() {
   webGateway.setGuestAccess(guestAccess);
   webGateway.setMicGain(micLevel);
   webGateway.setShellyPlugs(shellyHub, &shellyHistory);
+  webGateway.setShellySmoke(shellySmokeHub);
   webGateway.setDeviceIdentity("p4_hub", "", P4_BMS_MAC, P4_SOLAR_MAC, P4_ECO_MAC);
   if (!webGateway.begin(6789)) {
     Serial.println("web fs failed");
@@ -300,7 +308,7 @@ void loopPanel() {
     applyHealth();
     paintBoard();
   }
-  if (shellyHub.consumeDirty()) {
+  if (shellyHub.consumeDirty() || shellySmokeHub.consumeDirty()) {
     paintBoard();
   }
   recordHistory();

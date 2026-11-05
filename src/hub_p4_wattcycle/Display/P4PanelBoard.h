@@ -9,6 +9,7 @@
 #include "Display/P4GatewayFields.h"
 #include "Display/P4OverviewFlow.h"
 #include "Display/P4PlugsFields.h"
+#include "Display/P4SmokeFields.h"
 #include "Display/P4SolarFields.h"
 #include "Display/P4TempsFields.h"
 #include "Display/P4WattcycleFields.h"
@@ -27,6 +28,7 @@ struct P4PanelBoard {
   P4GatewayFields gateway;
   P4EspFields esp;
   P4PlugsFields plugs;
+  P4SmokeFields smoke;
 };
 
 }  // namespace wattcycle::display
