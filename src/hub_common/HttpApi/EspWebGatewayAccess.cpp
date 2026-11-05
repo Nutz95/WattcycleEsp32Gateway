@@ -38,6 +38,10 @@ void EspWebGateway::setShellyPlugs(shelly::IShellyPlugHub& plugs,
   plugsHistory_ = history;
 }
 
+void EspWebGateway::setShellySmoke(shelly::IShellySmokeHub& smoke) {
+  smokeHub_ = &smoke;
+}
+
 void EspWebGateway::handleGuest() {
   if (server_->method() == HTTP_GET) {
     char token[auth::kSessionTokenHexLen + 1] = {};

@@ -1,11 +1,10 @@
 #include "HttpApi/ShellyPlugsHttp.h"
 
-#include "Auth/AuthTypes.h"
 #include "HttpApi/GzipDayBody.h"
 #include "HttpApi/JsonField.h"
+#include "HttpApi/ShellyHttpSupport.h"
 #include "Shelly/ShellyPlugLimits.h"
 #include "Shelly/ShellyPlugReading.h"
-#include "Util/SafeCopy.h"
 
 #include <Arduino.h>
 
@@ -15,48 +14,15 @@
 namespace wattcycle::web {
 namespace {
 
-bool copyPlainBody(WebServer& server, char* body, size_t capacity) {
-  if (!server.hasArg("plain")) {
-    return false;
-  }
-  const String plain = server.arg("plain");
-  if (plain.length() == 0 || plain.length() >= capacity) {
-    return false;
-  }
-  std::memcpy(body, plain.c_str(), plain.length());
-  body[plain.length()] = '\0';
-  return true;
-}
-
-void appendEscaped(char* out, size_t capacity, size_t& used, const char* text) {
-  if (text == nullptr) {
-    return;
-  }
-  for (const char* cursor = text; *cursor != '\0' && used + 2 < capacity; ++cursor) {
-    const char ch = *cursor;
-    if (ch == '"' || ch == '\\') {
-      if (used + 3 >= capacity) {
-        return;
-      }
-      out[used++] = '\\';
-    }
-    if (static_cast<unsigned char>(ch) < 32u) {
-      continue;
-    }
-    out[used++] = ch;
-  }
-  out[used] = '\0';
-}
-
 void appendReadingJson(char* json, size_t capacity, size_t& used, const shelly::ShellyPlugReading& reading,
                        bool first) {
   if (used + 64 >= capacity) {
     return;
   }
   used += static_cast<size_t>(std::snprintf(json + used, capacity - used, "%s{\"id\":\"", first ? "" : ","));
-  appendEscaped(json, capacity, used, reading.id);
+  ShellyHttpSupport::appendEscaped(json, capacity, used, reading.id);
   used += static_cast<size_t>(std::snprintf(json + used, capacity - used, "\",\"name\":\""));
-  appendEscaped(json, capacity, used, reading.name);
+  ShellyHttpSupport::appendEscaped(json, capacity, used, reading.name);
   used += static_cast<size_t>(std::snprintf(
       json + used, capacity - used,
       "\",\"watts\":%.1f,\"volts\":%.1f,\"amps\":%.3f,\"whTotal\":%.3f,\"whToday\":%.3f,"
@@ -114,45 +80,12 @@ void ShellyPlugsHttp::setHistory(shelly::IShellyPlugHistoryStore* history) {
   history_ = history;
 }
 
-void ShellyPlugsHttp::sendJson(int code, const char* json) {
-  server_.sendHeader("Cache-Control", "no-store");
-  server_.send(code, "application/json", json);
-}
-
-void ShellyPlugsHttp::collectSessionToken(char* out, size_t capacity) const {
-  out[0] = '\0';
-  if (!server_.hasHeader("Cookie")) {
-    return;
-  }
-  const String cookie = server_.header("Cookie");
-  const int idx = cookie.indexOf("wg_session=");
-  if (idx < 0) {
-    return;
-  }
-  int start = idx + 11;
-  int end = cookie.indexOf(';', start);
-  if (end < 0) {
-    end = cookie.length();
-  }
-  util::copyCString(out, capacity, cookie.substring(start, end).c_str());
-}
-
-bool ShellyPlugsHttp::requireAuth() {
-  char token[auth::kSessionTokenHexLen + 1] = {};
-  collectSessionToken(token, sizeof(token));
-  if (!sessions_.isAuthenticated(token)) {
-    sendJson(401, "{\"error\":\"unauthorized\"}");
-    return false;
-  }
-  return true;
-}
-
 void ShellyPlugsHttp::handleGet() {
   if (plugs_ == nullptr) {
-    sendJson(404, "{\"error\":\"unavailable\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"unavailable\"}");
     return;
   }
-  if (!requireAuth()) {
+  if (!ShellyHttpSupport::requireAuth(server_, sessions_)) {
     return;
   }
   const uint32_t nowMs = millis();
@@ -175,53 +108,53 @@ void ShellyPlugsHttp::handleGet() {
   if (used + 3 < sizeof(json)) {
     std::memcpy(json + used, "]}", 3);
   }
-  sendJson(200, json);
+  ShellyHttpSupport::sendJson(server_, 200, json);
 }
 
 void ShellyPlugsHttp::handleListen() {
   if (plugs_ == nullptr) {
-    sendJson(404, "{\"error\":\"unavailable\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"unavailable\"}");
     return;
   }
-  if (!requireAuth()) {
+  if (!ShellyHttpSupport::requireAuth(server_, sessions_)) {
     return;
   }
   char body[64] = {};
-  if (!copyPlainBody(server_, body, sizeof(body))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+  if (!ShellyHttpSupport::copyPlainBody(server_, body, sizeof(body))) {
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   bool open = false;
   if (!extractJsonBoolField(body, "open", open)) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   plugs_->setListen(open, millis());
-  sendJson(200, open ? "{\"listen\":true}" : "{\"listen\":false}");
+  ShellyHttpSupport::sendJson(server_, 200, open ? "{\"listen\":true}" : "{\"listen\":false}");
 }
 
 void ShellyPlugsHttp::handleAuthorize() {
   if (plugs_ == nullptr) {
-    sendJson(404, "{\"error\":\"unavailable\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"unavailable\"}");
     return;
   }
-  if (!requireAuth()) {
+  if (!ShellyHttpSupport::requireAuth(server_, sessions_)) {
     return;
   }
   char body[128] = {};
-  if (!copyPlainBody(server_, body, sizeof(body))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+  if (!ShellyHttpSupport::copyPlainBody(server_, body, sizeof(body))) {
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   char id[shelly::kShellyIdCapacity] = {};
   char name[shelly::kShellyNameCapacity] = {};
   if (!extractJsonStringField(body, "id", id, sizeof(id))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   extractJsonStringField(body, "name", name, sizeof(name));
   if (!plugs_->authorize(id, name[0] != '\0' ? name : nullptr)) {
-    sendJson(400, "{\"error\":\"authorize_failed\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"authorize_failed\"}");
     return;
   }
   char stored[shelly::kShellyNameCapacity] = {};
@@ -229,35 +162,35 @@ void ShellyPlugsHttp::handleAuthorize() {
   char json[96] = {};
   std::snprintf(json, sizeof(json), "{\"ok\":true,\"name\":\"");
   size_t used = std::strlen(json);
-  appendEscaped(json, sizeof(json), used, stored);
+  ShellyHttpSupport::appendEscaped(json, sizeof(json), used, stored);
   if (used + 3 < sizeof(json)) {
     std::memcpy(json + used, "\"}", 3);
   }
-  sendJson(200, json);
+  ShellyHttpSupport::sendJson(server_, 200, json);
 }
 
 void ShellyPlugsHttp::handleRename() {
   if (plugs_ == nullptr) {
-    sendJson(404, "{\"error\":\"unavailable\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"unavailable\"}");
     return;
   }
-  if (!requireAuth()) {
+  if (!ShellyHttpSupport::requireAuth(server_, sessions_)) {
     return;
   }
   char body[128] = {};
-  if (!copyPlainBody(server_, body, sizeof(body))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+  if (!ShellyHttpSupport::copyPlainBody(server_, body, sizeof(body))) {
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   char id[shelly::kShellyIdCapacity] = {};
   char name[shelly::kShellyNameCapacity] = {};
   if (!extractJsonStringField(body, "id", id, sizeof(id)) ||
       !extractJsonStringField(body, "name", name, sizeof(name))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   if (!plugs_->rename(id, name)) {
-    sendJson(400, "{\"error\":\"rename_failed\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"rename_failed\"}");
     return;
   }
   char stored[shelly::kShellyNameCapacity] = {};
@@ -265,48 +198,48 @@ void ShellyPlugsHttp::handleRename() {
   char json[96] = {};
   std::snprintf(json, sizeof(json), "{\"ok\":true,\"name\":\"");
   size_t used = std::strlen(json);
-  appendEscaped(json, sizeof(json), used, stored);
+  ShellyHttpSupport::appendEscaped(json, sizeof(json), used, stored);
   if (used + 3 < sizeof(json)) {
     std::memcpy(json + used, "\"}", 3);
   }
-  sendJson(200, json);
+  ShellyHttpSupport::sendJson(server_, 200, json);
 }
 
 void ShellyPlugsHttp::handleRevoke() {
   if (plugs_ == nullptr) {
-    sendJson(404, "{\"error\":\"unavailable\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"unavailable\"}");
     return;
   }
-  if (!requireAuth()) {
+  if (!ShellyHttpSupport::requireAuth(server_, sessions_)) {
     return;
   }
   char body[96] = {};
-  if (!copyPlainBody(server_, body, sizeof(body))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+  if (!ShellyHttpSupport::copyPlainBody(server_, body, sizeof(body))) {
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   char id[shelly::kShellyIdCapacity] = {};
   if (!extractJsonStringField(body, "id", id, sizeof(id))) {
-    sendJson(400, "{\"error\":\"invalid_json\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"invalid_json\"}");
     return;
   }
   if (!plugs_->revoke(id)) {
-    sendJson(400, "{\"error\":\"revoke_failed\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"revoke_failed\"}");
     return;
   }
-  sendJson(200, "{\"ok\":true}");
+  ShellyHttpSupport::sendJson(server_, 200, "{\"ok\":true}");
 }
 
 void ShellyPlugsHttp::handleHistoryDay() {
-  if (!requireAuth()) {
+  if (!ShellyHttpSupport::requireAuth(server_, sessions_)) {
     return;
   }
   if (history_ == nullptr) {
-    sendJson(404, "{\"error\":\"unavailable\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"unavailable\"}");
     return;
   }
   if (!server_.hasArg("date") || !dateLooksUtc(server_.arg("date"))) {
-    sendJson(400, "{\"error\":\"missing_date\"}");
+    ShellyHttpSupport::sendJson(server_, 400, "{\"error\":\"missing_date\"}");
     return;
   }
   const bool gzip = GzipDayBody::wantsGzip(server_);
@@ -314,14 +247,14 @@ void ShellyPlugsHttp::handleHistoryDay() {
     DayStreamCtx ctx = {};
     ctx.server = &server_;
     if (!history_->streamDay(server_.arg("date").c_str(), &beginDayStream, &writeDayChunk, &ctx)) {
-      sendJson(404, "{\"error\":\"day_not_found\"}");
+      ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"day_not_found\"}");
     }
     return;
   }
   DayCsvBuffer buffer;
   if (!history_->streamDay(server_.arg("date").c_str(), &GzipDayBody::beginCollect,
                            &GzipDayBody::writeCollect, &buffer)) {
-    sendJson(404, "{\"error\":\"day_not_found\"}");
+    ShellyHttpSupport::sendJson(server_, 404, "{\"error\":\"day_not_found\"}");
     return;
   }
   GzipDayBody::send(server_, buffer.data(), buffer.size(), true);

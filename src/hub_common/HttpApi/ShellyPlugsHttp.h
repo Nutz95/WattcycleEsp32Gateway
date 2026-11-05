@@ -18,9 +18,6 @@ class ShellyPlugsHttp {
   void registerRoutes();
 
  private:
-  void sendJson(int code, const char* json);
-  bool requireAuth();
-  void collectSessionToken(char* out, size_t capacity) const;
   void handleGet();
   void handleListen();
   void handleAuthorize();

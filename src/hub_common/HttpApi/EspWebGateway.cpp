@@ -68,10 +68,6 @@ void EspWebGateway::useFiles(fs::FS& volume) {
   files_ = &volume;
 }
 
-fs::FS& EspWebGateway::files() {
-  return *files_;
-}
-
 bool EspWebGateway::begin(uint16_t port) {
   if (files_ == nullptr) {
     if (!LittleFS.begin(true)) {
@@ -80,9 +76,9 @@ bool EspWebGateway::begin(uint16_t port) {
     files_ = &LittleFS;
   }
 
-  computeFileEtag(files(), "/index.html", indexEtag_, sizeof(indexEtag_));
-  computeFileEtag(files(), "/app.css", cssEtag_, sizeof(cssEtag_));
-  computeFileEtag(files(), "/app.js", jsEtag_, sizeof(jsEtag_));
+  computeFileEtag(*files_, "/index.html", indexEtag_, sizeof(indexEtag_));
+  computeFileEtag(*files_, "/app.css", cssEtag_, sizeof(cssEtag_));
+  computeFileEtag(*files_, "/app.js", jsEtag_, sizeof(jsEtag_));
 
   server_ = std::unique_ptr<WebServer>(new WebServer(port));
   const char* collectHeaders[] = {"If-None-Match", "Cookie"};
@@ -101,10 +97,15 @@ bool EspWebGateway::begin(uint16_t port) {
   server_->on("/api/guest", HTTP_ANY, [this]() { handleGuest(); });
   server_->on("/api/mic-gain", HTTP_ANY, [this]() { handleMicGain(); });
   if (plugsHub_ != nullptr) {
-    plugsHttp_ = std::make_unique<ShellyPlugsHttp>(*server_, authSessions_);
+    plugsHttp_ = std::unique_ptr<ShellyPlugsHttp>(new ShellyPlugsHttp(*server_, authSessions_));
     plugsHttp_->setHub(plugsHub_);
     plugsHttp_->setHistory(plugsHistory_);
     plugsHttp_->registerRoutes();
+  }
+  if (smokeHub_ != nullptr) {
+    smokeHttp_ = std::unique_ptr<ShellySmokeHttp>(new ShellySmokeHttp(*server_, authSessions_));
+    smokeHttp_->setHub(smokeHub_);
+    smokeHttp_->registerRoutes();
   }
   server_->onNotFound([this]() { handleNotFound(); });
   server_->begin();
@@ -191,7 +192,7 @@ bool EspWebGateway::trySendCached(const char* path, const char* contentType) {
     return true;
   }
 
-  File file = files().open(path, "r");
+  File file = (*files_).open(path, "r");
   if (!file) {
     return false;
   }
@@ -206,11 +207,11 @@ void EspWebGateway::sendWithEtag(const char* path, const char* contentType) {
   if (trySendCached(path, contentType)) {
     return;
   }
-  if (!files().exists(path)) {
+  if (!(*files_).exists(path)) {
     server_->send(404, "text/plain", "Not found");
     return;
   }
-  File file = files().open(path, "r");
+  File file = (*files_).open(path, "r");
   server_->streamFile(file, contentType);
   file.close();
 }
@@ -378,16 +379,12 @@ void EspWebGateway::handleNotFound() {
     sendWithEtag("/app.js", "application/javascript; charset=utf-8");
     return;
   }
-  if (files().exists(path)) {
+  if ((*files_).exists(path)) {
     String contentType = "text/plain; charset=utf-8";
-    if (path.endsWith(".css")) {
-      contentType = "text/css; charset=utf-8";
-    } else if (path.endsWith(".js")) {
-      contentType = "application/javascript; charset=utf-8";
-    } else if (path.endsWith(".html")) {
-      contentType = "text/html; charset=utf-8";
-    }
-    File file = files().open(path, "r");
+    if (path.endsWith(".css")) contentType = "text/css; charset=utf-8";
+    else if (path.endsWith(".js")) contentType = "application/javascript; charset=utf-8";
+    else if (path.endsWith(".html")) contentType = "text/html; charset=utf-8";
+    File file = (*files_).open(path, "r");
     server_->streamFile(file, contentType);
     file.close();
     return;

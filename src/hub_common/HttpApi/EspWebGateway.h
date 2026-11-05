@@ -5,8 +5,10 @@
 #include "Auth/IGuestAccess.h"
 #include "EspNow/IEspNowCommandSender.h"
 #include "HttpApi/ShellyPlugsHttp.h"
+#include "HttpApi/ShellySmokeHttp.h"
 #include "Shelly/IShellyPlugHistoryStore.h"
 #include "Shelly/IShellyPlugHub.h"
+#include "Shelly/IShellySmokeHub.h"
 #include "Storage/IDailyHistoryStore.h"
 #include "Telemetry/ITelemetryStore.h"
 #include "HttpApi/IWebGateway.h"
@@ -38,6 +40,8 @@ class EspWebGateway : public IWebGateway {
   /// Optional. When unset, plug routes answer 404. History may be null.
   void setShellyPlugs(shelly::IShellyPlugHub& plugs,
                       shelly::IShellyPlugHistoryStore* history = nullptr);
+  /// Optional. When unset, smoke routes answer 404.
+  void setShellySmoke(shelly::IShellySmokeHub& smoke);
 
  private:
   void handleRoot();
@@ -62,7 +66,6 @@ class EspWebGateway : public IWebGateway {
                             size_t passwordCapacity);
   void sendJson(int code, const char* json);
   bool requireAuth();
-  fs::FS& files();
 
   telemetry::ITelemetryStore& store_;
   auth::IAuthSessionService& authSessions_;
@@ -72,7 +75,9 @@ class EspWebGateway : public IWebGateway {
   audio::IMicGain* micGain_ = nullptr;
   shelly::IShellyPlugHub* plugsHub_ = nullptr;
   shelly::IShellyPlugHistoryStore* plugsHistory_ = nullptr;
+  shelly::IShellySmokeHub* smokeHub_ = nullptr;
   std::unique_ptr<ShellyPlugsHttp> plugsHttp_;
+  std::unique_ptr<ShellySmokeHttp> smokeHttp_;
   char role_[24] = {};
   char hubStaMac_[18] = {};
   char bmsBridgeMac_[18] = {};
