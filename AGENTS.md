@@ -102,3 +102,18 @@ $env:BMS_BLE_ADDRESS = "AA:BB:CC:DD:EE:FF"
 - Storing long-term history on the TTGO hub (Phase 2 M5 + SD).
 - Migrating hub to M5 / ESP32-P4 without following the Phase 2 HAL plan.
 - Shipping in-process HTTPS on classic ESP32 + NimBLE until a lighter TLS path exists.
+
+## Learned User Preferences
+
+- P4 panel bottom menu order: Overview first, Camera second, then domain pages (Plugs/Smoke/…), Account last; keep Link outside the scrolling menu.
+- Shelly smoke authorize/config UX should mirror plugs but stay a separate smoke-detector domain stack — do not fold smoke into plugs.
+- After meaningful P4/web work, run thermo-nuclear code-quality review and prefer atomic commits.
+- Prefer `dd/mm/yyyy` dates in P4 web UI and keep UTF-8 so symbols like `°` render cleanly (no mojibake separators).
+- Guest sessions must not expose MAC/IP/port or other network-identifying details.
+
+## Learned Workspace Facts
+
+- ESP32-P4 panel hub lives under `hub_p4_wattcycle`; default flash path is `.\scripts\flash_p4_panel.ps1 -Port COM25`.
+- Shelly Plug M Gen3 and Shelly Plus Smoke share UDP **2267** NotifyStatus demux on P4; plugs whitelist `/plugs.cfg`, smoke whitelist `/smoke.cfg`; smoke device ids use the `shellyplussmoke-` prefix.
+- Authorized smoke detectors use a ~48 h online stale window because the hardware sleeps between reports; web Smoke tab + overview strip, panel Smoke page + overview LED card (click → Smoke page).
+- P4 web includes energy reports plus gzip-compressed history download with browser-side cache (today’s report stays refreshable).

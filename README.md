@@ -216,6 +216,8 @@ The same flash writes the dashboard onto the panel. Open the IP shown on the Esp
 
 Shelly Plug M Gen3 metering (P4 only): point each plug’s **RPC over UDP** at the hub IP, port **2267**. On the web **Plugs** tab, turn on listen, then **Authorize** by device id (`shellyplugmg3-…`) and set a display name (saved in `/plugs.cfg`). Bubble cards show live watts, Wh today, and a History link. The History tab has a **Plugs** sub-tab (power / Wh-today curves, filter by plug). The panel **Plugs** page shows authorized names and watts. Day energy is the delta of the plug’s lifetime `wh_total` (logged under `/history/plugs/YYYY-MM-DD.csv`); the hub does not reset the Shelly counter.
 
+Shelly Plus Smoke (P4 only, same UDP **2267**): on the web **Smoke** tab, listen then **Authorize** by id (`shellyplussmoke-…`; saved in `/smoke.cfg`). Cards show alarm / mute / battery. The Overview strip lists authorized detectors (tap to open Smoke). The panel **Smoke** page shows status and battery; detectors can sleep for long stretches and stay “online” for up to 48 h after the last packet.
+
 History day downloads (`/api/history/day`, `/api/history/plugs/day`) default to **gzip** (`Content-Type: application/gzip`, verified round-trip on device; falls back to plain CSV in the **same** response if compress/verify fails). Use `?encoding=identity` to force streamed plain CSV. The browser caches valid gzip bodies in **IndexedDB** and decompresses with `DecompressionStream` (no silent second identity fetch). The signed-in **Reports** tab rolls up pack/solar/EcoFlow and plugs energy (day/week/month/year) and estimates cost from browser-only HP/HC tariffs (form UI + JSON export/import).
 
 ### 2b. Pair ESP-NOW peers

@@ -42,7 +42,7 @@ function Minify-Js([string]$text) {
 
 # HTML: inject view fragments (UTF-8 in, UTF-8 out — never Windows ANSI)
 $html = Read-Utf8Text (Join-Path $webRoot "index.html")
-$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "reports", "cells", "temperatures", "warnings", "gateway", "esp", "plugs", "camera", "account")
+$views = @("overview", "dashboard", "solar", "wattcycle", "ecoflow", "history", "reports", "cells", "temperatures", "warnings", "gateway", "esp", "plugs", "smoke", "camera", "account")
 foreach ($view in $views) {
   $fragment = Read-Utf8Text (Join-Path $webRoot "views\$view.html")
   $html = $html.Replace("<!--VIEW:$view-->", $fragment.Trim())
@@ -88,7 +88,9 @@ $jsParts = @(
   "js\views\warnings.js",
   "js\views\gateway.js",
   "js\views\esp.js",
+  "js\shellyDeviceAdmin.js",
   "js\views\plugs.js",
+  "js\views\smoke.js",
   "js\views\camera.js",
   "js\guestTabs.js",
   "js\views\account.js",

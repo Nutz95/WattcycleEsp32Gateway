@@ -108,8 +108,12 @@ Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveHttp.cpp") (Jo
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4LiveHttp.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4GuestAccess.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4GuestAccess.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyAuthorizedCfg.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyAuthorizedCfg.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyConfigStore.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyConfigStore.h") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellySmokeConfigStore.cpp") (Join-Path $Stage "src")
+Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellySmokeConfigStore.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyUdp.cpp") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyUdp.h") (Join-Path $Stage "src")
 Copy-IfChanged (Join-Path $Repo "src\hub_p4_wattcycle\panel\P4ShellyHistory.cpp") (Join-Path $Stage "src")
@@ -162,13 +166,19 @@ $HubSources = @(
     "src\hub_common\HttpApi\EspWebGatewayHistory.cpp",
     "src\hub_common\HttpApi\EspWebGatewayAccess.cpp",
     "src\hub_common\HttpApi\ShellyPlugsHttp.cpp",
+    "src\hub_common\HttpApi\ShellySmokeHttp.cpp",
+    "src\hub_common\HttpApi\ShellyHttpSupport.cpp",
     "src\hub_common\Storage\HistoryCatalog.cpp",
     "src\hub_common\Storage\HistoryDayFile.cpp",
     "src\hub_common\Storage\HistorySampleFill.cpp",
     "src\hub_common\HttpApi\JsonField.cpp",
+    "src\hub_common\Shelly\ShellyDisplayName.cpp",
     "src\hub_common\Shelly\ShellyNotifyParser.cpp",
     "src\hub_common\Shelly\ShellyPlugHub.cpp",
     "src\hub_common\Shelly\ShellyPlugHubAccess.cpp",
+    "src\hub_common\Shelly\ShellySmokeNotifyParser.cpp",
+    "src\hub_common\Shelly\ShellySmokeHub.cpp",
+    "src\hub_common\Shelly\ShellySmokeHubAccess.cpp",
     "src\hub_common\Auth\AuthService.cpp",
     "src\hub_common\Auth\PasswordHasher.cpp",
     "src\hub_common\Auth\CredentialPolicy.cpp",
