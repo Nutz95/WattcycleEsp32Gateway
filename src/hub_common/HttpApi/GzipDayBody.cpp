@@ -4,7 +4,17 @@
 #include <cstdlib>
 #include <cstring>
 
+#if __has_include("miniz.h")
 #include "miniz.h"
+#elif __has_include("esp32/rom/miniz.h")
+#include "esp32/rom/miniz.h"
+#elif __has_include("esp32s3/rom/miniz.h")
+#include "esp32s3/rom/miniz.h"
+#elif __has_include("rom/miniz.h")
+#include "rom/miniz.h"
+#else
+#error "miniz.h not found (ESP-IDF ROM miniz required for GzipDayBody)"
+#endif
 
 namespace wattcycle::web {
 namespace {
@@ -59,7 +69,8 @@ bool deflateTo(const uint8_t* plain, size_t plainLen, uint8_t* dest, size_t dest
   return true;
 }
 
-bool writeAll(Client& client, const uint8_t* data, size_t length) {
+template <typename StreamT>
+bool writeAll(StreamT& client, const uint8_t* data, size_t length) {
   size_t sent = 0;
   while (sent < length) {
     const size_t chunk = length - sent > 1436 ? 1436 : length - sent;
@@ -208,13 +219,17 @@ bool GzipDayBody::send(WebServer& server, const uint8_t* plain, size_t plainLen,
     server.setContentLength(plainLen);
     server.send(200, "text/csv; charset=utf-8", "");
     if (plainLen > 0 && plain != nullptr) {
-      writeAll(server.client(), plain, plainLen);
+      auto client = server.client();
+      writeAll(client, plain, plainLen);
     }
     return true;
   }
   server.setContentLength(compressedLen);
   server.send(200, "application/gzip", "");
-  writeAll(server.client(), compressed, compressedLen);
+  {
+    auto client = server.client();
+    writeAll(client, compressed, compressedLen);
+  }
   std::free(compressed);
   return true;
 }
