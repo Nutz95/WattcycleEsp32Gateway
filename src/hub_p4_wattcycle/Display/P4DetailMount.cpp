@@ -1,8 +1,10 @@
 #include "Display/P4DetailPages.h"
 
+#include "Display/P4DetailPageRows.h"
 #include "Display/P4DetailRow.h"
 #include "Display/P4OverviewStyle.h"
 
+#include <cstddef>
 #include <cstdint>
 
 namespace wattcycle::display {
@@ -103,6 +105,13 @@ void P4DetailPages::mount(lv_obj_t* parent) {
                                     "Solar security", "EcoFlow link", "EcoFlow security"};
   static const char* plugNames[] = {"Total W", "Plug 1", "Plug 2", "Plug 3", "Plug 4", "Plug 5",
                                     "Plug 6", "Plug 7", "Plug 8"};
+  static const char* smokeNames[] = {"Status", "Smoke 1", "Smoke 2", "Smoke 3", "Smoke 4"};
+  static_assert(sizeof(plugNames) / sizeof(plugNames[0]) ==
+                    static_cast<size_t>(kPlugsRowCount),
+                "plug row captions must match P4DetailPageRows");
+  static_assert(sizeof(smokeNames) / sizeof(smokeNames[0]) ==
+                    static_cast<size_t>(kSmokeRowCount),
+                "smoke row captions must match P4DetailPageRows");
   mountRows(widgets_.wattcycle, parent, packNames, 8);
   mountRows(widgets_.solar, parent, solarNames, 8);
   mountCommandButton(widgets_.solar.root, 16, 620, "Reset Wh", 0x01, this);
@@ -121,6 +130,7 @@ void P4DetailPages::mount(lv_obj_t* parent) {
   mountRows(widgets_.plugs, parent, plugNames, 9);
   lv_obj_add_flag(widgets_.plugs.root, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(widgets_.plugs.root, LV_DIR_VER);
+  mountRows(widgets_.smoke, parent, smokeNames, 5);
   mountRows(widgets_.link, parent, linkNames, 8);
   lv_obj_add_flag(widgets_.esp.root, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(widgets_.esp.root, LV_DIR_VER);

@@ -61,7 +61,8 @@ void test_page_wraps_and_keeps_backlight() {
   TEST_ASSERT_TRUE(display.isBacklightOn());
 
   display.previousPage();
-  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(wattcycle::display::HubPage::Plugs), display.pageIndex());
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(wattcycle::display::HubPage::Account),
+                          display.pageIndex());
   display.nextPage();
   TEST_ASSERT_EQUAL_UINT8(0, display.pageIndex());
 

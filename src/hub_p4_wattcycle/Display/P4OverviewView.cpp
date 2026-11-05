@@ -48,6 +48,7 @@ void P4OverviewView::mount(lv_obj_t* parent, const char* footer) {
   mountPorts(flowRoot_);
   mountPack(flowRoot_);
   mountSolar(flowRoot_);
+  smokeCard_.mount(flowRoot_, this);
   mountEdges(flowRoot_);
   footer_ = makeValueLabel(flowRoot_);
   lv_label_set_text(footer_, footer != nullptr ? footer : "");
@@ -159,4 +160,9 @@ void P4OverviewView::apply(const P4OverviewFlow& flow) {
   applySolar(flow);
 }
 
+void P4OverviewView::applySmoke(const P4SmokeFields& smoke) {
+  smokeCard_.apply(smoke);
+}
+
 }  // namespace wattcycle::display
+

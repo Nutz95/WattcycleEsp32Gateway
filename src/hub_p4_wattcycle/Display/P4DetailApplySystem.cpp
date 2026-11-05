@@ -1,5 +1,6 @@
 #include "Display/P4DetailPages.h"
 
+#include "Display/P4DetailPageRows.h"
 #include "Display/P4DetailRow.h"
 #include "Display/P4OverviewStyle.h"
 
@@ -96,28 +97,62 @@ void applyEsp(P4TextPage& page, const P4EspFields& fields) {
 void applyPlugs(P4TextPage& page, const P4PlugsFields& fields) {
   char line[40];
   if (fields.count == 0) {
-    setDetailValue(page.values[0], "authorize on web", kMuted);
-    for (int index = 1; index < 9; ++index) {
+    setDetailValue(page.values[kPlugsSummaryRow], "authorize on web", kMuted);
+    for (int index = kPlugsDeviceRow0; index < kPlugsRowCount; ++index) {
       setDetailValue(page.values[index], "--", kMuted);
     }
     return;
   }
   std::snprintf(line, sizeof(line), "%.0f W", fields.totalWatts);
-  setDetailValue(page.values[0], line, kInk);
-  for (int index = 0; index < 8; ++index) {
+  setDetailValue(page.values[kPlugsSummaryRow], line, kInk);
+  for (int index = 0; index < kPlugsDeviceSlots; ++index) {
+    const int row = kPlugsDeviceRow0 + index;
     if (index >= fields.count) {
-      setDetailValue(page.values[index + 1], "--", kMuted);
+      setDetailValue(page.values[row], "--", kMuted);
       continue;
     }
     const char* name = fields.names[index][0] != '\0' ? fields.names[index] : "plug";
     if (!fields.online[index]) {
       std::snprintf(line, sizeof(line), "%s offline", name);
-      setDetailValue(page.values[index + 1], line, kDanger);
+      setDetailValue(page.values[row], line, kDanger);
       continue;
     }
     std::snprintf(line, sizeof(line), "%s %.0fW %.0fWh", name, fields.watts[index],
                   fields.whToday[index]);
-    setDetailValue(page.values[index + 1], line, fields.output[index] ? kAccent : kInk);
+    setDetailValue(page.values[row], line, fields.output[index] ? kAccent : kInk);
+  }
+}
+
+void applySmoke(P4TextPage& page, const P4SmokeFields& fields) {
+  char line[40];
+  if (fields.count == 0) {
+    setDetailValue(page.values[kSmokeStatusRow], "authorize on web", kMuted);
+    for (int index = kSmokeDeviceRow0; index < kSmokeRowCount; ++index) {
+      setDetailValue(page.values[index], "--", kMuted);
+    }
+    return;
+  }
+  setDetailValue(page.values[kSmokeStatusRow], fields.anyAlarm ? "ALARM" : "clear",
+                 fields.anyAlarm ? kDanger : kAccent);
+  for (int index = 0; index < kSmokeDeviceSlots; ++index) {
+    const int row = kSmokeDeviceRow0 + index;
+    if (index >= fields.count) {
+      setDetailValue(page.values[row], "--", kMuted);
+      continue;
+    }
+    const char* name = fields.names[index][0] != '\0' ? fields.names[index] : "smoke";
+    if (fields.alarm[index]) {
+      std::snprintf(line, sizeof(line), "%s ALARM", name);
+      setDetailValue(page.values[row], line, kDanger);
+      continue;
+    }
+    if (!fields.online[index]) {
+      std::snprintf(line, sizeof(line), "%s stale", name);
+      setDetailValue(page.values[row], line, kMuted);
+      continue;
+    }
+    std::snprintf(line, sizeof(line), "%s ok %.0f%%", name, fields.batteryPercent[index]);
+    setDetailValue(page.values[row], line, kInk);
   }
 }
 
@@ -143,6 +178,7 @@ void applySystemPages(P4DetailWidgets& widgets, const P4PanelBoard& board) {
   applyGateway(widgets.gateway, board.gateway);
   applyEsp(widgets.esp, board.esp);
   applyPlugs(widgets.plugs, board.plugs);
+  applySmoke(widgets.smoke, board.smoke);
   applyLink(widgets.link, board);
 }
 

@@ -1,10 +1,13 @@
 #pragma once
 
+#ifndef WATTCYCLE_DISPLAY_HUB_PAGE_H
+#define WATTCYCLE_DISPLAY_HUB_PAGE_H
+
 #include <cstdint>
 
 namespace wattcycle::display {
 
-/// Monitoring pages on the P4, in the same order as the web tabs.
+/// Monitoring pages on the P4. Menu strip order lives in HubMenuOrder.h.
 enum class HubPage : uint8_t {
   Overview = 0,
   Wattcycle,
@@ -18,11 +21,12 @@ enum class HubPage : uint8_t {
   Account,
   Camera,
   Plugs,
+  Smoke,
   Link
 };
 
-/// Bottom menu includes Camera and Plugs. Link opens from the status icons.
-constexpr uint8_t kHubMenuCount = static_cast<uint8_t>(HubPage::Plugs) + 1u;
 constexpr uint8_t kHubPageCount = static_cast<uint8_t>(HubPage::Link) + 1u;
 
 }  // namespace wattcycle::display
+
+#endif  // WATTCYCLE_DISPLAY_HUB_PAGE_H

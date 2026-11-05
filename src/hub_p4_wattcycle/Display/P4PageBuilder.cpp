@@ -124,6 +124,8 @@ const char* hubPageTitle(HubPage page) {
       return "Camera";
     case HubPage::Plugs:
       return "Plugs";
+    case HubPage::Smoke:
+      return "Smoke";
     case HubPage::Link:
       return "Link";
   }
@@ -164,6 +166,7 @@ P4PageModel buildP4Page(HubPage page, const telemetry::ITelemetryStore& store) {
     case HubPage::Overview:
     case HubPage::Camera:
     case HubPage::Plugs:
+    case HubPage::Smoke:
     case HubPage::Link:
       break;
   }

@@ -69,6 +69,7 @@ void P4DetailPages::show(HubPage page) {
   reveal(widgets_.esp.root, page == HubPage::Esp);
   reveal(widgets_.account.root, page == HubPage::Account);
   reveal(widgets_.plugs.root, page == HubPage::Plugs);
+  reveal(widgets_.smoke.root, page == HubPage::Smoke);
   reveal(widgets_.link.root, page == HubPage::Link);
   // Camera page is owned by P4CameraPage in the panel composition root.
 }

@@ -1,5 +1,6 @@
 #include "Display/P4StatusDisplay.h"
 
+#include "Display/HubMenuOrder.h"
 #include "Display/P4FlowBuilder.h"
 #include "Display/P4PageBuilder.h"
 
@@ -9,15 +10,19 @@ namespace wattcycle::display {
 namespace {
 
 HubPage stepPage(HubPage page, int delta) {
+  int index = hubMenuIndexOf(page);
+  if (index < 0) {
+    index = 0;
+  }
   const int count = static_cast<int>(kHubMenuCount);
-  int next = static_cast<int>(page) + delta;
+  int next = index + delta;
   if (next < 0) {
     next = count - 1;
   }
   if (next >= count) {
     next = 0;
   }
-  return static_cast<HubPage>(next);
+  return kHubMenuOrder[static_cast<size_t>(next)];
 }
 
 }  // namespace

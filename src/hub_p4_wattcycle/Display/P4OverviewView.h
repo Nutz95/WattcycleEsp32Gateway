@@ -1,18 +1,24 @@
 #pragma once
 
+#include "Display/HubMenuOrder.h"
 #include "Display/HubPage.h"
+#include "Display/IHubPageNavigator.h"
 #include "Display/P4EnergyDash.h"
 #include "Display/P4OverviewStyle.h"
+#include "Display/P4SmokeFields.h"
+#include "Display/P4SmokeOverviewCard.h"
 
 namespace wattcycle::display {
 
 /// LVGL shell for the 480×800 panel: status band, energy flow, scrolling page menu.
-class P4OverviewView {
+class P4OverviewView : public IHubPageNavigator {
  public:
   /// Build the shell on `parent`. `footer` is the one-line demo note.
   void mount(lv_obj_t* parent, const char* footer);
   /// Refresh node text, borders, and the direction of each energy lane.
   void apply(const P4OverviewFlow& flow);
+  /// Refresh the Smoke card LED and status from authorized detectors.
+  void applySmoke(const P4SmokeFields& smoke);
   /// Paint Wi-Fi and the ESP link. Both stay down until those radios exist here.
   void setLinks(bool wifiUp, bool espUp);
   /// Color the SD icon from free space. A missing card is red with a mark.
@@ -20,7 +26,7 @@ class P4OverviewView {
   /// Clock and date. A year before 2024 stays blank.
   void refreshClock();
   /// Highlight one menu icon and show that page.
-  void showPage(uint8_t index);
+  void showPage(uint8_t index) override;
   /// Called after the menu changes page. The panel uses it to show the matching screen.
   void setPageHandler(void (*handler)(uint8_t index, void* user), void* user);
 
@@ -55,8 +61,8 @@ class P4OverviewView {
   lv_obj_t* clock_ = nullptr;
   lv_obj_t* date_ = nullptr;
   lv_obj_t* menu_ = nullptr;
-  lv_obj_t* menuBtn_[kHubPageCount] = {};
-  lv_obj_t* menuIcon_[kHubPageCount] = {};
+  lv_obj_t* menuBtn_[kHubMenuCount] = {};
+  lv_obj_t* menuIcon_[kHubMenuCount] = {};
   lv_obj_t* gridCard_ = nullptr;
   lv_obj_t* acIn_ = nullptr;
   lv_obj_t* ecoCard_ = nullptr;
@@ -75,6 +81,7 @@ class P4OverviewView {
   lv_obj_t* packWatts_ = nullptr;
   lv_obj_t* solarCard_ = nullptr;
   lv_obj_t* solarWatts_ = nullptr;
+  P4SmokeOverviewCard smokeCard_;
   lv_obj_t* packEdge_ = nullptr;
   lv_obj_t* solarEdge_ = nullptr;
   lv_obj_t* bypassIn_ = nullptr;

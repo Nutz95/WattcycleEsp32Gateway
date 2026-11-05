@@ -69,3 +69,4 @@ void P4OverviewView::mountSolar(lv_obj_t* parent) {
 }
 
 }  // namespace wattcycle::display
+
